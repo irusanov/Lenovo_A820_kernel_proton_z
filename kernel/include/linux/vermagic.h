@@ -1,6 +1,6 @@
-#include <generated/utsrelease.h>
+/*#include <generated/utsrelease.h>*/
 
-/* Simply sanity version stamp for modules. */
+/* Simply sanity version stamp for modules. 
 #ifdef CONFIG_SMP
 #define MODULE_VERMAGIC_SMP "SMP "
 #else
@@ -30,4 +30,7 @@
 	MODULE_VERMAGIC_SMP MODULE_VERMAGIC_PREEMPT 			\
 	MODULE_VERMAGIC_MODULE_UNLOAD MODULE_VERMAGIC_MODVERSIONS	\
 	MODULE_ARCH_VERMAGIC
+*/
+
+#define VERMAGIC_STRING "3.4.5 SMP preempt mod_unload ARMv7 "
 
