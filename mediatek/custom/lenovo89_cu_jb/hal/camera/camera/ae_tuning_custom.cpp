@@ -126,9 +126,9 @@ getAEParam()
         0,                      // uAEIspGainDelayCycle;
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, // uPrvFlareWeightArr[16]            // for dynamic flare used
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, // uVideoFlareWeightArr[16]            // for dynamic flare used
-        96,                   // u4FlareStdThrHigh             // flare std high
-        48,                     // u4FlareStdThrLow             // flare std low
-        0,                     // u4PrvCapFlareDiff
+        128,                   // u4FlareStdThrHigh             // flare std high
+        64,                     // u4FlareStdThrLow             // flare std low
+        32,                     // u4PrvCapFlareDiff
     };
 
     static strWeightTable  g_Weight_Matrix =
@@ -169,7 +169,7 @@ getAEParam()
 
     static strAFPlineInfo g_strAFPLineTable =     // from high lv to low lv
     {
-         0,                  // 1 enable the AF Pline, 0 disable the AF Pline (bypass)
+         1,                  // 1 enable the AF Pline, 0 disable the AF Pline (bypass)
          {
              {73, 30},       // {LV value, AF frame rate}
              {65, 25},  
@@ -181,7 +181,7 @@ getAEParam()
 
     static strAFPlineInfo g_strAFZSDPLineTable =     // from high lv to low lv
     {
-        0,                  // 1 enable the AF ZSD Pline, 0 disable the AF ZSD Pline (bypass)
+        1,                  // 1 enable the AF ZSD Pline, 0 disable the AF ZSD Pline (bypass)
         {
             {73, 15},       // {LV value, AF frame rate}
             {65, 15},  
@@ -221,25 +221,25 @@ getAEParam()
         1160,  // EV   0.3
         1261,  // EV   0.5
         1370,  // EV   0.7
-        1800, //1552,  // EV   1.0
+        1550,  // EV   1.0
         1758,  // EV   1.3
         1911,  // EV   1.5
         2077,  // EV   1.7
-        2750, //2353,  // EV   2.0
+        2423,  // EV   2.0 
         2896,  // EV   2.5
-        5000, //3566,  // EV   3.0
+        3566,  // EV   3.0
         4390,  // EV   3.5
         5405,  // EV   4.0
          904,  // EV -0.3
          832,  // EV -0.5
-         765,  // EV -0.7
-         685, //748,  // EV -1.0
-         596,  // EV -1.3
-         549,  // EV -1.5
-         505,  // EV -1.7
-         420, //459,  // EV -2.0
-         362,  // EV -2.5
-         218,//218,  // EV -3.0
+         815,  // EV -0.7
+         790,  // EV -1.0
+         750,  // EV -1.3
+         700,  // EV -1.5
+         650,  // EV -1.7
+         580,  // EV -2.0
+         450,  // EV -2.5
+         260,  // EV -3.0
          239,  // EV -3.5
          194,  // EV -4.0
     };
@@ -248,8 +248,8 @@ getAEParam()
     // total 24 sets
     static strAEMOVE  g_AEMoveTable[] =
     {
-        {-20,   17,    24}, //   mean below -2.5  move increase 25 index
-        {-20,   25,    19}, //   -2.5~-2  move increase 20 index
+        {-20,   17,    25}, //   mean below -2.5  move increase 25 index
+        {-20,   25,    20}, //   -2.5~-2  move increase 20 index
         {-15,   33,    15}, //   -2~-1.6
         {-15,   40,    12}, //   -1.6~-1.3
         {-10,   50,    9}, //   -1.3~-1

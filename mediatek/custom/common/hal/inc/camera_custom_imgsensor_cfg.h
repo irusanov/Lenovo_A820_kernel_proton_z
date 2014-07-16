@@ -92,7 +92,30 @@ SensorOrientation_T const&  getSensorOrientation();
 *******************************************************************************/
 MBOOL isRetFakeSubOrientation();
 
+/*******************************************************************************
+* Return fake orientation for back sensor in degree 0/180 or not
+*******************************************************************************/
+MBOOL isRetFakeMainOrientation();
+/*******************************************************************************
+* Return fake orientation for back2 (3D)sensor in degree 0/180 or not
+*******************************************************************************/
+MBOOL isRetFakeMain2Orientation();
 
+
+/*******************************************************************************
+* Image Sensor Module FOV
+*******************************************************************************/
+typedef struct SensorViewAngle_S
+{
+    MUINT32 MainSensorHorFOV;     //  main sensor horizontal view angle, 0: not support
+    MUINT32 MainSensorVerFOV;     //  main sensor vertical view angle, 0: not support
+    MUINT32 SubSensorHorFOV;     //  sub sensor horizontal view angle, 0: not support
+    MUINT32 SubSensorVerFOV;     //  sub sensor vertical view angle, 0: not support
+    MUINT32 Main2SensorHorFOV;     //  main2 sensor horizontal view angle, 0: not support
+    MUINT32 Main2SensorVerFOV;     //  main2 sensor vertical view angle, 0: not support
+} SensorViewAngle_T;
+
+SensorViewAngle_T const&  getSensorViewAngle();
 
 };  //NSCamCustomSensor
 #endif  //  _CAMERA_CUSTOM_IMGSENSOR_CFG_

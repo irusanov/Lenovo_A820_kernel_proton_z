@@ -110,7 +110,7 @@ getAWBParam()
     	// AWB convergence parameter
     	{
             10, // i4Speed: Convergence speed: (0 ~ 100)
-            225 // i4StableThr: Stable threshold ((currentRgain - targetRgain)^2 + (currentBgain - targetBgain)^2), WB gain format: 4.9
+            100,//225 // i4StableThr: Stable threshold ((currentRgain - targetRgain)^2 + (currentBgain - targetBgain)^2), WB gain format: 4.9
     	},
 
         // AWB daylight locus target offset ratio LUT for tungsten
@@ -181,7 +181,7 @@ getAWBParam()
 
     	// Parent block weight parameter
     	{
-            MTRUE, // bEnable
+            MFALSE, // bEnable
             6 // i4ScalingFactor: [6] 1~12, [7] 1~6, [8] 1~3, [9] 1~2, [>=10]: 1
     	},
 

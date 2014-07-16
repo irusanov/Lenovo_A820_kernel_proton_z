@@ -1080,8 +1080,6 @@ kal_int32 fgauge_compensate_battery_voltage_recursion(kal_int32 ori_voltage, kal
             temp_voltage_1, temp_voltage_2, gFG_resistance_bat, ret_compensate_value);
     }
 
-    //xlog_printk(ANDROID_LOG_DEBUG, "Power/Battery", "[CompensateVoltage] Ori_voltage:%d, compensate_value:%d, gFG_resistance_bat:%d, gFG_current:%d\r\n", 
-    //    ori_voltage, ret_compensate_value, gFG_resistance_bat, gFG_current);
 
     return ret_compensate_value;
 }
@@ -2303,7 +2301,7 @@ void fgauge_Normal_Mode_Work(void)
 //2. Calculate battery capacity by VBAT    
     gFG_capacity_by_v = fgauge_read_capacity_by_v();
 
-	if(gFG_booting_counter_I_FLAG == 0) {
+	if(gFG_booting_counter_I_FLAG == 1) { 
 		gFG_capacity_by_v_init = gFG_capacity_by_v;
 	}
 //3. Calculate battery capacity by Coulomb Counter
@@ -2320,9 +2318,11 @@ void fgauge_Normal_Mode_Work(void)
         gFG_capacity_by_v = fgauge_read_capacity_by_v();
 		xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[FGADC] get_hw_ocv=%d, HW_SOC=%d, SW_SOC = %d\n", 
 			gFG_voltage, gFG_capacity_by_v, gFG_capacity_by_v_init);
-		// compare with hw_ocv & sw_ocv, check if less than or equal to 5% tolerance 
-		if (abs(gFG_capacity_by_v_init - gFG_capacity_by_v) > 5) {
-			gFG_capacity_by_v = gFG_capacity_by_v_init;
+		if (upmu_is_chr_det() == KAL_TRUE) {
+			// compare with hw_ocv & sw_ocv, check if less than or equal to 5% tolerance 
+			if (abs(gFG_capacity_by_v_init - gFG_capacity_by_v) > 5) {
+				gFG_capacity_by_v = gFG_capacity_by_v_init;
+			}
 		}
         //-------------------------------------------------------------------------------
         g_rtc_fg_soc = get_rtc_spare_fg_value();

@@ -2,7 +2,7 @@
  *
  * Filename:
  * ---------
- *    mt6320_battery_fan5405.c
+ *    mt6320_battery_bq24158.c
  *
  * Project:
  * --------
@@ -67,7 +67,7 @@
 
 #include <mach/mt_sleep.h>
 
-#include "fan5405.h"
+#include "bq24158.h"
 
 #include <cust_gpio_usage.h>
 
@@ -75,8 +75,8 @@ int Enable_BATDRV_LOG = 2;
 
 int g_low_power_ready = 0;
 
-void pchr_turn_off_charging_fan5405 (void);
-void pchr_turn_on_charging_fan5405 (void);
+void pchr_turn_off_charging_bq24158 (void);
+void pchr_turn_on_charging_bq24158 (void);
 
 #if defined(HIGH_BATTERY_VOLTAGE_SUPPORT)
 int g_enable_high_vbat_spec = 1;
@@ -266,8 +266,8 @@ int get_tbat_volt(int times)
             return PMIC_IMM_GetOneChannelValue(4,times,1);
         #endif
     }
-    
-#endif    
+#endif  
+
 }
 
 int get_charger_detect_status(void)
@@ -1527,42 +1527,42 @@ void select_charging_curret_bcct(void)
     if ( (BMT_status.charger_type == STANDARD_HOST) || 
          (BMT_status.charger_type == NONSTANDARD_CHARGER) )
     {
-        if(g_bcct_value < 100)        pchr_turn_off_charging_fan5405();
-        else if(g_bcct_value < 500)   fan5405_config_interface_liao(0x01,0x38);
-        else if(g_bcct_value < 800)   fan5405_config_interface_liao(0x01,0x78);
-        else if(g_bcct_value == 800)  fan5405_config_interface_liao(0x01,0xB8);
-        else                          fan5405_config_interface_liao(0x01,0x78);     
+        if(g_bcct_value < 100)        pchr_turn_off_charging_bq24158();
+        else if(g_bcct_value < 500)   bq24158_config_interface_reg(0x01,0x38);
+        else if(g_bcct_value < 800)   bq24158_config_interface_reg(0x01,0x78);
+        else if(g_bcct_value == 800)  bq24158_config_interface_reg(0x01,0xB8);
+        else                          bq24158_config_interface_reg(0x01,0x78);     
     }
     else if( (BMT_status.charger_type == STANDARD_CHARGER) ||
              (BMT_status.charger_type == CHARGING_HOST) )
     {
-        fan5405_config_interface_liao(0x06,0x70); //set ISAFE
-        fan5405_config_interface_liao(0x01,0xF8);
-        fan5405_config_interface_liao(0x02,0x8E);
+        bq24158_config_interface_reg(0x06,0x70); //set ISAFE
+        bq24158_config_interface_reg(0x01,0xF8);
+        bq24158_config_interface_reg(0x02,0x8E);
         
         //---------------------------------------------------
         //set IOCHARGE
-        if(g_bcct_value < 550)        pchr_turn_off_charging_fan5405();
-        else if(g_bcct_value < 650)   fan5405_config_interface_liao(0x04,0x09); 
-        else if(g_bcct_value < 750)   fan5405_config_interface_liao(0x04,0x19);
-        else if(g_bcct_value < 850)   fan5405_config_interface_liao(0x04,0x29);
-        else if(g_bcct_value < 950)   fan5405_config_interface_liao(0x04,0x39);
-        else if(g_bcct_value < 1050)  fan5405_config_interface_liao(0x04,0x49);
-        else if(g_bcct_value < 1150)  fan5405_config_interface_liao(0x04,0x59);
-        else if(g_bcct_value < 1250)  fan5405_config_interface_liao(0x04,0x69);
-        else if(g_bcct_value == 1250) fan5405_config_interface_liao(0x04,0x79);
-        else                          fan5405_config_interface_liao(0x04,0x19);
+        if(g_bcct_value < 550)        pchr_turn_off_charging_bq24158();
+        else if(g_bcct_value < 650)   bq24158_config_interface_reg(0x04,0x09); 
+        else if(g_bcct_value < 750)   bq24158_config_interface_reg(0x04,0x19);
+        else if(g_bcct_value < 850)   bq24158_config_interface_reg(0x04,0x29);
+        else if(g_bcct_value < 950)   bq24158_config_interface_reg(0x04,0x39);
+        else if(g_bcct_value < 1050)  bq24158_config_interface_reg(0x04,0x49);
+        else if(g_bcct_value < 1150)  bq24158_config_interface_reg(0x04,0x59);
+        else if(g_bcct_value < 1250)  bq24158_config_interface_reg(0x04,0x69);
+        else if(g_bcct_value == 1250) bq24158_config_interface_reg(0x04,0x79);
+        else                          bq24158_config_interface_reg(0x04,0x19);
         //---------------------------------------------------
         
-        fan5405_config_interface_liao(0x05,0x04);
+        bq24158_config_interface_reg(0x05,0x04);
     }
     else
     {
-        fan5405_config_interface_liao(0x01,0x78);        
+        bq24158_config_interface_reg(0x01,0x78);        
     } 
 }
 
-extern kal_uint32 fan5405_read_interface (kal_uint8 RegNum, kal_uint8 *val, kal_uint8 MASK, kal_uint8 SHIFT);
+extern kal_uint32 bq24158_read_interface (kal_uint8 RegNum, kal_uint8 *val, kal_uint8 MASK, kal_uint8 SHIFT);
 
 int get_bat_charging_current_level(void)
 {
@@ -1572,7 +1572,7 @@ int get_bat_charging_current_level(void)
          (BMT_status.charger_type == NONSTANDARD_CHARGER) )
     {
         //Get current level
-        fan5405_read_interface(0x1, &ret_val, 0x3, 0x6);
+        bq24158_read_interface(0x1, &ret_val, 0x3, 0x6);
         
         //Parsing
         if(ret_val==0x00)         return 100;
@@ -1585,7 +1585,7 @@ int get_bat_charging_current_level(void)
              (BMT_status.charger_type == CHARGING_HOST) )
     {
         //Get current level
-        fan5405_read_interface(0x4, &ret_val, 0x7, 0x4);
+        bq24158_read_interface(0x4, &ret_val, 0x7, 0x4);
         
         //Parsing
         if(ret_val==0x00)         return  550;
@@ -1606,7 +1606,7 @@ int get_bat_charging_current_level(void)
 
 int set_bat_charging_current_limit(int current_limit)
 {
-    printk("[BATTERY:fan5405] set_bat_charging_current_limit (%d)\r\n", current_limit);
+    printk("[BATTERY:bq24158] set_bat_charging_current_limit (%d)\r\n", current_limit);
 
     if(current_limit != -1)
     {
@@ -1625,7 +1625,7 @@ int set_bat_charging_current_limit(int current_limit)
     return g_bcct_flag;
 }   
 
-void ChargerHwInit_fan5405(void)
+void ChargerHwInit_bq24158(void)
 {
     if (Enable_BATDRV_LOG == 1) {
         printk("[MT6329 BAT_probe] ChargerHwInit\n" );
@@ -1636,47 +1636,47 @@ void ChargerHwInit_fan5405(void)
         if(g_enable_high_vbat_spec == 1)
         {
             if(g_pmic_cid == 0x1020)
-                fan5405_config_interface_liao(0x06,0x70);    
+                bq24158_config_interface_reg(0x06,0x70);    
             else
-                fan5405_config_interface_liao(0x06,0x77);
+                bq24158_config_interface_reg(0x06,0x77);
         }
         else
-            fan5405_config_interface_liao(0x06,0x70);
+            bq24158_config_interface_reg(0x06,0x70);
         
-        fan5405_config_interface_liao(0x00,0x80);
-        fan5405_config_interface_liao(0x01,0xb9);
+        bq24158_config_interface_reg(0x00,0x80);
+        bq24158_config_interface_reg(0x01,0xb9);
 
         if(g_enable_high_vbat_spec == 1)
         {
             if(g_pmic_cid == 0x1020)
-                fan5405_config_interface_liao(0x02,0x8e);
+                bq24158_config_interface_reg(0x02,0x8e);
             else    
-                fan5405_config_interface_liao(0x02,0xaa);
+                bq24158_config_interface_reg(0x02,0xaa);
         }
         else
-            fan5405_config_interface_liao(0x02,0x8e);
+            bq24158_config_interface_reg(0x02,0x8e);
         
-        fan5405_config_interface_liao(0x05,0x04);
+        bq24158_config_interface_reg(0x05,0x04);
         
         if(g_low_power_ready == 1)
-            fan5405_config_interface_liao(0x04,0x19);
+            bq24158_config_interface_reg(0x04,0x19);
         else
-            fan5405_config_interface_liao(0x04,0x1B); //194mA
+            bq24158_config_interface_reg(0x04,0x1B); //194mA
         
         temp_init_flag =1;    
     }
     else
     {
-        fan5405_config_interface_liao(0x00,0x80);
+        bq24158_config_interface_reg(0x00,0x80);
     }
 }
 
-void fan5405_set_ac_current(void)
+void bq24158_set_ac_current(void)
 {
     kal_uint8 reg_set_value=0;
     
     if (Enable_BATDRV_LOG == 1) {
-        printk("[BATTERY:fan5405] fan5405_set_ac_charging_current \r\n");    
+        printk("[BATTERY:bq24158] bq24158_set_ac_charging_current \r\n");    
     }    
     
     #if 0
@@ -1690,27 +1690,27 @@ void fan5405_set_ac_current(void)
     if(g_enable_high_vbat_spec == 1)
     {
         if(g_pmic_cid == 0x1020)
-            fan5405_config_interface_liao(0x06,0x70);
+            bq24158_config_interface_reg(0x06,0x70);
         else    
-            fan5405_config_interface_liao(0x06,0x77);
+            bq24158_config_interface_reg(0x06,0x77);
     }
     else
-        fan5405_config_interface_liao(0x06,0x70);
+        bq24158_config_interface_reg(0x06,0x70);
             
-    fan5405_config_interface_liao(0x01,0xF8);
+    bq24158_config_interface_reg(0x01,0xF8);
     
     if(g_enable_high_vbat_spec == 1)
     {
         if(g_pmic_cid == 0x1020)
-            fan5405_config_interface_liao(0x02,0x8E);
+            bq24158_config_interface_reg(0x02,0x8E);
         else            
-            fan5405_config_interface_liao(0x02,0xaa);
+            bq24158_config_interface_reg(0x02,0xaa);
     }
     else
-        fan5405_config_interface_liao(0x02,0x8E);
+        bq24158_config_interface_reg(0x02,0x8E);
     
-    fan5405_config_interface_liao(0x04,0x79);
-    fan5405_config_interface_liao(0x05,0x04);
+    bq24158_config_interface_reg(0x04,0x79);
+    bq24158_config_interface_reg(0x05,0x04);
     #endif
 
     #if 1
@@ -1724,78 +1724,78 @@ void fan5405_set_ac_current(void)
     if(g_enable_high_vbat_spec == 1)
     {
         if(g_pmic_cid == 0x1020)
-            fan5405_config_interface_liao(0x06,0x70);
+            bq24158_config_interface_reg(0x06,0x70);
         else
-            fan5405_config_interface_liao(0x06,0x77); //set ISAFE
+            bq24158_config_interface_reg(0x06,0x77); //set ISAFE
     }
     else
-        fan5405_config_interface_liao(0x06,0x70); //set ISAFE
+        bq24158_config_interface_reg(0x06,0x70); //set ISAFE
     
 #if defined(MTK_JEITA_STANDARD_SUPPORT)  
      if(g_temp_status == TEMP_NEG_10_TO_POS_0)
      {          
-         fan5405_config_interface_liao(0x05,0x24);
-         fan5405_config_interface_liao(0x01,0x78); //for low temp      
-         fan5405_config_interface_liao(0x02,0x52); //for 3.9v CV threshold
+         bq24158_config_interface_reg(0x05,0x24);
+         bq24158_config_interface_reg(0x01,0x78); //for low temp      
+         bq24158_config_interface_reg(0x02,0x52); //for 3.9v CV threshold
      }
      else 
      {          
-         fan5405_config_interface_liao(0x05,0x04); //release limitation of 325mA  FAN_CON5
-         //fan5405_set_iocharge(0x01);               //FAN5405 CON4 IOCHARGE          
+         bq24158_config_interface_reg(0x05,0x04); //release limitation of 325mA  FAN_CON5
+         //bq24158_set_iocharge(0x01);               //bq24158 CON4 IOCHARGE          
          
          if(g_low_power_ready == 1)
-             fan5405_config_interface_liao(0x04,0x19);
+             bq24158_config_interface_reg(0x04,0x19);
          else
-             fan5405_config_interface_liao(0x04,0x1B); //194mA
+             bq24158_config_interface_reg(0x04,0x1B); //194mA
          
-         fan5405_config_interface_liao(0x01,0xB8);
+         bq24158_config_interface_reg(0x01,0xB8);
           
          if(g_temp_status == TEMP_POS_10_TO_POS_45)
          {
              if(g_enable_high_vbat_spec == 1)
              {
                 if(g_pmic_cid == 0x1020)
-                    fan5405_config_interface_liao(0x02,0x8E);
+                    bq24158_config_interface_reg(0x02,0x8E);
                 else
-                    fan5405_config_interface_liao(0x02,0xaa); 
+                    bq24158_config_interface_reg(0x02,0xaa); 
              }
              else
-                fan5405_config_interface_liao(0x02,0x8E); //for 4.2v CV threshold
+                bq24158_config_interface_reg(0x02,0x8E); //for 4.2v CV threshold
          }
          else
          {    
-             fan5405_config_interface_liao(0x02,0x7A); //for 4.1v CV threshold  mtk71259 20120720
+             bq24158_config_interface_reg(0x02,0x7A); //for 4.1v CV threshold  mtk71259 20120720
          }
      }
 #else    
-    fan5405_config_interface_liao(0x01,0xF8);
+    bq24158_config_interface_reg(0x01,0xF8);
 
     if(g_enable_high_vbat_spec == 1)
     {
         if(g_pmic_cid == 0x1020)
-            fan5405_config_interface_liao(0x02,0x8E);
+            bq24158_config_interface_reg(0x02,0x8E);
         else
-            fan5405_config_interface_liao(0x02,0xaa);
+            bq24158_config_interface_reg(0x02,0xaa);
     }
     else
-        fan5405_config_interface_liao(0x02,0x8E);
+        bq24158_config_interface_reg(0x02,0x8E);
 
-    #if defined(FAN5405_AC_CHARGING_CURRENT_1250)
+    #if defined(bq24158_AC_CHARGING_CURRENT_1250)
         reg_set_value=0x70;
     #else
-        #if defined(FAN5405_AC_CHARGING_CURRENT_1150)
+        #if defined(bq24158_AC_CHARGING_CURRENT_1150)
             reg_set_value=0x60;
         #else
-            #if defined(FAN5405_AC_CHARGING_CURRENT_1050)
+            #if defined(bq24158_AC_CHARGING_CURRENT_1050)
                 reg_set_value=0x50;
             #else
-                #if defined(FAN5405_AC_CHARGING_CURRENT_950)
+                #if defined(bq24158_AC_CHARGING_CURRENT_950)
                     reg_set_value=0x40;
                 #else
-                    #if defined(FAN5405_AC_CHARGING_CURRENT_850)
+                    #if defined(bq24158_AC_CHARGING_CURRENT_850)
                         reg_set_value=0x30;
                     #else
-                        #if defined(FAN5405_AC_CHARGING_CURRENT_750)
+                        #if defined(bq24158_AC_CHARGING_CURRENT_750)
                             reg_set_value=0x20; 
                         #else
                             reg_set_value=0x10;                                                
@@ -1809,40 +1809,40 @@ void fan5405_set_ac_current(void)
         reg_set_value += 0x09;
     else
         reg_set_value += 0x0B;
-    fan5405_config_interface_liao(0x04,reg_set_value);
+    bq24158_config_interface_reg(0x04,reg_set_value);
     
-    fan5405_config_interface_liao(0x05,0x04);
+    bq24158_config_interface_reg(0x05,0x04);
 #endif    
     
     #endif
 }
 
-void select_charging_curret_fan5405(void)
+void select_charging_curret_bq24158(void)
 {
     if( g_temp_CC_value == Cust_CC_0MA)
     {
-        pchr_turn_off_charging_fan5405();
+        pchr_turn_off_charging_bq24158();
         xlog_printk(ANDROID_LOG_DEBUG, "Power/Battery", "[BATTERY] charging current is set 0mA !\r\n");
     }
     else if (g_ftm_battery_flag) 
     {
-        printk("[BATTERY:fan5405] FTM charging : %d\r\n", charging_level_data[0]);    
+        printk("[BATTERY:bq24158] FTM charging : %d\r\n", charging_level_data[0]);    
         g_temp_CC_value = charging_level_data[0];
 
         if(g_temp_CC_value == Cust_CC_450MA)
         { 
-            fan5405_config_interface_liao(0x01,0x78);
+            bq24158_config_interface_reg(0x01,0x78);
 
             if (Enable_BATDRV_LOG == 1) {
-                printk("[BATTERY:fan5405] fan5405_config_interface_liao(0x01,0x78) \r\n");    
+                printk("[BATTERY:bq24158] bq24158_config_interface_reg(0x01,0x78) \r\n");    
             }
         }
         else
         {            
-            fan5405_set_ac_current();        
+            bq24158_set_ac_current();        
 
             if (Enable_BATDRV_LOG == 1) {
-                printk("[BATTERY:fan5405] fan5405_set_ac_current \r\n");    
+                printk("[BATTERY:bq24158] bq24158_set_ac_current \r\n");    
             }
         }        
     }
@@ -1855,30 +1855,30 @@ void select_charging_curret_fan5405(void)
             {
                 if (g_usb_state == USB_SUSPEND)
                 {
-                    fan5405_config_interface_liao(0x01,0xbc);
+                    bq24158_config_interface_reg(0x01,0xbc);
                     if (Enable_BATDRV_LOG == 1) {
-                        printk("[BATTERY:fan5405] Disable charging\r\n");    
+                        printk("[BATTERY:bq24158] Disable charging\r\n");    
                     }
                 }
                 else if (g_usb_state == USB_UNCONFIGURED)
                 {
-                    fan5405_config_interface_liao(0x01,0x38);
+                    bq24158_config_interface_reg(0x01,0x38);
                     if (Enable_BATDRV_LOG == 1) {
-                        printk("[BATTERY:fan5405] g_usb_state == USB_UNCONFIGURED \r\n");    
+                        printk("[BATTERY:bq24158] g_usb_state == USB_UNCONFIGURED \r\n");    
                     }
                 }
                 else if (g_usb_state == USB_CONFIGURED)
                 {
-                    fan5405_config_interface_liao(0x01,0x78);
+                    bq24158_config_interface_reg(0x01,0x78);
                     if (Enable_BATDRV_LOG == 1) {
-                        printk("[BATTERY:fan5405] g_usb_state == USB_CONFIGURED \r\n");    
+                        printk("[BATTERY:bq24158] g_usb_state == USB_CONFIGURED \r\n");    
                     }
                 }
                 else
                 {
-                    fan5405_config_interface_liao(0x01,0x78);
+                    bq24158_config_interface_reg(0x01,0x78);
                     if (Enable_BATDRV_LOG == 1) {
-                        printk("[BATTERY:fan5405] fan5405_config_interface_liao(0x01,0x78); 1\r\n");    
+                        printk("[BATTERY:bq24158] bq24158_config_interface_reg(0x01,0x78); 1\r\n");    
                     }
                 }
             }
@@ -1887,44 +1887,44 @@ void select_charging_curret_fan5405(void)
 #if defined(MTK_JEITA_STANDARD_SUPPORT)            
                 if(g_temp_status == TEMP_NEG_10_TO_POS_0)
                 {
-                    fan5405_config_interface_liao(0x05,0x24);
-                    fan5405_config_interface_liao(0x01,0x78); //for low temp    
-                    fan5405_config_interface_liao(0x02,0x52); //for 3.9v CV threshold
+                    bq24158_config_interface_reg(0x05,0x24);
+                    bq24158_config_interface_reg(0x01,0x78); //for low temp    
+                    bq24158_config_interface_reg(0x02,0x52); //for 3.9v CV threshold
                 }
                 else 
                 {
-                    fan5405_config_interface_liao(0x05,0x04);
-                    //fan5405_set_iocharge(0x02);
+                    bq24158_config_interface_reg(0x05,0x04);
+                    //bq24158_set_iocharge(0x02);
                     
                     if(g_low_power_ready == 1)
-                        fan5405_config_interface_liao(0x04,0x29);
+                        bq24158_config_interface_reg(0x04,0x29);
                     else
-                        fan5405_config_interface_liao(0x04,0x2B); //194mA
+                        bq24158_config_interface_reg(0x04,0x2B); //194mA
                     
-                    fan5405_config_interface_liao(0x01,0x78);
+                    bq24158_config_interface_reg(0x01,0x78);
 
                     if(g_temp_status == TEMP_POS_10_TO_POS_45)
                     {
                         if(g_enable_high_vbat_spec == 1)
                         {
                             if(g_pmic_cid == 0x1020)
-                                fan5405_config_interface_liao(0x02,0x8E);
+                                bq24158_config_interface_reg(0x02,0x8E);
                             else
-                                fan5405_config_interface_liao(0x02,0xaa);
+                                bq24158_config_interface_reg(0x02,0xaa);
                         }
                         else
-                            fan5405_config_interface_liao(0x02,0x8E); //for 4.2v CV threshold    
+                            bq24158_config_interface_reg(0x02,0x8E); //for 4.2v CV threshold    
                     }
                     else
                     {    
-                        fan5405_config_interface_liao(0x02,0x7A); //for 4.1v CV threshold  mtk71259 20120720 FA
+                        bq24158_config_interface_reg(0x02,0x7A); //for 4.1v CV threshold  mtk71259 20120720 FA
                     }
                 }                       
 #else            
-                fan5405_config_interface_liao(0x01,0x78);
+                bq24158_config_interface_reg(0x01,0x78);
 #endif                
                 if (Enable_BATDRV_LOG == 1) {
-                    printk("[BATTERY:fan5405] fan5405_config_interface_liao(0x01,0x78); 2\r\n");    
+                    printk("[BATTERY:bq24158] bq24158_config_interface_reg(0x01,0x78); 2\r\n");    
                 }            
             }
         } 
@@ -1933,65 +1933,65 @@ void select_charging_curret_fan5405(void)
 #if defined(MTK_JEITA_STANDARD_SUPPORT)
             if(g_temp_status == TEMP_NEG_10_TO_POS_0)
             {
-                fan5405_config_interface_liao(0x05,0x24);
-                fan5405_config_interface_liao(0x01,0x78); //for low temp    
-                fan5405_config_interface_liao(0x02,0x52);  //for 3.9v CV threshold
+                bq24158_config_interface_reg(0x05,0x24);
+                bq24158_config_interface_reg(0x01,0x78); //for low temp    
+                bq24158_config_interface_reg(0x02,0x52);  //for 3.9v CV threshold
             }
             else 
             {
-                fan5405_config_interface_liao(0x05,0x04);
-                //fan5405_set_iocharge(0x02);
+                bq24158_config_interface_reg(0x05,0x04);
+                //bq24158_set_iocharge(0x02);
                 
                 if(g_low_power_ready == 1)
-                    fan5405_config_interface_liao(0x04,0x29);
+                    bq24158_config_interface_reg(0x04,0x29);
                 else
-                    fan5405_config_interface_liao(0x04,0x2B); //194mA
+                    bq24158_config_interface_reg(0x04,0x2B); //194mA
                 
-                fan5405_config_interface_liao(0x01,0x78);
+                bq24158_config_interface_reg(0x01,0x78);
                 
                 if(g_temp_status == TEMP_POS_10_TO_POS_45)
                 {
                     if(g_enable_high_vbat_spec == 1)
                     {
                         if(g_pmic_cid == 0x1020)
-                            fan5405_config_interface_liao(0x02,0x8E);
+                            bq24158_config_interface_reg(0x02,0x8E);
                         else
-                            fan5405_config_interface_liao(0x02,0xaa);
+                            bq24158_config_interface_reg(0x02,0xaa);
                     }
                     else
-                        fan5405_config_interface_liao(0x02,0x8E); //for 4.2v CV threshold
+                        bq24158_config_interface_reg(0x02,0x8E); //for 4.2v CV threshold
                 }
                 else
                 {    
-                    fan5405_config_interface_liao(0x02,0x7A); //for 4.1v CV threshold mtk71259
+                    bq24158_config_interface_reg(0x02,0x7A); //for 4.1v CV threshold mtk71259
                 }
             }
 #else        
-            fan5405_config_interface_liao(0x01,0x78);
+            bq24158_config_interface_reg(0x01,0x78);
 #endif            
             if (Enable_BATDRV_LOG == 1) {
-                printk("[BATTERY:fan5405] BMT_status.charger_type == NONSTANDARD_CHARGER \r\n");    
+                printk("[BATTERY:bq24158] BMT_status.charger_type == NONSTANDARD_CHARGER \r\n");    
             }
         } 
         else if (BMT_status.charger_type == STANDARD_CHARGER) 
         {
-            fan5405_set_ac_current();           
+            bq24158_set_ac_current();           
         }
         else if (BMT_status.charger_type == CHARGING_HOST) 
         {
-            fan5405_set_ac_current();           
+            bq24158_set_ac_current();           
         }
         else 
         {
-            fan5405_config_interface_liao(0x01,0x78);
+            bq24158_config_interface_reg(0x01,0x78);
             if (Enable_BATDRV_LOG == 1) {
-                printk("[BATTERY:fan5405] fan5405_config_interface_liao(0x01,0x78); 3\r\n");    
+                printk("[BATTERY:bq24158] bq24158_config_interface_reg(0x01,0x78); 3\r\n");    
             }           
         }        
     }
 }
 
-void pchr_turn_on_charging_fan5405(void)
+void pchr_turn_on_charging_bq24158(void)
 {
     mt_set_gpio_mode(gpio_number,gpio_on_mode);  
     mt_set_gpio_dir(gpio_number,gpio_on_dir);
@@ -1999,52 +1999,52 @@ void pchr_turn_on_charging_fan5405(void)
 
     if ( BMT_status.bat_charging_state == CHR_ERROR ) 
     {
-        printk("[BATTERY:fan5405] Charger Error, turn OFF charging !\r\n");
-        pchr_turn_off_charging_fan5405();
+        printk("[BATTERY:bq24158] Charger Error, turn OFF charging !\r\n");
+        pchr_turn_off_charging_bq24158();
     }
     else if( (get_boot_mode()==META_BOOT) || (get_boot_mode()==ADVMETA_BOOT) )
     {   
-        printk("[BATTERY:fan5405] In meta or advanced meta mode, disable charging.\r\n");    
-        pchr_turn_off_charging_fan5405();
+        printk("[BATTERY:bq24158] In meta or advanced meta mode, disable charging.\r\n");    
+        pchr_turn_off_charging_bq24158();
     }
     else
     {
-        ChargerHwInit_fan5405();
+        ChargerHwInit_bq24158();
     
         if (Enable_BATDRV_LOG == 1) {
-            printk("[BATTERY:fan5405] pchr_turn_on_charging !\r\n");
+            printk("[BATTERY:bq24158] pchr_turn_on_charging !\r\n");
         }
 
         if (g_bcct_flag == 1)
         {
             select_charging_curret_bcct();
             if (Enable_BATDRV_LOG == 1) {
-                printk("[BATTERY:fan5405] select_charging_curret_bcct !\n");
+                printk("[BATTERY:bq24158] select_charging_curret_bcct !\n");
             }
         }
         else
         {
-            select_charging_curret_fan5405();
+            select_charging_curret_bq24158();
             if (Enable_BATDRV_LOG == 1) {
-                printk("[BATTERY:fan5405] select_charging_curret_fan5405 !\n");
+                printk("[BATTERY:bq24158] select_charging_curret_bq24158 !\n");
             }
         }
             
         if(gFG_booting_counter_I_FLAG == 2)
         {
             if (Enable_BATDRV_LOG == 1) {
-                printk("[BATTERY:fan5405] charger enable !\r\n");
+                printk("[BATTERY:bq24158] charger enable !\r\n");
             }
         }
         else
         {
-            //pchr_turn_off_charging_fan5405();
-            printk("[BATTERY:fan5405] wait gFG_booting_counter_I_FLAG==2 (%d)\r\n", gFG_booting_counter_I_FLAG);
+            //pchr_turn_off_charging_bq24158();
+            printk("[BATTERY:bq24158] wait gFG_booting_counter_I_FLAG==2 (%d)\r\n", gFG_booting_counter_I_FLAG);
         }    
     }
 }
 
-void pchr_turn_off_charging_fan5405 (void)
+void pchr_turn_off_charging_bq24158 (void)
 {
 #if defined(CONFIG_USB_MTK_HDRC_HCD)
     if(mt_usb_is_device())
@@ -2056,10 +2056,10 @@ void pchr_turn_off_charging_fan5405 (void)
         mt_set_gpio_out(gpio_number,gpio_off_out);
 
         if (Enable_BATDRV_LOG >= 1) {
-            printk("[BATTERY] pchr_turn_off_charging_fan5405 !\r\n");
+            printk("[BATTERY] pchr_turn_off_charging_bq24158 !\r\n");
         }
 
-        fan5405_config_interface_liao(0x01,0xbc);    
+        bq24158_config_interface_reg(0x01,0xbc);    
         
 #if defined(CONFIG_USB_MTK_HDRC_HCD)
     }
@@ -2364,7 +2364,7 @@ int do_jeita_state_machine(void)
 }
 #endif
 
-int BAT_CheckBatteryStatus_fan5405(void)
+int BAT_CheckBatteryStatus_bq24158(void)
 {
     int BAT_status = PMU_STATUS_OK;
     int i = 0;
@@ -2457,7 +2457,7 @@ int BAT_CheckBatteryStatus_fan5405(void)
     BMT_status.ICharging = g_Get_I_Charging();
 
     if (Enable_BATDRV_LOG == 1) {
-        printk("[BATTERY:ADC:fan5405] VCHR:%d BAT_SENSE:%d I_SENSE:%d TBAT:%d (%d)\n", 
+        printk("[BATTERY:ADC:bq24158] VCHR:%d BAT_SENSE:%d I_SENSE:%d TBAT:%d (%d)\n", 
             BMT_status.charger_vol, BMT_status.ADC_BAT_SENSE, BMT_status.ADC_I_SENSE, BMT_status.temperature, TBAT_OVER_CRITICAL_LOW);
     }
 
@@ -2612,6 +2612,7 @@ int BAT_CheckBatteryStatus_fan5405(void)
             batteryIndex = 0;
         /**************** Averaging : END ****************/
     }
+
 #if !defined(MTK_KERNEL_POWER_OFF_CHARGING)
     //workaround--------------------------------------------------
     if( (gFG_booting_counter_I_FLAG < 2) && upmu_is_chr_det() )
@@ -2639,18 +2640,18 @@ int BAT_CheckBatteryStatus_fan5405(void)
                     boot_soc_temp, BMT_status.SOC, boot_soc_temp_count, gFG_DOD0, gFG_DOD1);
             }
         }       
-    }  
-#endif	
+    }    
     //------------------------------------------------------------
+#endif	
     
     if (Enable_BATDRV_LOG >= 1) {
-        printk("[BATTERY:AVG:fan5405] BatTemp:%d Vbat:%d VBatSen:%d SOC:%d ChrDet:%d Vchrin:%d Icharging:%d ChrType:%d USBstate:%d\r\n", 
+        printk("[BATTERY:AVG:bq24158] BatTemp:%d Vbat:%d VBatSen:%d SOC:%d ChrDet:%d Vchrin:%d Icharging:%d ChrType:%d USBstate:%d\r\n", 
            BMT_status.temperature ,BMT_status.bat_vol, BMT_status.ADC_BAT_SENSE, BMT_status.SOC, 
            upmu_is_chr_det(), BMT_status.charger_vol, BMT_status.ICharging, CHR_Type_num, g_usb_state );            
     }           
 
     if (Enable_BATDRV_LOG == 1) {        
-        printk("[BATTERY:FG:fan5405] %d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n", 
+        printk("[BATTERY:FG:bq24158] %d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n", 
            BMT_status.temperature ,BMT_status.bat_vol, BMT_status.ADC_BAT_SENSE, BMT_status.SOC, 
            upmu_is_chr_det(), BMT_status.charger_vol, BMT_status.ICharging, CHR_Type_num,
            FGADC_Get_BatteryCapacity_CoulombMothod(), FGADC_Get_BatteryCapacity_VoltageMothod(), BATTERY_AVERAGE_SIZE );
@@ -2774,7 +2775,7 @@ PMU_STATUS BAT_BatteryStatusFailAction(void)
     post_charging_time=0;
 
     /*  Disable charger */
-    pchr_turn_off_charging_fan5405();
+    pchr_turn_off_charging_bq24158();
 
     return PMU_STATUS_OK;
 }
@@ -2794,7 +2795,7 @@ PMU_STATUS BAT_ChargingOTAction(void)
     g_Charging_Over_Time = 1;
 
     /*  Disable charger*/
-    pchr_turn_off_charging_fan5405();
+    pchr_turn_off_charging_bq24158();
 
     return PMU_STATUS_OK;
 }
@@ -2849,7 +2850,7 @@ PMU_STATUS BAT_BatteryFullAction(void)
     g_Calibration_FG = 0;
 
     /*  Disable charger */
-    //pchr_turn_off_charging_fan5405();
+    //pchr_turn_off_charging_bq24158();
     
     gSyncPercentage=1;
     
@@ -3022,8 +3023,8 @@ void check_battery_exist(void)
         }
         else
         {
-            printk("[BATTERY] Battery is not exist, power off FAN5405 and system (%d)\n", baton_count);
-            pchr_turn_off_charging_fan5405();
+            printk("[BATTERY] Battery is not exist, power off bq24158 and system (%d)\n", baton_count);
+            pchr_turn_off_charging_bq24158();
             arch_reset(0,NULL);      
         }
     }    
@@ -3038,14 +3039,29 @@ void BAT_UpdateChargerStatus(void)
 	}
 #endif	
 }
-void BAT_thread_fan5405(void)
+void BAT_thread_bq24158(void)
 {    
-    kal_uint32 fan5405_status=0;
+    kal_uint32 bq24158_status=0;
     int i=0;
     int BAT_status = 0;
-    //kal_uint32 tmp32;	
+    //kal_uint32 tmp32;
     int ret_val=0;
+#if !defined(MTK_KERNEL_POWER_OFF_CHARGING)	
 
+    if(boot_check_once==1)
+    {
+        if( upmu_is_chr_det() == KAL_TRUE )
+        {
+            ret_val=get_bat_sense_volt(1);
+            if(ret_val > 4110)
+            {
+                g_bat_full_user_view = KAL_TRUE;                
+            }
+            printk("[BATTERY] ret_val=%d, g_bat_full_user_view=%d\n", ret_val, g_bat_full_user_view);
+        }
+        boot_check_once=0;
+    }
+#endif
     if (Enable_BATDRV_LOG == 1) {
         
 #if defined(MTK_JEITA_STANDARD_SUPPORT)        
@@ -3061,7 +3077,7 @@ void BAT_thread_fan5405(void)
         xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "GPIO_SWCHARGER_EN_PIN=%d\n", GPIO_SWCHARGER_EN_PIN );
 		xlog_printk(ANDROID_LOG_DEBUG, "Power/Battery", "SET TMR_RST\n");
 	}
-    fan5405_config_interface_liao(0x00,0x80);
+    bq24158_config_interface_reg(0x00,0x80);
 
     if( (g_battery_thermal_throttling_flag==1) || (g_battery_thermal_throttling_flag==3) )
     {
@@ -3147,7 +3163,7 @@ void BAT_thread_fan5405(void)
     }
 
     /* Check Battery Status */
-    BAT_status = BAT_CheckBatteryStatus_fan5405();
+    BAT_status = BAT_CheckBatteryStatus_bq24158();
     if( BMT_status.bat_charging_state == CHR_ERROR || BAT_status == PMU_STATUS_FAIL)
         g_Battery_Fail = KAL_TRUE;
     else
@@ -3164,34 +3180,34 @@ void BAT_thread_fan5405(void)
     {                    
         if(g_temp_status == TEMP_NEG_10_TO_POS_0)
         {
-            fan5405_config_interface_liao(0x02,0x52);   //for 3.9v CV threshold
+            bq24158_config_interface_reg(0x02,0x52);   //for 3.9v CV threshold
         }
         else if(g_temp_status == TEMP_POS_10_TO_POS_45)
         {
             if(g_enable_high_vbat_spec == 1)
             {
                 if(g_pmic_cid == 0x1020)
-                    fan5405_config_interface_liao(0x02,0x8E);
+                    bq24158_config_interface_reg(0x02,0x8E);
                 else
-                    fan5405_config_interface_liao(0x02,0xaa);
+                    bq24158_config_interface_reg(0x02,0xaa);
             }
             else
-                fan5405_config_interface_liao(0x02,0x8E);  //for 4.2v CV threshold
+                bq24158_config_interface_reg(0x02,0x8E);  //for 4.2v CV threshold
         }
         else if((g_temp_status == TEMP_POS_0_TO_POS_10)||(g_temp_status == TEMP_POS_45_TO_POS_60))
         {     
-            fan5405_config_interface_liao(0x02,0x7A);  //for 4.1v CV threshold  mtk71259 20120720 FA
+            bq24158_config_interface_reg(0x02,0x7A);  //for 4.1v CV threshold  mtk71259 20120720 FA
         }
         else{
             if(g_enable_high_vbat_spec == 1)
             {
                 if(g_pmic_cid == 0x1020)
-                    fan5405_config_interface_liao(0x02,0x8E);
+                    bq24158_config_interface_reg(0x02,0x8E);
                 else
-                    fan5405_config_interface_liao(0x02,0xaa);
+                    bq24158_config_interface_reg(0x02,0xaa);
             }
             else
-                fan5405_config_interface_liao(0x02,0x8E);  //for 4.2v CV threshold
+                bq24158_config_interface_reg(0x02,0x8E);  //for 4.2v CV threshold
         }
     }
 #else
@@ -3243,6 +3259,7 @@ void BAT_thread_fan5405(void)
 			}
 			boot_check_once=0;
 		}
+
 		mt6320_ac_update(&mt6320_ac_main);
 		mt6320_usb_update(&mt6320_usb_main);
 		mt6320_battery_update(&mt6320_battery_main);  	
@@ -3301,7 +3318,7 @@ void BAT_thread_fan5405(void)
         if (Enable_BATDRV_LOG >= 1) {
             xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[BATTERY] Charging Over Time. \n");
         }
-        pchr_turn_off_charging_fan5405();
+        pchr_turn_off_charging_bq24158();
 
         if(gFG_can_reset_flag == 1)
         {
@@ -3331,10 +3348,10 @@ void BAT_thread_fan5405(void)
             }
         }
 
-        fan5405_status = fan5405_get_chip_status();
+        bq24158_status = bq24158_get_chip_status();
         
         /* check battery full */
-        if( fan5405_status == 0x2 )
+        if( bq24158_status == 0x2 )
         {
             if(BMT_status.bat_vol >= 3900)
             {
@@ -3346,22 +3363,22 @@ void BAT_thread_fan5405(void)
                 BMT_status.TOPOFF_charging_time = 0;
                 BMT_status.POSTFULL_charging_time = 0;    
                 g_HW_Charging_Done = 1;            
-                //pchr_turn_off_charging_fan5405();
-                printk("[BATTERY:fan5405] Battery real full and disable charging (%d) \n", fan5405_status); 
+                //pchr_turn_off_charging_bq24158();
+                printk("[BATTERY:bq24158] Battery real full and disable charging (%d) \n", bq24158_status); 
                 return;
             }
             else
             {
-                printk("[BATTERY:fan5405] HW Battery real full ?? (%d,%d) \n", fan5405_status, BMT_status.bat_vol);
-                pchr_turn_off_charging_fan5405();
+                printk("[BATTERY:bq24158] HW Battery real full ?? (%d,%d) \n", bq24158_status, BMT_status.bat_vol);
+                pchr_turn_off_charging_bq24158();
             }
         }
         
         /* Charging flow begin */
         BMT_status.total_charging_time += BAT_TASK_PERIOD;
-        pchr_turn_on_charging_fan5405();        
+        pchr_turn_on_charging_bq24158();        
         if (Enable_BATDRV_LOG >= 1) {
-            printk("[BATTERY:fan5405] Total charging timer=%ld \n", 
+            printk("[BATTERY:bq24158] Total charging timer=%ld \n", 
                 BMT_status.total_charging_time);    
         }
     }
@@ -3373,11 +3390,11 @@ void BAT_thread_fan5405(void)
 #endif
 
     if (Enable_BATDRV_LOG >= 1) {
-        fan5405_dump_register();
+        bq24158_dump_register();
     }
 
     if (Enable_BATDRV_LOG == 1) {
-        printk("[BAT_thread_fan5405] End ....\n");
+        printk("[BAT_thread_bq24158] End ....\n");
     }
 }
 
@@ -3385,7 +3402,7 @@ void BAT_thread_fan5405(void)
 //// Internal API
 ///////////////////////////////////////////////////////////////////////////////////////////
 int g_FG_init = 0;
-extern unsigned int g_fan5405_rdy_flag;
+extern unsigned int g_bq24158_rdy_flag;
 int bat_thread_kthread(void *x)
 {
     /* Run on a process content */  
@@ -3396,8 +3413,8 @@ int bat_thread_kthread(void *x)
             mutex_lock(&bat_mutex);
             
 #if defined(CONFIG_POWER_EXT)			
-			if (g_fan5405_rdy_flag) {
-				BAT_thread_fan5405();
+			if (g_bq24158_rdy_flag) {
+				BAT_thread_bq24158();
 			}
 #else
             if(g_FG_init == 0)
@@ -3415,8 +3432,8 @@ int bat_thread_kthread(void *x)
                 {            
                     FGADC_thread_kthread();
                 }
-				if (g_fan5405_rdy_flag) {
-					BAT_thread_fan5405();                      
+				if (g_bq24158_rdy_flag) {
+					BAT_thread_bq24158();                      
 				}
             }
 #endif
@@ -4272,7 +4289,7 @@ int charger_hv_detect_sw_thread_handler(void *unused)
         {
             xlog_printk(ANDROID_LOG_DEBUG, "Power/Battery", "[charger_hv_detect_sw_thread_handler] charger hv\n");    
             
-            pchr_turn_off_charging_fan5405();
+            pchr_turn_off_charging_bq24158();
         }
         else
         {
@@ -4601,7 +4618,7 @@ static int mt6320_battery_resume(struct platform_device *dev)
         
         mutex_lock(&bat_mutex);
         FGADC_thread_kthread();
-        BAT_thread_fan5405();
+        BAT_thread_bq24158();
         mutex_unlock(&bat_mutex);
     }    
 #endif

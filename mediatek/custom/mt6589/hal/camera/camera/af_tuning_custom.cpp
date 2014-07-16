@@ -68,7 +68,16 @@ getAFParam()
         1,   // i4AFS_MODE  0 : singleAF, 1:smoothAF
         1,   // i4AFC_MODE  0 : singleAF, 1:smoothAF
         1,   // i4VAFC_MODE  0 : singleAF, 1:smoothAF        
-        1    // i4ReadOTP 0 : disable, 1:enable 
+        1,   // i4ReadOTP 0 : disable, 1:enable 
+        5,   // i4FD_DETECT_CNT
+        5,   // i4FD_NONE_CNT
+        
+        50,  // i4FV_SHOCK_THRES
+        30000,  // i4FV_SHOCK_OFFSET        
+        5,   // i4FV_VALID_CNT 2
+        20, // i4FV_SHOCK_FRM_CNT 100
+        5    // i4FV_SHOCK_CNT 2
+        
     };
 
     return g_AFparam;
@@ -79,7 +88,7 @@ getAFConfig()
 {
     static AF_CONFIG_T g_AFconfig;
 
-    g_AFconfig.i4SGG_GAIN = 64;
+    g_AFconfig.i4SGG_GAIN = 16;
     g_AFconfig.i4SGG_GMR1 = 31;
     g_AFconfig.i4SGG_GMR2 = 63;
     g_AFconfig.i4SGG_GMR3 = 127;    

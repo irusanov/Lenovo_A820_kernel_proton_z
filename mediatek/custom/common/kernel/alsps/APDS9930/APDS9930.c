@@ -263,13 +263,13 @@ static long APDS9930_enable_als(struct i2c_client *client, int enable)
 	{
 		goto EXIT_ERR;
 	}
-	APS_LOG("APDS9930_CMM_ENABLE als value = %x\n",databuf[0]);
+	//APS_LOG("APDS9930_CMM_ENABLE als value = %x\n",databuf[0]);
 	
 	if(enable)
 		{
 			databuf[1] = databuf[0]|0x03;
 			databuf[0] = APDS9930_CMM_ENABLE;
-			APS_LOG("APDS9930_CMM_ENABLE enable als value = %x\n",databuf[1]);
+			//APS_LOG("APDS9930_CMM_ENABLE enable als value = %x\n",databuf[1]);
 			res = APDS9930_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res <= 0)
 			{
@@ -285,7 +285,7 @@ static long APDS9930_enable_als(struct i2c_client *client, int enable)
 			databuf[1] = databuf[0]&0xF8;
 		
 			databuf[0] = APDS9930_CMM_ENABLE;
-			APS_LOG("APDS9930_CMM_ENABLE disable als value = %x\n",databuf[1]);
+			//APS_LOG("APDS9930_CMM_ENABLE disable als value = %x\n",databuf[1]);
 			res = APDS9930_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res <= 0)
 			{
@@ -313,13 +313,13 @@ static long APDS9930_enable_ps(struct i2c_client *client, int enable)
 		goto EXIT_ERR;
 	}
 	
-	APS_LOG("APDS9930_CMM_ENABLE ps value = %x\n",databuf[0]);
+	//APS_LOG("APDS9930_CMM_ENABLE ps value = %x\n",databuf[0]);
 	
 	if(enable)
 		{
 			databuf[1] = databuf[0]|0x05;
 			databuf[0] = APDS9930_CMM_ENABLE;
-			APS_LOG("APDS9930_CMM_ENABLE enable ps value = %x\n",databuf[1]);	
+			//APS_LOG("APDS9930_CMM_ENABLE enable ps value = %x\n",databuf[1]);	
 			res = APDS9930_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res <= 0)
 			{
@@ -335,7 +335,7 @@ static long APDS9930_enable_ps(struct i2c_client *client, int enable)
 			databuf[1] = databuf[0]&0xF8;
 		
 			databuf[0] = APDS9930_CMM_ENABLE;
-			APS_LOG("APDS9930_CMM_ENABLE disable ps value = %x\n",databuf[1]);	
+			//APS_LOG("APDS9930_CMM_ENABLE disable ps value = %x\n",databuf[1]);	
 			res = APDS9930_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res <= 0)
 			{
@@ -861,6 +861,23 @@ static int APDS9930_get_als_value(struct APDS9930_priv *obj, u16 als)
 
 	if(!invalid)
 	{
+#if defined(MTK_AAL_SUPPORT)
+        int level_high = obj->hw->als_level[idx];
+    	int level_low = (idx > 0) ? obj->hw->als_level[idx-1] : 0;
+        int level_diff = level_high - level_low;
+		int value_high = obj->hw->als_value[idx];
+        int value_low = (idx > 0) ? obj->hw->als_value[idx-1] : 0;
+        int value_diff = value_high - value_low;
+        int value = 0;
+        
+        if ((level_low >= level_high) || (value_low >= value_high))
+            value = value_low;
+        else
+            value = (level_diff * value_low + (als - level_low) * value_diff + ((level_diff + 1) >> 1)) / level_diff;
+
+		APS_DBG("ALS: %d [%d, %d] => %d [%d, %d] \n", als, level_low, level_high, value, value_low, value_high);
+		return value;
+#endif			        
 		//APS_ERR("ALS: %05d => %05d\n", als, obj->hw->als_value[idx]);	
 		return obj->hw->als_value[idx];
 	}
@@ -982,7 +999,7 @@ static int APDS9930_get_ps_value(struct APDS9930_priv *obj, u16 ps)
 
 /*----------------------------------------------------------------------------*/
 /*for interrup work mode support -- by liaoxl.lenovo 12.08.2011*/
-#define DEBUG_APDS9930
+//#define DEBUG_APDS9930
 static void APDS9930_eint_work(struct work_struct *work)
 {
 	struct APDS9930_priv *obj = (struct APDS9930_priv *)container_of(work, struct APDS9930_priv, eint_work);
@@ -1162,8 +1179,133 @@ static int APDS9930_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-	
+#if 1
+static void apds9930_WriteCalibration(struct PS_CALI_DATA_STRUCT *data_cali)
+{
+
+	   APS_LOG("apds9930_WriteCalibration  1 %d," ,data_cali->close);
+		   APS_LOG("apds9930_WriteCalibration  2 %d," ,data_cali->far_away);
+		   APS_LOG("apds9930_WriteCalibration  3 %d,", data_cali->valid);
+		   
+	  if(data_cali->valid == 1)
+	  {
+	      if(data_cali->close < 100)
+	      	{
+		  	ps_cali.close = 200;
+			ps_cali.far_away= 150;
+			ps_cali.valid = 1;
+	      	}
+		  else if(data_cali->close > 900)
+		  {
+		  	ps_cali.close = 900;
+			ps_cali.far_away= 750;
+			ps_cali.valid = 1;
+	      	}
+		  else
+		  {
+			  ps_cali.close = data_cali->close;
+			ps_cali.far_away= data_cali->far_away;
+			ps_cali.valid = 1;
+		  }
+	  }
+	  
+
+}
+#endif
+
+#if 1
+static int apds9930_read_data_for_cali(struct i2c_client *client, struct PS_CALI_DATA_STRUCT *ps_data_cali)
+{
+     int i=0 ,err = 0,j = 0;
+	 u16 data[21],sum,data_cali;
+
+	 for(i = 0;i<20;i++)
+	 	{
+	 		mdelay(5);//50
+			if(err = APDS9930_read_ps(client,&data[i]))
+			{
+				APS_ERR("apds9930_read_data_for_cali fail: %d\n", i); 
+				break;
+			}
+			else
+				{
+					sum += data[i];
+			}
+			mdelay(55);//160
+	 	}
+	 
+	 for(j = 0;j<20;j++)
+	 	APS_LOG("%d\t",data[j]);
+	 
+	 if(i == 20)
+	 	{
+			data_cali = sum/20;
+			APS_LOG("apds9930_read_data_for_cali data = %d",data_cali);
+			if(data_cali>600)
+			return -1;
+			if(data_cali<=100)
+			{
+				ps_data_cali->close =data_cali*22/10;
+				ps_data_cali->far_away = data_cali*19/10;
+				ps_data_cali->valid =1;
+			}
+			else if(100<data_cali&&data_cali<300)
+			{
+				ps_data_cali->close = data_cali*2;
+				ps_data_cali->far_away =data_cali*17/10;
+				ps_data_cali->valid = 1;
+			}
+			else
+			{
+				ps_data_cali->close = data_cali*18/10;
+				ps_data_cali->far_away =data_cali*15/10;
+				ps_data_cali->valid = 1;
+			}
+		        if(ps_data_cali->close > 900)
+		       {
+		  	ps_data_cali->close = 900;
+			ps_data_cali->far_away = 750;
+			err= 0;
+	         	}
+			else  if(ps_data_cali->close < 100)
+			{
+			   ps_data_cali->close = 200;
+			   ps_data_cali->far_away = 150;
+			   err= 0;
+			}
+			else  if(ps_data_cali->close >= 100 && ps_data_cali->close < 300)
+			{
+			   ps_data_cali->close = 280;
+			   ps_data_cali->far_away = 200;
+			   err= 0;
+			}
+
+			ps_cali.close = ps_data_cali->close;
+			ps_cali.far_away= ps_data_cali->far_away;
+			ps_cali.valid = 1;
+			APS_LOG("apds9930_read_data_for_cali close  = %d,far_away = %d,valid = %d",ps_data_cali->close,ps_data_cali->far_away,ps_data_cali->valid);
+	 	}
+	 else
+	 	{
+	 	ps_data_cali->valid = 0;
+	 	err=  -1;
+	 	}
+	 return err;
+	 	
+
+}
+#endif
+
 /*----------------------------------------------------------------------------*/
+/************************tengdeqiang start*************************************/
+#define ALSPS				0X84
+#define ALSPS_GET_ALS_RAW_DATA2  	_IOR(ALSPS, 0x09, int)
+#define ALSPS_GET_PS_THD                                       _IOR(ALSPS, 0x0a, int)
+#define ALSPS_SET_PS_CALI  						_IOR(ALSPS, 0x0b, int)
+#define ALSPS_GET_PS_RAW_DATA_FOR_CALI          _IOR(ALSPS, 0x0f, int)
+
+
+/************************tengdeqiang end*************************************/
 static long APDS9930_unlocked_ioctl(struct file *file, unsigned int cmd,
        unsigned long arg)
 {
@@ -1174,7 +1316,7 @@ static long APDS9930_unlocked_ioctl(struct file *file, unsigned int cmd,
 	int dat;
 	uint32_t enable;
 	int ps_result;
-
+	struct PS_CALI_DATA_STRUCT ps_cali_temp;
 	switch (cmd)
 	{
 		case ALSPS_SET_PS_MODE:
@@ -1291,7 +1433,8 @@ static long APDS9930_unlocked_ioctl(struct file *file, unsigned int cmd,
 			}              
 			break;
 
-		case ALSPS_GET_ALS_RAW_DATA:    
+		case ALSPS_GET_ALS_RAW_DATA:  
+		case ALSPS_GET_ALS_RAW_DATA2: 
 			if((err = APDS9930_read_als(obj->client, &obj->als)))
 			{
 				goto err_out;
@@ -1304,7 +1447,60 @@ static long APDS9930_unlocked_ioctl(struct file *file, unsigned int cmd,
 				goto err_out;
 			}              
 			break;
+		case ALSPS_SET_PS_CALI:
+			dat = (void __user*)arg;
+			if(dat == NULL)
+			{
+				APS_LOG("dat == NULL\n");
+				err = -EINVAL;
+				break;	  
+			}
+			if(copy_from_user(&ps_cali_temp,dat, sizeof(ps_cali_temp)))
+			{
+				APS_LOG("copy_from_user\n");
+				err = -EFAULT;
+				break;	  
+			}
+			apds9930_WriteCalibration(&ps_cali_temp);
+			APS_LOG(" ALSPS_SET_PS_CALI %d,%d,%d\t",ps_cali_temp.close,ps_cali_temp.far_away,ps_cali_temp.valid);
+			break;
+		case ALSPS_GET_PS_RAW_DATA_FOR_CALI:
+			 APDS9930_enable_ps(obj->client, 1);
+			err = apds9930_read_data_for_cali(obj->client,&ps_cali_temp);
+			if(err)
+			{
+			   goto err_out;
+			}
+			//avgo9900_init_client(obj->client);
+			 APDS9930_enable_ps(obj->client, 0);
+			//avgo9900_enable(obj->client, 0);
+			if(copy_to_user(ptr, &ps_cali_temp, sizeof(ps_cali_temp)))
+			{
+				err = -EFAULT;
+				goto err_out;
+			}              
+			break;
+		case ALSPS_GET_PS_THD:    //ps_threshold
+			if(ps_cali.valid==1)
+			{
+				ps_cali_temp.close=ps_cali.close;
+				ps_cali_temp.far_away=ps_cali.far_away;
+				ps_cali_temp.valid=ps_cali.valid;
+			}
+			else
+			{
+				ps_cali_temp.close=atomic_read(&obj->ps_thd_val_high);
+				ps_cali_temp.far_away=atomic_read(&obj->ps_thd_val_low);
+				ps_cali_temp.valid=0;
+			}			
+			if(copy_to_user(ptr, &ps_cali_temp, sizeof(ps_cali_temp)))
+			{
+				err = -EFAULT;
+				goto err_out;
+			}              
+			break;
 		/*----------------------------------for factory mode test---------------------------------------*/
+		#if 0
 		case ALSPS_GET_PS_TEST_RESULT:
 			if((err = APDS9930_read_ps(obj->client, &obj->ps)))
 			{
@@ -1323,6 +1519,7 @@ static long APDS9930_unlocked_ioctl(struct file *file, unsigned int cmd,
 			}			   
 			break;
 			/*------------------------------------------------------------------------------------------*/
+			#endif
 		default:
 			APS_ERR("%s not supported = 0x%04x", __FUNCTION__, cmd);
 			err = -ENOIOCTLCMD;
@@ -1631,9 +1828,6 @@ int APDS9930_als_operate(void* self, uint32_t command, void* buff_in, int size_i
 				sensor_data = (hwm_sensor_data *)buff_out;
 				/*yucong MTK add for fixing known issue*/
 				APDS9930_read_als(obj->client, &obj->als);
-				#if defined(MTK_AAL_SUPPORT)
-				sensor_data->values[0] = obj->als;
-				#else
 				if(obj->als == 0)
 				{
 					sensor_data->values[0] = temp_als;				
@@ -1648,7 +1842,6 @@ int APDS9930_als_operate(void* self, uint32_t command, void* buff_in, int size_i
 					sensor_data->values[0] = APDS9930_get_als_value(obj, obj->als);
 					temp_als = sensor_data->values[0];
 				}
-				#endif
 				sensor_data->value_divide = 1;
 				sensor_data->status = SENSOR_STATUS_ACCURACY_MEDIUM;
 			}
@@ -1817,7 +2010,8 @@ static int APDS9930_probe(struct platform_device *pdev)
 {
 	struct alsps_hw *hw = get_cust_alsps_hw();
 
-	APDS9930_power(hw, 1);    
+	APDS9930_power(hw, 1);   
+	mdelay(100);
 	//APDS9930_force[0] = hw->i2c_num;
 	//APDS9930_force[1] = hw->i2c_addr[0];
 	//APS_DBG("I2C = %d, addr =0x%x\n",APDS9930_force[0],APDS9930_force[1]);

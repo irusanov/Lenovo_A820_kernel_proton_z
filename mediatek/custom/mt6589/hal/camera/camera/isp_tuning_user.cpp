@@ -118,32 +118,41 @@ IspTuningCustom::userSetting_EE(
 	MINT32 LOCK_EE_Y2 = rEE.ed_ctrl2.bits.USM_ED_Y2;   // 0~1023
 	MINT32 LOCK_EE_Y3 = rEE.ed_ctrl3.bits.USM_ED_Y3;   // 0~1023
 	MINT32 LOCK_EE_Y4 = rEE.ed_ctrl4.bits.USM_ED_Y4;   // 0~1023
+	MINT32 LOCK_EE_S5 = rEE.ed_ctrl5.bits.USM_ED_S5;   // 0~255
 	MINT32 LOCK_EE_CLIP = rEE.clip_ctrl.bits.USM_CLIP; // 0~255
 	MINT32 LOCK_EE_TH_OV = rEE.ed_ctrl6.bits.USM_ED_TH_OVER; // 0~255
 	MINT32 LOCK_EE_TH_UN = rEE.ed_ctrl6.bits.USM_ED_TH_UNDER; // 0~255
+	MINT32 USM_ED_Y1, USM_ED_Y2, USM_ED_Y3, USM_ED_Y4, USM_CLIP, USM_ED_TH_OVER, USM_ED_TH_UNDER;
 
     // Determine user setting EE parameter
     if (i4Slider < 0) {  // Soft EE
-        LOCK_EE_Y1 = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_Y1) * (1 + 0.5 * i4Slider) + 0.5), 0, 1023);
-        LOCK_EE_Y2 = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_Y2) * (1 + 0.3 * i4Slider) + 0.5), 0, 1023);
+        USM_ED_Y1 = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_Y1) * (1 + 0.5 * i4Slider) + 0.5), 0, 1023);
+        USM_ED_Y2 = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_Y2) * (1 + 0.3 * i4Slider) + 0.5), 0, 1023);
     }
     else { // Texture EE
-        LOCK_EE_Y1 = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_Y1) * (1 + 1.0 * i4Slider) + 0.5), 0, 1023);
-        LOCK_EE_Y2 = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_Y2) * (1 + 1.5 * i4Slider) + 0.5), 0, 1023);
+        USM_ED_Y1 = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_Y1) * (1 + 1.0 * i4Slider) + 0.5), 0, 1023);
+        USM_ED_Y2 = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_Y2) * (1 + 1.5 * i4Slider) + 0.5), 0, 1023);
     }
 
-	LOCK_EE_Y3 = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_Y3) * (1 + 0.2 * i4Slider) + 0.5), 0, 1023);
-	LOCK_EE_Y4 = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_Y4) * (1 + 0.2 * i4Slider) + 0.5), 0, 1023);
-	LOCK_EE_CLIP = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_CLIP) * (1 + 0.2 * i4Slider) + 0.5), 0, 1023);
-	LOCK_EE_TH_OV = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_TH_OV) * (1 + 0.2 * i4Slider) + 0.5), 0, 1023);
-	LOCK_EE_TH_UN = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_TH_UN) * (1 + 0.2 * i4Slider) + 0.5), 0, 1023);
+	USM_ED_Y3 = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_Y3) * (1 + 0.2 * i4Slider) + 0.5), 0, 1023);
+	USM_ED_Y4 = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_Y4) * (1 + 0.2 * i4Slider) + 0.5), 0, 1023);
+	USM_CLIP = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_CLIP) * (1 + 0.2 * i4Slider) + 0.5), 0, 255);
+	USM_ED_TH_OVER = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_TH_OV) * (1 + 0.2 * i4Slider) + 0.5), 0, 255);
+	USM_ED_TH_UNDER = LIMIT(static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_TH_UN) * (1 + 0.2 * i4Slider) + 0.5), 0, 255);
+
+	MINT32 EE_LCE_THO_1 = LIMIT(static_cast<MINT32>(USM_ED_TH_OVER - 10), 0, 255);
+	MINT32 EE_LCE_THO_2 = LIMIT(static_cast<MINT32>(USM_ED_TH_OVER - 20), 0, 255);
+	MINT32 EE_LCE_THO_3 = LIMIT(static_cast<MINT32>(USM_ED_TH_OVER - 30), 0, 255);
+	MINT32 EE_LCE_THU_1 = LIMIT(static_cast<MINT32>(USM_ED_TH_UNDER - 10), 0, 255);
+	MINT32 EE_LCE_THU_2 = LIMIT(static_cast<MINT32>(USM_ED_TH_UNDER - 20), 0, 255);
+	MINT32 EE_LCE_THU_3 = LIMIT(static_cast<MINT32>(USM_ED_TH_UNDER - 30), 0, 255);
 
     // USM_ED_S1
     MINT32 USM_ED_X1 = rEE.ed_ctrl1.bits.USM_ED_X1;
     MINT32 USM_ED_S1;
 
     if (USM_ED_X1 == 0) USM_ED_S1 = 0;
-    else USM_ED_S1 = static_cast<MINT32>(static_cast<MDOUBLE>(rEE.ed_ctrl1.bits.USM_ED_Y1) / USM_ED_X1 + 0.5);
+    else USM_ED_S1 = static_cast<MINT32>(static_cast<MDOUBLE>(USM_ED_Y1) / USM_ED_X1 + 0.5);
 
     if (USM_ED_S1 > 127) USM_ED_S1 = 127;
 
@@ -152,7 +161,7 @@ IspTuningCustom::userSetting_EE(
     MINT32 EE_LCE_S1_1;
 
     if (EE_LCE_X1_1 == 0) EE_LCE_S1_1 = 0;
-    else EE_LCE_S1_1 = static_cast<MINT32>(static_cast<MDOUBLE>(rEE.ed_ctrl1.bits.USM_ED_Y1) / EE_LCE_X1_1 + 0.5);
+    else EE_LCE_S1_1 = static_cast<MINT32>(static_cast<MDOUBLE>(USM_ED_Y1) / EE_LCE_X1_1 + 0.5);
 
     if (EE_LCE_S1_1 > 127) EE_LCE_S1_1 = 127;
 
@@ -161,7 +170,7 @@ IspTuningCustom::userSetting_EE(
     MINT32 EE_LCE_S1_2;
 
     if (EE_LCE_X1_2 == 0) EE_LCE_S1_2 = 0;
-    else EE_LCE_S1_2 = static_cast<MINT32>(static_cast<MDOUBLE>(rEE.ed_ctrl1.bits.USM_ED_Y1) / EE_LCE_X1_2 + 0.5);
+    else EE_LCE_S1_2 = static_cast<MINT32>(static_cast<MDOUBLE>(USM_ED_Y1) / EE_LCE_X1_2 + 0.5);
 
     if(EE_LCE_S1_2 > 127) EE_LCE_S1_2 = 127;
 
@@ -170,7 +179,7 @@ IspTuningCustom::userSetting_EE(
     MINT32 EE_LCE_S1_3;
 
     if (EE_LCE_X1_3 == 0) EE_LCE_S1_3 = 0;
-    else EE_LCE_S1_3 = static_cast<MINT32>(static_cast<MDOUBLE>(rEE.ed_ctrl1.bits.USM_ED_Y1) / EE_LCE_X1_3 + 0.5);
+    else EE_LCE_S1_3 = static_cast<MINT32>(static_cast<MDOUBLE>(USM_ED_Y1) / EE_LCE_X1_3 + 0.5);
 
     if (EE_LCE_S1_3 > 127) EE_LCE_S1_3 = 127;
 
@@ -184,7 +193,7 @@ IspTuningCustom::userSetting_EE(
     // EE_LCE_S2_3
     MINT32 EE_LCE_S2_3;
 
-    dY = rEE.ed_ctrl2.bits.USM_ED_Y2 - rEE.ed_ctrl1.bits.USM_ED_Y1;
+    dY = USM_ED_Y2 - USM_ED_Y1;
     if (dY > 0){
         // USM_ED_S2
         dX = USM_ED_X2 - USM_ED_X1;
@@ -237,7 +246,7 @@ IspTuningCustom::userSetting_EE(
     MINT32 USM_ED_X3 = rEE.ed_ctrl3.bits.USM_ED_X3;
     MINT32 USM_ED_S3;
     dX = USM_ED_X3 - USM_ED_X2;
-    dY = rEE.ed_ctrl3.bits.USM_ED_Y3 - rEE.ed_ctrl2.bits.USM_ED_Y2;
+    dY = USM_ED_Y3 - USM_ED_Y2;
     if (dY > 0) {
         if (dX == 0) USM_ED_S3 = 0;
         else USM_ED_S3 = static_cast<MINT32>(static_cast<MDOUBLE>(dY) / dX + 0.5);
@@ -253,7 +262,7 @@ IspTuningCustom::userSetting_EE(
     MINT32 USM_ED_X4 = rEE.ed_ctrl4.bits.USM_ED_X4;
     MINT32 USM_ED_S4;
     dX = USM_ED_X4 - USM_ED_X3;
-    dY = rEE.ed_ctrl4.bits.USM_ED_Y4 - rEE.ed_ctrl3.bits.USM_ED_Y3;
+    dY = USM_ED_Y4 - USM_ED_Y3;
     if (dY > 0){
         if (dX == 0) USM_ED_S4 = 0;
         else USM_ED_S4 = static_cast<MINT32>(static_cast<MDOUBLE>(dY) / dX + 0.5);
@@ -266,54 +275,77 @@ IspTuningCustom::userSetting_EE(
     USM_ED_S4 = LIMIT(USM_ED_S4, -127, 127);
 
     // USM_ED_S5
-    MINT32 USM_ED_S5 = rEE.ed_ctrl5.bits.USM_ED_S5;
-
-    if (USM_ED_S5 > 127) { // -
-        USM_ED_S5 = static_cast<MINT32>(static_cast<MDOUBLE>(USM_ED_S5 - 256) * (1 + 0.2 * i4Slider) - 0.5);
+	MINT32 USM_ED_S5;
+	dX = 255 - USM_ED_X4;
+	if (LOCK_EE_S5 < 128){
+		if (dX == 0) USM_ED_S5 = 0;
+		else USM_ED_S5 = static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_S5) * (1 + 0.2 * i4Slider) + 0.5);
     }
     else {
-        USM_ED_S5 = static_cast<MINT32>(static_cast<MDOUBLE>(USM_ED_S5) * (1 + 0.2 * i4Slider) + 0.5);
+		if (dX == 0) USM_ED_S5 = 0;
+		else USM_ED_S5 = static_cast<MINT32>(static_cast<MDOUBLE>(LOCK_EE_S5 - 256) * (1 + 0.2 * i4Slider) - 0.5);
     }
 
     USM_ED_S5 = LIMIT(USM_ED_S5, -127, 127);
 
 
-    MY_LOG("[userSetting_EE] old (X1, Y1, S1, X2, Y2, S2, X3, Y3, S3, X4, Y4, S4, S5) = (%d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)",
+    MY_LOG("[userSetting_EE] old\nX1, Y1, S1: %3d, %3d, %3d, 0x%08x\nX2, Y2, S2: %3d, %3d, %3d, 0x%08x\nX3, Y3, S3: %3d, %3d, %3d, 0x%08x\nX4, Y4, S4: %3d, %3d, %3d, 0x%08x\nS5: %3d, 0x%08x\nCLIP: %3d, 0x%08x\nTHO, THU: %3d, %3d, 0x%08x\n",
                                rEE.ed_ctrl1.bits.USM_ED_X1,
                                rEE.ed_ctrl1.bits.USM_ED_Y1,
                                rEE.ed_ctrl1.bits.USM_ED_S1,
+							   rEE.ed_ctrl1.val,
                                rEE.ed_ctrl2.bits.USM_ED_X2,
                                rEE.ed_ctrl2.bits.USM_ED_Y2,
                                rEE.ed_ctrl2.bits.USM_ED_S2,
+							   rEE.ed_ctrl2.val,
                                rEE.ed_ctrl3.bits.USM_ED_X3,
                                rEE.ed_ctrl3.bits.USM_ED_Y3,
                                rEE.ed_ctrl3.bits.USM_ED_S3,
+							   rEE.ed_ctrl3.val,
                                rEE.ed_ctrl4.bits.USM_ED_X4,
                                rEE.ed_ctrl4.bits.USM_ED_Y4,
                                rEE.ed_ctrl4.bits.USM_ED_S4,
-                               rEE.ed_ctrl5.bits.USM_ED_S5
+							   rEE.ed_ctrl4.val,
+                               rEE.ed_ctrl5.bits.USM_ED_S5,
+							   rEE.ed_ctrl5.val,
+							   rEE.clip_ctrl.bits.USM_CLIP,
+							   rEE.clip_ctrl.val,
+							   rEE.ed_ctrl6.bits.USM_ED_TH_OVER,
+							   rEE.ed_ctrl6.bits.USM_ED_TH_UNDER,
+							   rEE.ed_ctrl6.val
                                );
 
-    MY_LOG("[userSetting_EE] old (LCE_X1_1, LCE_S1_1, LCE_S2_1, LCE_X1_2, LCE_S1_2, LCE_S2_2, LCE_X1_3, LCE_S1_3, LCE_S2_3) = (%d, %d, %d, %d, %d, %d, %d, %d, %d)",
+    MY_LOG("[userSetting_EE] old\nLCE_X1_1, LCE_S1_1, LCE_S2_1: %3d, %3d, %3d, 0x%08x\nLCE_X1_2, LCE_S1_2, LCE_S2_2: %3d, %3d, %3d, 0x%08x\nLCE_X1_3, LCE_S1_3, LCE_S2_3: %3d, %3d, %3d, 0x%08x\nLCE_THO_1, LCE_THU_1, LCE_THO_2, LCE_THU_2: %3d, %3d, %3d, %3d, 0x%08x\nLCE_THO_3, LCE_THU_3: %3d, %3d, 0x%08x\n",
                                rEE.ee_link1.bits.EE_LCE_X1_1,
                                rEE.ee_link1.bits.EE_LCE_S1_1,
                                rEE.ee_link1.bits.EE_LCE_S2_1,
+							   rEE.ee_link1.val,
                                rEE.ee_link2.bits.EE_LCE_X1_2,
                                rEE.ee_link2.bits.EE_LCE_S1_2,
                                rEE.ee_link2.bits.EE_LCE_S2_2,
+							   rEE.ee_link2.val,
                                rEE.ee_link3.bits.EE_LCE_X1_3,
                                rEE.ee_link3.bits.EE_LCE_S1_3,
-                               rEE.ee_link3.bits.EE_LCE_S2_3
+                               rEE.ee_link3.bits.EE_LCE_S2_3,
+							   rEE.ee_link3.val,
+							   rEE.ee_link4.bits.EE_LCE_THO_1,
+							   rEE.ee_link4.bits.EE_LCE_THU_1,
+							   rEE.ee_link4.bits.EE_LCE_THO_2,
+							   rEE.ee_link4.bits.EE_LCE_THU_2,
+							   rEE.ee_link4.val,
+							   rEE.ee_link5.bits.EE_LCE_THO_3,
+							   rEE.ee_link5.bits.EE_LCE_THU_3,
+							   rEE.ee_link5.val
                                );
 
     // Write back
-    rEE.ed_ctrl1.bits.USM_ED_Y1 = static_cast<MUINT32>(LOCK_EE_Y1);
-    rEE.ed_ctrl2.bits.USM_ED_Y2 = static_cast<MUINT32>(LOCK_EE_Y2);
-    rEE.ed_ctrl3.bits.USM_ED_Y3 = static_cast<MUINT32>(LOCK_EE_Y3);
-    rEE.ed_ctrl4.bits.USM_ED_Y4 = static_cast<MUINT32>(LOCK_EE_Y4);
-    rEE.clip_ctrl.bits.USM_CLIP = static_cast<MUINT32>(LOCK_EE_CLIP);
-    rEE.ed_ctrl6.bits.USM_ED_TH_OVER = static_cast<MUINT32>(LOCK_EE_TH_OV);
-    rEE.ed_ctrl6.bits.USM_ED_TH_UNDER = static_cast<MUINT32>(LOCK_EE_TH_UN);
+    rEE.ed_ctrl1.bits.USM_ED_Y1 = static_cast<MUINT32>(USM_ED_Y1);
+    rEE.ed_ctrl2.bits.USM_ED_Y2 = static_cast<MUINT32>(USM_ED_Y2);
+    rEE.ed_ctrl3.bits.USM_ED_Y3 = static_cast<MUINT32>(USM_ED_Y3);
+    rEE.ed_ctrl4.bits.USM_ED_Y4 = static_cast<MUINT32>(USM_ED_Y4);
+    rEE.clip_ctrl.bits.USM_CLIP = static_cast<MUINT32>(USM_CLIP);
+    rEE.ed_ctrl6.bits.USM_ED_TH_OVER = static_cast<MUINT32>(USM_ED_TH_OVER);
+    rEE.ed_ctrl6.bits.USM_ED_TH_UNDER = static_cast<MUINT32>(USM_ED_TH_UNDER);
 
     rEE.ed_ctrl1.bits.USM_ED_S1 = (USM_ED_S1 >= 0) ? static_cast<MUINT32>(USM_ED_S1) : static_cast<MUINT32>(256 + USM_ED_S1);
     rEE.ed_ctrl2.bits.USM_ED_S2 = (USM_ED_S2 >= 0) ? static_cast<MUINT32>(USM_ED_S2) : static_cast<MUINT32>(256 + USM_ED_S2);
@@ -328,32 +360,60 @@ IspTuningCustom::userSetting_EE(
     rEE.ee_link3.bits.EE_LCE_S1_3 = (EE_LCE_S1_3 >= 0) ? static_cast<MUINT32>(EE_LCE_S1_3) : static_cast<MUINT32>(256 + EE_LCE_S1_3);
     rEE.ee_link3.bits.EE_LCE_S2_3 = (EE_LCE_S2_3 >= 0) ? static_cast<MUINT32>(EE_LCE_S2_3) : static_cast<MUINT32>(256 + EE_LCE_S2_3);
 
-    MY_LOG("[userSetting_EE] new (X1, Y1, S1, X2, Y2, S2, X3, Y3, S3, X4, Y4, S4, S5) = (%d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)",
+	rEE.ee_link4.bits.EE_LCE_THO_1 = EE_LCE_THO_1;
+	rEE.ee_link4.bits.EE_LCE_THO_2 = EE_LCE_THO_2;
+	rEE.ee_link5.bits.EE_LCE_THO_3 = EE_LCE_THO_3;
+	rEE.ee_link4.bits.EE_LCE_THU_1 = EE_LCE_THU_1;
+	rEE.ee_link4.bits.EE_LCE_THU_2 = EE_LCE_THU_2;
+	rEE.ee_link5.bits.EE_LCE_THU_3 = EE_LCE_THU_3;
+
+	MY_LOG("[userSetting_EE] new\nX1, Y1, S1: %3d, %3d, %3d, 0x%08x\nX2, Y2, S2: %3d, %3d, %3d, 0x%08x\nX3, Y3, S3: %3d, %3d, %3d, 0x%08x\nX4, Y4, S4: %3d, %3d, %3d, 0x%08x\nS5: %3d, 0x%08x\nCLIP: %3d, 0x%08x\nTHO, THU: %3d, %3d, 0x%08x\n",
                                rEE.ed_ctrl1.bits.USM_ED_X1,
                                rEE.ed_ctrl1.bits.USM_ED_Y1,
                                rEE.ed_ctrl1.bits.USM_ED_S1,
+							   rEE.ed_ctrl1.val,
                                rEE.ed_ctrl2.bits.USM_ED_X2,
                                rEE.ed_ctrl2.bits.USM_ED_Y2,
                                rEE.ed_ctrl2.bits.USM_ED_S2,
+							   rEE.ed_ctrl2.val,
                                rEE.ed_ctrl3.bits.USM_ED_X3,
                                rEE.ed_ctrl3.bits.USM_ED_Y3,
                                rEE.ed_ctrl3.bits.USM_ED_S3,
+							   rEE.ed_ctrl3.val,
                                rEE.ed_ctrl4.bits.USM_ED_X4,
                                rEE.ed_ctrl4.bits.USM_ED_Y4,
                                rEE.ed_ctrl4.bits.USM_ED_S4,
-                               rEE.ed_ctrl5.bits.USM_ED_S5
+							   rEE.ed_ctrl4.val,
+                               rEE.ed_ctrl5.bits.USM_ED_S5,
+							   rEE.ed_ctrl5.val,
+							   rEE.clip_ctrl.bits.USM_CLIP,
+							   rEE.clip_ctrl.val,
+							   rEE.ed_ctrl6.bits.USM_ED_TH_OVER,
+							   rEE.ed_ctrl6.bits.USM_ED_TH_UNDER,
+							   rEE.ed_ctrl6.val
                                );
 
-    MY_LOG("[userSetting_EE] new (LCE_X1_1, LCE_S1_1, LCE_S2_1, LCE_X1_2, LCE_S1_2, LCE_S2_2, LCE_X1_3, LCE_S1_3, LCE_S2_3) = (%d, %d, %d, %d, %d, %d, %d, %d, %d)",
+	MY_LOG("[userSetting_EE] new\nLCE_X1_1, LCE_S1_1, LCE_S2_1: %3d, %3d, %3d, 0x%08x\nLCE_X1_2, LCE_S1_2, LCE_S2_2: %3d, %3d, %3d, 0x%08x\nLCE_X1_3, LCE_S1_3, LCE_S2_3: %3d, %3d, %3d, 0x%08x\nLCE_THO_1, LCE_THU_1, LCE_THO_2, LCE_THU_2: %3d, %3d, %3d, %3d, 0x%08x\nLCE_THO_3, LCE_THU_3: %3d, %3d, 0x%08x\n",
                                rEE.ee_link1.bits.EE_LCE_X1_1,
                                rEE.ee_link1.bits.EE_LCE_S1_1,
                                rEE.ee_link1.bits.EE_LCE_S2_1,
+							   rEE.ee_link1.val,
                                rEE.ee_link2.bits.EE_LCE_X1_2,
                                rEE.ee_link2.bits.EE_LCE_S1_2,
                                rEE.ee_link2.bits.EE_LCE_S2_2,
+							   rEE.ee_link2.val,
                                rEE.ee_link3.bits.EE_LCE_X1_3,
                                rEE.ee_link3.bits.EE_LCE_S1_3,
-                               rEE.ee_link3.bits.EE_LCE_S2_3
+                               rEE.ee_link3.bits.EE_LCE_S2_3,
+							   rEE.ee_link3.val,
+							   rEE.ee_link4.bits.EE_LCE_THO_1,
+							   rEE.ee_link4.bits.EE_LCE_THU_1,
+							   rEE.ee_link4.bits.EE_LCE_THO_2,
+							   rEE.ee_link4.bits.EE_LCE_THU_2,
+							   rEE.ee_link4.val,
+							   rEE.ee_link5.bits.EE_LCE_THO_3,
+							   rEE.ee_link5.bits.EE_LCE_THU_3,
+							   rEE.ee_link5.val
                                );
 
 }

@@ -78,14 +78,14 @@ const NVRAM_LENS_PARA_STRUCT FM50AF_LENS_PARA_DEFAULT_VALUE =
     // AF NVRAM
     {
         // -------- AF ------------
-        {200, // i4Offset
-          10, // i4NormalNum
-          15, // i4MacroNum
+        {202, // i4Offset
+          9, // i4NormalNum
+          12, // i4MacroNum
            0, // i4InfIdxOffset
            0, //i4MacroIdxOffset          
     	{
-                 0,  25,  55,  90, 130, 175, 225, 280, 335, 390,
-               455, 520, 585, 650, 715,   0,   0,   0,   0,   0,
+                 0,   20,  44,  72, 105, 144, 189, 242, 305, 379,
+               453,  527,   0,   0,   0,   0,   0,   0,   0,   0,
              0,   0,   0,   0,   0,   0,   0,   0,   0,   0
             },
           15, // i4THRES_MAIN;
@@ -103,12 +103,12 @@ const NVRAM_LENS_PARA_STRUCT FM50AF_LENS_PARA_DEFAULT_VALUE =
           10000,  // i4FV_CHANGE_OFFSET;        
           12,  // i4FV_CHANGE_CNT;
           0,  // i4GS_CHANGE_THRES;    
-          20,  // i4GS_CHANGE_OFFSET;    
+          15,  // i4GS_CHANGE_OFFSET;    
           12,  // i4GS_CHANGE_CNT;            
-          12,  // i4FV_STABLE_THRES;         // percentage -> 0 more stable  
+          18,  // i4FV_STABLE_THRES;         // percentage -> 0 more stable  
           10000,  // i4FV_STABLE_OFFSET;        // value -> 0 more stable
-          6,  // i4FV_STABLE_NUM;           // max = 9 (more stable), reset = 0
-          6,  // i4FV_STABLE_CNT;           // max = 9                                      
+          4,  // i4FV_STABLE_NUM;           // max = 9 (more stable), reset = 0
+          4,  // i4FV_STABLE_CNT;           // max = 9                                      
           12,  // i4FV_1ST_STABLE_THRES;        
           10000,  // i4FV_1ST_STABLE_OFFSET;
           6,  // i4FV_1ST_STABLE_NUM;                        
@@ -116,18 +116,18 @@ const NVRAM_LENS_PARA_STRUCT FM50AF_LENS_PARA_DEFAULT_VALUE =
          },
          
          // -------- ZSD AF ------------
-         {200, // i4Offset
-           10, // i4NormalNum
-           15, // i4MacroNum
+         {202, // i4Offset
+           9, // i4NormalNum
+           12, // i4MacroNum
             0, // i4InfIdxOffset
             0, //i4MacroIdxOffset           
            {
-               0,  25,  55,  90, 130, 175, 225, 280, 335, 390,
-             455, 520, 585, 650, 715,   0,   0,   0,   0,   0,
+                 0,   20,  44,  72, 105, 144, 189, 242, 305, 379,
+               453,  527,   0,   0,   0,   0,   0,   0,   0,   0,
                0,   0,   0,   0,   0,   0,   0,   0,   0,   0              
            },
-           15, // i4THRES_MAIN;
-           10, // i4THRES_SUB;            
+           30, // i4THRES_MAIN;
+           20, // i4THRES_SUB;            
            1,  // i4INIT_WAIT;
            {500, 500, 500, 500, 500}, // i4FRAME_WAIT
            0,  // i4DONE_WAIT;
@@ -164,8 +164,8 @@ const NVRAM_LENS_PARA_STRUCT FM50AF_LENS_PARA_DEFAULT_VALUE =
                 200, 220, 240, 260, 280, 300, 320, 340, 360, 390,
                   0,   0,   0,   0,   0,   0,   0,   0,   0,   0              
              },
-           15, // i4THRES_MAIN;
-           10, // i4THRES_SUB;            
+           30, // i4THRES_MAIN;
+           20, // i4THRES_SUB;            
            1,  // i4INIT_WAIT;
            {500, 500, 500, 500, 500}, // i4FRAME_WAIT
            0,  // i4DONE_WAIT;
@@ -199,9 +199,9 @@ const NVRAM_LENS_PARA_STRUCT FM50AF_LENS_PARA_DEFAULT_VALUE =
           6,   // i4GMeanNum;
           {20,55,105,150,180,205},        // i4GMean[GMEAN_MAX_NUM];
 
-          { 31, 31, 31, 31, 31, 31, 31, 31,
-            63, 63, 63, 63, 63, 63, 63, 63,
-           127,127,127,127,127,127,127,127},        // i4GMR[3][ISO_MAX_NUM];
+          { 31, 31, 31, 31, 31, 89, 89, 89,
+            63, 63, 63, 63, 63,127,127,127,
+           127,127,127,127,127,180,180,180},        // i4GMR[3][ISO_MAX_NUM];
           
 // ------------------------------------------------------------------------                  
           {0,0,0,0,0,0,0,0,
@@ -211,19 +211,19 @@ const NVRAM_LENS_PARA_STRUCT FM50AF_LENS_PARA_DEFAULT_VALUE =
            0,0,0,0,0,0,0,0,
            0,0,0,0,0,0,0,0},        // i4FV_DC[GMEAN_MAX_NUM][ISO_MAX_NUM];
            
-          {50000,50000,50000,50000,50000,50000,50000,50000,
-           50000,50000,50000,50000,50000,50000,50000,50000,
-           50000,50000,50000,50000,50000,50000,50000,50000,
-           50000,50000,50000,50000,50000,50000,50000,50000,
-           50000,50000,50000,50000,50000,50000,50000,50000,
-           50000,50000,50000,50000,50000,50000,50000,50000},         // i4MIN_TH[GMEAN_MAX_NUM][ISO_MAX_NUM];        
+          {120000,120000,120000,120000,120000,100000,80000,80000,
+           120000,120000,120000,120000,120000,100000,80000,80000,
+           120000,120000,120000,120000,120000,100000,80000,80000,
+           120000,120000,120000,120000,120000,100000,80000,80000,
+           120000,120000,120000,120000,120000,100000,80000,80000,
+           120000,120000,120000,120000,120000,100000,80000,80000},         // i4MIN_TH[GMEAN_MAX_NUM][ISO_MAX_NUM];        
+          {   5,5,5,5,5,5,0,0,
+              5,5,5,5,5,5,0,0,
+              5,5,5,5,5,5,0,0,
+              5,5,5,5,5,5,0,0,
+              5,5,5,5,5,5,0,0,
+              5,5,5,5,5,5,0,0}, // i4HW_TH[GMEAN_MAX_NUM][ISO_MAX_NUM];       
 
-          {   5,5,5,5,5,5,5,5,
-              5,5,5,5,5,5,5,5,
-              5,5,5,5,5,5,5,5,
-              5,5,5,5,5,5,5,5,
-              5,5,5,5,5,5,5,5,
-              5,5,5,5,5,5,5,5}, // i4HW_TH[GMEAN_MAX_NUM][ISO_MAX_NUM];       
 // ------------------------------------------------------------------------
           {0,0,0,0,0,0,0,0,
            0,0,0,0,0,0,0,0,
@@ -239,12 +239,12 @@ const NVRAM_LENS_PARA_STRUCT FM50AF_LENS_PARA_DEFAULT_VALUE =
            0,0,0,0,0,0,0,0,
            0,0,0,0,0,0,0,0},         // i4MIN_TH2[GMEAN_MAX_NUM][ISO_MAX_NUM];
           
-          {5,5,5,5,5,5,5,5,
-              5,5,5,5,5,5,5,5,
-              5,5,5,5,5,5,5,5,
-              5,5,5,5,5,5,5,5,
-              5,5,5,5,5,5,5,5,
-              5,5,5,5,5,5,5,5}      // i4HW_TH2[GMEAN_MAX_NUM][ISO_MAX_NUM];       
+          {0,0,0,0,0,0,0,0,
+           0,0,0,0,0,0,0,0,
+           0,0,0,0,0,0,0,0,
+           0,0,0,0,0,0,0,0,
+           0,0,0,0,0,0,0,0,
+           0,0,0,0,0,0,0,0}          // i4HW_TH2[GMEAN_MAX_NUM][ISO_MAX_NUM];       
           
          },
 // ------------------------------------------------------------------------
@@ -309,7 +309,7 @@ const NVRAM_LENS_PARA_STRUCT FM50AF_LENS_PARA_DEFAULT_VALUE =
           1, // i4VAFC_FAIL_CNT;
           0, // i4CHANGE_CNT_DELTA;
 
-          30, // i4LV_THRES;
+          0, // i4LV_THRES;
 
           18, // i4WIN_PERCENT_W;
           24, // i4WIN_PERCENT_H;                
@@ -325,7 +325,7 @@ const NVRAM_LENS_PARA_STRUCT FM50AF_LENS_PARA_DEFAULT_VALUE =
           400,  //i4BackJumpPos
 
           80, // i4FDWinPercent;
-          100, // i4FDSizeDiff;
+          40, // i4FDSizeDiff;
 
           3,   //i4StatGain          
 

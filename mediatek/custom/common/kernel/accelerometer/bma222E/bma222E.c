@@ -151,14 +151,18 @@ static struct i2c_client *bma222_i2c_client = NULL;
 static struct platform_driver bma222_gsensor_driver;
 static struct bma222_i2c_data *obj_i2c_data = NULL;
 static bool sensor_power = true;
+static int sensor_suspend = 0;
 static GSENSOR_VECTOR3D gsensor_gain;
 //static char selftestRes[8]= {0}; 
+static DEFINE_MUTEX(bma222_mutex);
+static bool enable_status = false;
+
 
 /*----------------------------------------------------------------------------*/
 #define GSE_TAG                  "[Gsensor] "
 #define GSE_FUN(f)               printk(KERN_INFO GSE_TAG"%s\n", __FUNCTION__)
 #define GSE_ERR(fmt, args...)    printk(KERN_ERR GSE_TAG"%s %d : "fmt, __FUNCTION__, __LINE__, ##args)
-#define GSE_LOG(fmt, args...)    printk(KERN_ERR GSE_TAG fmt, ##args)
+#define GSE_LOG(fmt, args...)    printk(KERN_INFO GSE_TAG fmt, ##args)
 /*----------------------------------------------------------------------------*/
 static struct data_resolution bma222_data_resolution[1] = {
  /* combination by {FULL_RES,RANGE}*/
@@ -167,6 +171,41 @@ static struct data_resolution bma222_data_resolution[1] = {
 /*----------------------------------------------------------------------------*/
 static struct data_resolution bma222_offset_resolution = {{15, 6}, 64};
 
+/*----------------------------------------------------------------------------*/
+static int bma_i2c_read_block(struct i2c_client *client, u8 addr, u8 *data, u8 len)
+{
+        u8 beg = addr;
+	struct i2c_msg msgs[2] = {
+		{
+			.addr = client->addr,	.flags = 0,
+			.len = 1,	.buf = &beg
+		},
+		{
+			.addr = client->addr,	.flags = I2C_M_RD,
+			.len = len,	.buf = data,
+		}
+	};
+	int err;
+
+	if (!client)
+		return -EINVAL;
+	else if (len > C_I2C_FIFO_SIZE) {
+		GSE_ERR(" length %d exceeds %d\n", len, C_I2C_FIFO_SIZE);
+		return -EINVAL;
+	}
+
+	err = i2c_transfer(client->adapter, msgs, sizeof(msgs)/sizeof(msgs[0]));
+	if (err != 2) {
+		GSE_ERR("i2c_transfer error: (%d %p %d) %d\n",
+			addr, data, len, err);
+		err = -EIO;
+	} else {
+		err = 0;
+	}
+	return err;
+
+}
+/*----------------------------------------------------------------------------*/
 /*--------------------BMA222 power control function----------------------------------*/
 static void BMA222_power(struct acc_hw *hw, unsigned int on) 
 {
@@ -234,7 +273,7 @@ static int BMA222_ReadData(struct i2c_client *client, s16 data[BMA222_AXES_NUM])
 	{
 		err = -EINVAL;
 	}
-	else if((err = hwmsen_read_block(client, addr, buf, 0x05))!=0)
+	else if((err = bma_i2c_read_block(client, addr, buf, 0x05))!=0)
 	{
 		GSE_ERR("error: %d\n", err);
 	}
@@ -338,7 +377,7 @@ static int BMA222_ReadOffset(struct i2c_client *client, s8 ofs[BMA222_AXES_NUM])
 #ifdef SW_CALIBRATION
 	ofs[0]=ofs[1]=ofs[2]=0x0;
 #else
-	if((err = hwmsen_read_block(client, BMA222_REG_OFSX, ofs, BMA222_AXES_NUM)))
+	if((err = bma_i2c_read_block(client, BMA222_REG_OFSX, ofs, BMA222_AXES_NUM)))
 	{
 		GSE_ERR("error: %d\n", err);
 	}
@@ -480,7 +519,7 @@ static int BMA222_WriteCalibration(struct i2c_client *client, int dat[BMA222_AXE
 		return err;
 	}
 #endif
-
+	mdelay(1);
 	return err;
 }
 /*----------------------------------------------------------------------------*/
@@ -507,26 +546,28 @@ static int BMA222_CheckDeviceID(struct i2c_client *client)
 		goto exit_BMA222_CheckDeviceID;
 	}
 	
-	printk("BMA222_CheckDeviceID %d done!\n ", databuf[0]);
+
+	GSE_LOG("BMA222_CheckDeviceID %d done!\n ", databuf[0]);
 
 	#if 0
 	if(databuf[0]!=BMA222_FIXED_DEVID)
 	{
-		printk("BMA222_CheckDeviceID %d failt!\n ", databuf[0]);
+		GSE_LOG("BMA222_CheckDeviceID %d failt!\n ", databuf[0]);
 		return BMA222_ERR_IDENTIFICATION;
 	}
 	else
 	{
-		printk("BMA222_CheckDeviceID %d pass!\n ", databuf[0]);
+		GSE_LOG("BMA222_CheckDeviceID %d pass!\n ", databuf[0]);
 	}
 	#endif
 
 	exit_BMA222_CheckDeviceID:
 	if (res <= 0)
 	{
+		GSE_ERR("BMA222_CheckDeviceID %d failt!\n ", BMA222_ERR_I2C);
 		return BMA222_ERR_I2C;
 	}
-	
+	mdelay(1);
 	return BMA222_SUCCESS;
 }
 /*----------------------------------------------------------------------------*/
@@ -537,20 +578,21 @@ static int BMA222_SetPowerMode(struct i2c_client *client, bool enable)
 	u8 addr = BMA222_REG_POWER_CTL;
 	struct bma222_i2c_data *obj = i2c_get_clientdata(client);
 	
-	
+	//GSE_LOG("enter Sensor power status is sensor_power = %d\n",sensor_power);
+
 	if(enable == sensor_power )
 	{
 		GSE_LOG("Sensor power status is newest!\n");
 		return BMA222_SUCCESS;
 	}
 
-	if(hwmsen_read_block(client, addr, databuf, 0x01))
+	if(bma_i2c_read_block(client, addr, databuf, 0x01))
 	{
 		GSE_ERR("read power ctl register err!\n");
 		return BMA222_ERR_I2C;
 	}
-
-	
+	GSE_LOG("set power mode value = 0x%x!\n",databuf[0]);
+	mdelay(1);
 	if(enable == TRUE)
 	{
 		databuf[0] &= ~BMA222_MEASURE_MODE;
@@ -572,14 +614,10 @@ static int BMA222_SetPowerMode(struct i2c_client *client, bool enable)
 	{
 		GSE_LOG("set power mode ok %d!\n", databuf[1]);
 	}
-
-	//GSE_LOG("BMA222_SetPowerMode ok!\n");
-
-
-	sensor_power = enable;
-
-	mdelay(20);
 	
+	sensor_power = enable;
+	mdelay(1);
+	//GSE_LOG("leave Sensor power status is sensor_power = %d\n",sensor_power);
 	return BMA222_SUCCESS;    
 }
 /*----------------------------------------------------------------------------*/
@@ -591,12 +629,12 @@ static int BMA222_SetDataFormat(struct i2c_client *client, u8 dataformat)
 
 	memset(databuf, 0, sizeof(u8)*10);    
 
-	if(hwmsen_read_block(client, BMA222_REG_DATA_FORMAT, databuf, 0x01))
+	if(bma_i2c_read_block(client, BMA222_REG_DATA_FORMAT, databuf, 0x01))
 	{
 		printk("bma222 read Dataformat failt \n");
 		return BMA222_ERR_I2C;
 	}
-
+	mdelay(1);
 	databuf[0] &= ~BMA222_RANGE_MASK;
 	databuf[0] |= dataformat;
 	databuf[1] = databuf[0];
@@ -609,8 +647,7 @@ static int BMA222_SetDataFormat(struct i2c_client *client, u8 dataformat)
 	}
 	
 	//printk("BMA222_SetDataFormat OK! \n");
-	
-
+	mdelay(1);
 	return BMA222_SetDataResolution(obj);    
 }
 /*----------------------------------------------------------------------------*/
@@ -621,12 +658,12 @@ static int BMA222_SetBWRate(struct i2c_client *client, u8 bwrate)
 
 	memset(databuf, 0, sizeof(u8)*10);    
 
-	if(hwmsen_read_block(client, BMA222_REG_BW_RATE, databuf, 0x01))
+	if(bma_i2c_read_block(client, BMA222_REG_BW_RATE, databuf, 0x01))
 	{
 		printk("bma222 read rate failt \n");
 		return BMA222_ERR_I2C;
 	}
-
+	mdelay(1);
 	databuf[0] &= ~BMA222_BW_MASK;
 	databuf[0] |= bwrate;
 	databuf[1] = databuf[0];
@@ -637,7 +674,7 @@ static int BMA222_SetBWRate(struct i2c_client *client, u8 bwrate)
 	{
 		return BMA222_ERR_I2C;
 	}
-	
+	mdelay(1);
 	//printk("BMA222_SetBWRate OK! \n");
 	
 	return BMA222_SUCCESS;    
@@ -653,15 +690,16 @@ static int BMA222_SetIntEnable(struct i2c_client *client, u8 intenable)
 			{
 				return res;
 			}
+			mdelay(1);
 			res = hwmsen_write_byte(client, BMA222_INT_REG_2, 0x00);
 			if(res != BMA222_SUCCESS) 
 			{
 				return res;
 			}
-			printk("BMA222 disable interrupt ...\n");
+			//printk("BMA222 disable interrupt ...\n");
 		
 			/*for disable interrupt function*/
-			
+			mdelay(1);
 			return BMA222_SUCCESS;	  
 }
 
@@ -677,21 +715,21 @@ static int bma222_init_client(struct i2c_client *client, int reset_cali)
 	{
 		return res;
 	}	
-	printk("BMA222_CheckDeviceID ok \n");
+	//printk("BMA222_CheckDeviceID ok \n");
 	
 	res = BMA222_SetBWRate(client, BMA222_BW_25HZ);
 	if(res != BMA222_SUCCESS ) 
 	{
 		return res;
 	}
-	printk("BMA222_SetBWRate OK!\n");
+	//printk("BMA222_SetBWRate OK!\n");
 	
 	res = BMA222_SetDataFormat(client, BMA222_RANGE_2G);
 	if(res != BMA222_SUCCESS) 
 	{
 		return res;
 	}
-	printk("BMA222_SetDataFormat OK!\n");
+	//printk("BMA222_SetDataFormat OK!\n");
 
 	gsensor_gain.x = gsensor_gain.y = gsensor_gain.z = obj->reso->sensitivity;
 
@@ -701,14 +739,14 @@ static int bma222_init_client(struct i2c_client *client, int reset_cali)
 	{
 		return res;
 	}
-	printk("BMA222 disable interrupt function!\n");
-
-	res = BMA222_SetPowerMode(client, false);
+	//printk("BMA222 disable interrupt function!\n");
+	
+	res = BMA222_SetPowerMode(client, enable_status);//false);//
 		if(res != BMA222_SUCCESS)
 		{
 			return res;
 		}
-		printk("BMA222_SetPowerMode OK!\n");
+	//printk("BMA222_SetPowerMode OK!\n");
 
 
 	if(0 != reset_cali)
@@ -720,13 +758,10 @@ static int bma222_init_client(struct i2c_client *client, int reset_cali)
 			return res;
 		}
 	}
-	printk("bma222_init_client OK!\n");
+	GSE_LOG("bma222_init_client OK!\n");
 #ifdef CONFIG_BMA222_LOWPASS
 	memset(&obj->fir, 0x00, sizeof(obj->fir));  
 #endif
-
-	mdelay(20);
-
 	return BMA222_SUCCESS;
 }
 /*----------------------------------------------------------------------------*/
@@ -768,16 +803,25 @@ static int BMA222_ReadSensorData(struct i2c_client *client, char *buf, int bufsi
 		*buf = 0;
 		return -2;
 	}
-
+		
+	if(sensor_suspend == 1)
+	{
+		//GSE_LOG("sensor in suspend read not data!\n");
+		return 0;
+	}
+	#if 0 //wrong operation marked
+	mutex_lock(&bma222_mutex);
 	if(sensor_power == FALSE)
 	{
+		GSE_ERR("BMA222_ReadSensorData bad operation sensor_power = %d!\n", sensor_power);
 		res = BMA222_SetPowerMode(client, true);
 		if(res)
 		{
 			GSE_ERR("Power on bma222 error %d!\n", res);
 		}
 	}
-
+	mutex_unlock(&bma222_mutex);	
+	#endif
 	if((res = BMA222_ReadData(client, obj->data))!=0)
 	{        
 		GSE_ERR("I2C error: ret value=%d", res);
@@ -1103,12 +1147,23 @@ static ssize_t show_status_value(struct device_driver *ddri, char *buf)
 /*----------------------------------------------------------------------------*/
 static ssize_t show_power_status_value(struct device_driver *ddri, char *buf)
 {
+	
+	u8 databuf[2];    
+	int res = 0;
+	u8 addr = BMA222_REG_POWER_CTL;
+	struct bma222_i2c_data *obj = obj_i2c_data;
+	if(bma_i2c_read_block(obj->client, addr, databuf, 0x01))
+	{
+		GSE_ERR("read power ctl register err!\n");
+		return 1;
+	}
+	
 	if(sensor_power)
-		printk("G sensor is in work mode, sensor_power = %d\n", sensor_power);
+		GSE_LOG("G sensor is in work mode, sensor_power = %d\n", sensor_power);
 	else
-		printk("G sensor is in standby mode, sensor_power = %d\n", sensor_power);
+		GSE_LOG("G sensor is in standby mode, sensor_power = %d\n", sensor_power);
 
-	return 0;
+	return snprintf(buf, PAGE_SIZE, "%x\n", databuf[0]);
 }
 /*----------------------------------------------------------------------------*/
 static DRIVER_ATTR(chipinfo,   S_IWUSR | S_IRUGO, show_chipinfo_value,      NULL);
@@ -1116,7 +1171,7 @@ static DRIVER_ATTR(sensordata, S_IWUSR | S_IRUGO, show_sensordata_value,    NULL
 static DRIVER_ATTR(cali,       S_IWUSR | S_IRUGO, show_cali_value,          store_cali_value);
 static DRIVER_ATTR(firlen,     S_IWUSR | S_IRUGO, show_firlen_value,        store_firlen_value);
 static DRIVER_ATTR(trace,      S_IWUSR | S_IRUGO, show_trace_value,         store_trace_value);
-static DRIVER_ATTR(status,               S_IRUGO, show_status_value,        NULL);
+static DRIVER_ATTR(status,     S_IRUGO, show_status_value,        NULL);
 static DRIVER_ATTR(powerstatus,               S_IRUGO, show_power_status_value,        NULL);
 
 /*----------------------------------------------------------------------------*/
@@ -1204,13 +1259,13 @@ int gsensor_operate(void* self, uint32_t command, void* buff_in, int size_in,
 				{
 					sample_delay = BMA222_BW_50HZ;
 				}
-				
+				mutex_lock(&bma222_mutex);
 				err = BMA222_SetBWRate(priv->client, sample_delay);
 				if(err != BMA222_SUCCESS ) //0x2C->BW=100Hz
 				{
 					GSE_ERR("Set delay parameter error!\n");
 				}
-
+				mutex_unlock(&bma222_mutex);
 				if(value >= 50)
 				{
 					atomic_set(&priv->filter, 0);
@@ -1238,14 +1293,26 @@ int gsensor_operate(void* self, uint32_t command, void* buff_in, int size_in,
 			else
 			{
 				value = *(int *)buff_in;
+				mutex_lock(&bma222_mutex);
+				GSE_LOG("Gsensor device enable function enable = %d, sensor_power = %d!\n",value,sensor_power);
 				if(((value == 0) && (sensor_power == false)) ||((value == 1) && (sensor_power == true)))
 				{
-					GSE_LOG("Gsensor device have updated!\n");
+					enable_status = sensor_power;
+					GSE_LOG("Gsensor device have updated !\n");
 				}
 				else
 				{
+					if(sensor_suspend == 0){
+					enable_status = !sensor_power;
 					err = BMA222_SetPowerMode( priv->client, !sensor_power);
+					GSE_LOG("Gsensor not in suspend BMA222_SetPowerMode!, enable_status = %d\n",enable_status);
+					}else{
+					enable_status = !sensor_power;
+					GSE_LOG("Gsensor in suspend and can not enable or disable!enable_status = %d\n",enable_status);
+					}
+					
 				}
+				mutex_unlock(&bma222_mutex);
 			}
 			break;
 
@@ -1328,7 +1395,7 @@ static long bma222_unlocked_ioctl(struct file *file, unsigned int cmd,
 	switch(cmd)
 	{
 		case GSENSOR_IOCTL_INIT:
-			bma222_init_client(client, 0);			
+			bma222_init_client(client, 0);	
 			break;
 
 		case GSENSOR_IOCTL_READ_CHIPINFO:
@@ -1354,7 +1421,7 @@ static long bma222_unlocked_ioctl(struct file *file, unsigned int cmd,
 				err = -EINVAL;
 				break;	  
 			}
-			
+			BMA222_SetPowerMode(client,true);	
 			BMA222_ReadSensorData(client, strbuf, BMA222_BUFSIZE);
 			if(copy_to_user(data, strbuf, strlen(strbuf)+1))
 			{
@@ -1500,7 +1567,7 @@ static int bma222_suspend(struct i2c_client *client, pm_message_t msg)
 static int bma222_resume(struct i2c_client *client)
 {
 	struct bma222_i2c_data *obj = i2c_get_clientdata(client);        
-	int err;
+	//int err;
 	GSE_FUN();
 
 	if(obj == NULL)
@@ -1510,7 +1577,7 @@ static int bma222_resume(struct i2c_client *client)
 	}
 
 	BMA222_power(obj->hw, 1);
-#if 1 //ALPS00400022 sensor not work issue
+#if 0 //ALPS00400022 sensor not work issue
 	if(err = bma222_init_client(client, 0))
 	{
 		GSE_ERR("initialize client fail!!\n");
@@ -1528,31 +1595,48 @@ static void bma222_early_suspend(struct early_suspend *h)
 {
 	struct bma222_i2c_data *obj = container_of(h, struct bma222_i2c_data, early_drv);   
 	int err;
-	GSE_FUN();    
-
+		
 	if(obj == NULL)
 	{
 		GSE_ERR("null pointer!!\n");
 		return;
 	}
 	atomic_set(&obj->suspend, 1); 
+	mutex_lock(&bma222_mutex);
+	GSE_FUN();  
+	u8 databuf[2]; //for debug read power control register to see the value is OK
+	if(bma_i2c_read_block(obj->client, BMA222_REG_POWER_CTL, databuf, 0x01))
+	{
+		GSE_ERR("read power ctl register err!\n");
+		mutex_unlock(&bma222_mutex);
+		return BMA222_ERR_I2C;
+	}
+	if(databuf[0]==0xff)//if the value is ff the gsensor will not work anymore, any i2c operations won't be vaild
+		GSE_LOG("before BMA222_SetPowerMode in suspend databuf = 0x%x\n",databuf[0]);
 	if((err = BMA222_SetPowerMode(obj->client, false)))
 	{
 		GSE_ERR("write power control fail!!\n");
+		mutex_unlock(&bma222_mutex);
 		return;
 	}
-
-	sensor_power = false;
-	
+	if(bma_i2c_read_block(obj->client, BMA222_REG_POWER_CTL, databuf, 0x01)) //for debug read power control register to see the value is OK
+	{
+		GSE_ERR("read power ctl register err!\n");
+		mutex_unlock(&bma222_mutex);
+		return BMA222_ERR_I2C;
+	}
+	if(databuf[0]==0xff)//if the value is ff the gsensor will not work anymore, any i2c operations won't be vaild
+		GSE_LOG("after BMA222_SetPowerMode suspend err databuf = 0x%x\n",databuf[0]);
+	sensor_suspend = 1;
+	mutex_unlock(&bma222_mutex);
 	BMA222_power(obj->hw, 0);
 }
 /*----------------------------------------------------------------------------*/
 static void bma222_late_resume(struct early_suspend *h)
 {
 	struct bma222_i2c_data *obj = container_of(h, struct bma222_i2c_data, early_drv);         
-	//int err;
-	GSE_FUN();
-
+	int err;
+	
 	if(obj == NULL)
 	{
 		GSE_ERR("null pointer!!\n");
@@ -1560,13 +1644,34 @@ static void bma222_late_resume(struct early_suspend *h)
 	}
 
 	BMA222_power(obj->hw, 1);
-#if 0 //ALPS00400022 sensor not work issue
+	mutex_lock(&bma222_mutex);
+	GSE_FUN();
+	u8 databuf[2];//for debug read power control register to see the value is OK
+	if(bma_i2c_read_block(obj->client, BMA222_REG_POWER_CTL, databuf, 0x01))
+	{
+		GSE_ERR("read power ctl register err!\n");
+		mutex_unlock(&bma222_mutex);
+		return BMA222_ERR_I2C;
+	}
+	if(databuf[0]==0xff)//if the value is ff the gsensor will not work anymore, any i2c operations won't be vaild
+		GSE_LOG("before bma222_init_client databuf = 0x%x\n",databuf[0]);
 	if((err = bma222_init_client(obj->client, 0)))
 	{
 		GSE_ERR("initialize client fail!!\n");
+		mutex_unlock(&bma222_mutex);
 		return;        
 	}
-#endif
+	
+	if(bma_i2c_read_block(obj->client, BMA222_REG_POWER_CTL, databuf, 0x01)) //for debug read power control register to see the value is OK
+	{
+		GSE_ERR("read power ctl register err!\n");
+		mutex_unlock(&bma222_mutex);
+		return BMA222_ERR_I2C;
+	}
+	if(databuf[0]==0xff)//if the value is ff the gsensor will not work anymore, any i2c operations won't be vaild
+		GSE_LOG("after bma222_init_client databuf = 0x%x\n",databuf[0]);
+	sensor_suspend = 0;
+	mutex_unlock(&bma222_mutex);
 	atomic_set(&obj->suspend, 0);    
 }
 /*----------------------------------------------------------------------------*/

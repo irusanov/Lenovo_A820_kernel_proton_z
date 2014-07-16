@@ -64,6 +64,8 @@
 #include <mach/upmu_common.h>
 #include <mach/upmu_hw.h>
 
+#include <mach/mt_sleep.h>
+
 int Enable_BATDRV_LOG = 2;
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -187,8 +189,44 @@ int get_charger_volt(int times)
     return PMIC_IMM_GetOneChannelValue(2,times,1);
 }
 
+extern int IMM_GetOneChannelValue(int dwChannel, int data[4], int* rawdata);
+extern int IMM_IsAdcInitReady(void);
+
 int get_tbat_volt(int times)
 {
+#if defined(MTK_PCB_TBAT_FEATURE)
+    
+        int ret = 0, data[4], i, ret_value = 0, ret_temp = 0;
+        int Channel=1;
+        
+        if( IMM_IsAdcInitReady() == 0 )
+        {
+            if (Enable_BATDRV_LOG == 1) {
+                xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[get_tbat_volt] AUXADC is not ready");
+            }
+            return 0;
+        }
+    
+        i = times;
+        while (i--)
+        {
+            ret_value = IMM_GetOneChannelValue(Channel, data, &ret_temp);
+            ret += ret_temp;
+            if (Enable_BATDRV_LOG == 1) {
+                xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[get_tbat_volt] ret_temp=%d\n",ret_temp);
+            }
+        }
+        
+        ret = ret*1500/4096 ;
+        ret = ret/times;
+        if (Enable_BATDRV_LOG == 1) {
+            xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[get_tbat_volt] Battery output mV = %d\n",ret);
+        }
+    
+        return ret;
+        
+#else
+
     if(upmu_get_cid() == 0x1020)
     {
         return PMIC_IMM_GetOneChannelValue(4,times,1);
@@ -207,6 +245,8 @@ int get_tbat_volt(int times)
             return PMIC_IMM_GetOneChannelValue(4,times,1);
         #endif    
     }
+
+#endif    
 }
 
 int get_charger_detect_status(void)
@@ -1093,7 +1133,7 @@ static void mt6320_battery_update(struct mt6320_battery_data *bat_data)
 			set_rtc_spare_fg_value(0);
 		}
 		else {
-			set_rtc_spare_fg_value(bat_volt_check_point);
+    set_rtc_spare_fg_value(bat_volt_check_point);
 		}
 	}
         
@@ -1631,7 +1671,7 @@ int get_bat_charging_current_level(void)
     kal_uint32 ret_val=0;
     
     //Get current level
-    ret_val=upmu_get_reg_value(0x25);
+    ret_val=upmu_get_reg_value(0x8);
     
     //Parsing
     if(ret_val==0x00)         return 1600;
@@ -1838,7 +1878,7 @@ unsigned long BAT_Get_Battery_Voltage(int polling_mode)
 {
     unsigned long ret_val = 0;
 
-#if 0
+#if 1
     if(polling_mode == 1)
         ret_val=get_bat_sense_volt(1);
     else
@@ -3051,9 +3091,9 @@ void BAT_thread(void)
         if( (g_battery_thermal_throttling_flag==2) || (g_battery_thermal_throttling_flag==3) )
         {
 			if (Enable_BATDRV_LOG == 1) {
-				printk("[TestMode] Disable Safty Timer. bat_tt_enable=%d, bat_thr_test_mode=%d, bat_thr_test_value=%d\n", 
-					g_battery_thermal_throttling_flag, battery_cmd_thermal_test_mode, battery_cmd_thermal_test_mode_value);
-			}
+            printk("[TestMode] Disable Safty Timer. bat_tt_enable=%d, bat_thr_test_mode=%d, bat_thr_test_value=%d\n", 
+            g_battery_thermal_throttling_flag, battery_cmd_thermal_test_mode, battery_cmd_thermal_test_mode_value);
+        }
         }
         else
         {    
@@ -4116,7 +4156,7 @@ int battery_kthread_handler(void *unused)
     do
     {
         ktime = ktime_set(10, 0);	// 10s, 10* 1000 ms
-   
+    
         wait_event_interruptible(battery_kthread_waiter, battery_kthread_flag != 0);
     
         battery_kthread_flag = 0;
@@ -4132,7 +4172,7 @@ enum hrtimer_restart battery_kthread_hrtimer_func(struct hrtimer *timer)
 {
     battery_kthread_flag = 1; 
     wake_up_interruptible(&battery_kthread_waiter);
-    
+
     return HRTIMER_NORESTART;
 }
 
@@ -4325,11 +4365,71 @@ static int mt6320_battery_suspend(struct platform_device *dev, pm_message_t stat
     return 0;
 }
 
+int force_get_tbat(void)
+{
+#if defined(CONFIG_POWER_EXT)
+    return 19;
+#else
+    int bat_temperature_volt=0;
+    int bat_temperature_val=0;
+    int fg_r_value=0;
+    kal_int32 fg_current_temp=0;
+    kal_bool fg_current_state=KAL_FALSE;
+    int bat_temperature_volt_temp=0;
+    
+    /* Get V_BAT_Temperature */
+    bat_temperature_volt = get_tbat_volt(2); 
+    if(bat_temperature_volt != 0)
+    {   
+        if( gForceADCsolution == 1 )
+        {
+            /*Use no gas gauge*/
+        }
+        else
+        {
+            fg_r_value = get_r_fg_value();
+            fg_current_temp = fgauge_read_current();
+            fg_current_temp = fg_current_temp/10;
+            fg_current_state = get_gFG_Is_Charging();
+            if(fg_current_state==KAL_TRUE)
+            {
+                bat_temperature_volt_temp = bat_temperature_volt;
+                bat_temperature_volt = bat_temperature_volt - ((fg_current_temp*fg_r_value)/1000);
+            }
+            else
+            {
+                bat_temperature_volt_temp = bat_temperature_volt;
+                bat_temperature_volt = bat_temperature_volt + ((fg_current_temp*fg_r_value)/1000);
+            }
+        }
+        
+        bat_temperature_val = BattVoltToTemp(bat_temperature_volt);        
+    }
+    
+    printk(KERN_CRIT "[tbat] %d,%d,%d,%d,%d,%d\n", 
+        bat_temperature_volt_temp, bat_temperature_volt, fg_current_state, fg_current_temp, fg_r_value, bat_temperature_val);
+    
+    return bat_temperature_val;    
+#endif    
+}
+EXPORT_SYMBOL(force_get_tbat);
+
 static int mt6320_battery_resume(struct platform_device *dev)
 {
     //xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "******** MT6320 battery driver resume!! ********\n" );
 
-    //g_battery_flag_resume=1;
+#if defined(CONFIG_POWER_EXT)
+#else        
+        if(slp_get_wake_reason() == WR_PCM_TIMER)
+        {
+            printk(KERN_CRIT "[bat resume] by pcm timer\n");
+            
+            mutex_lock(&bat_mutex);
+            FGADC_thread_kthread();
+            BAT_thread();
+            mutex_unlock(&bat_mutex);
+        }    
+#endif
 
     return 0;
 }

@@ -1,3 +1,22 @@
+/***
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK-DISTRIBUTED SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER
+ * ON AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL
+ * WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR
+ * NONINFRINGEMENT. NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH
+ * RESPECT TO THE SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY,
+ * INCORPORATED IN, OR SUPPLIED WITH THE MEDIATEK-DISTRIBUTED SOFTWARE, AND RECEIVER AGREES
+ * TO LOOK ONLY TO SUCH THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO.
+ * RECEIVER EXPRESSLY ACKNOWLEDGES THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO
+ * OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES CONTAINED IN MEDIATEK-DISTRIBUTED
+ * SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK-DISTRIBUTED SOFTWARE
+ * RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM.
+ */
+#include <asm/uaccess.h>
+#include <asm/system.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/dmi.h>
@@ -9,19 +28,18 @@
 #include <linux/types.h>
 #include <linux/delay.h>
 #include <linux/proc_fs.h>
-#include <asm/uaccess.h>
 #include <linux/err.h>
 #include <linux/syscalls.h>
-#include <asm/system.h>
 #include <linux/time.h>
-#include <mach/mt_typedefs.h>
-#include <mach/mt_storage_logger.h>
-#include <mach/mtk_mdm_monitor.h>
-
 #include <linux/string.h>
 #include <linux/mutex.h>
 #include <linux/bug.h>
+#include <linux/workqueue.h>
+
 #include <mach/mtk_thermal_monitor.h>
+#include <mach/mt_typedefs.h>
+#include <mach/mt_storage_logger.h>
+#include <mach/mtk_mdm_monitor.h>
 
 //************************************
 // Definition
@@ -39,8 +57,10 @@
 #endif 
 #endif 
 
-#if defined(CONFIG_ARCH_MT6589) 
+#if defined(CONFIG_ARCH_MT6589)
+#if defined(MTK_FAN5405_SUPPORT) || defined(MTK_NCP1851_SUPPORT) || defined(MTK_BQ24196_SUPPORT) || defined(MTK_BQ24158_SUPPORT)// supported charger IC
 #define CONFIG_MTK_THERMAL_TIME_BASE_PROTECTION
+#endif
 #endif
 
 #if defined(CONFIG_MTK_SMART_BATTERY)
@@ -52,13 +72,6 @@ extern kal_bool gFG_Is_Charging;
 // get MT6589 GPU loading...
 extern unsigned int mt_gpufreq_cur_load(void); 
 extern unsigned int mt_gpufreq_cur_freq(void);
-#endif
-
-/* Modem Index Function */
-#if 0 // wait for these API to get ready...
-extern int mtk_mdm_get_tx_power(void);
-extern int mtk_mdm_start_query(void);
-extern int mtk_mdm_stop_query(void);
 #endif
 
 /**
@@ -133,9 +146,7 @@ static struct proc_dir_entry *proc_tz_dir_entry = NULL; // lock by MTK_TZ_PROC_D
  *  write to nBattCurrentCnsmpt, nCPU0_usage, and nCPU1_usage are locked by MTM_SYSINFO_LOCK
  */
 static int nBattCurrentCnsmpt = 0;
-//static int nCPU0_usage = 0;
-//static int nCPU1_usage = 0;
-static int nCPU_loading_avg = 0;
+static int nCPU_loading_sum = 0;
 static unsigned long g_check_sys_info_flag = 0x0; // TODO: change to use atomic bit field // write locked by MTM_COOLER_LOCK
 
 static int nWifi_throughput = 0;
@@ -148,6 +159,8 @@ static DEFINE_MUTEX(MTM_COOLER_LOCK);
 static DEFINE_MUTEX(MTM_SYSINFO_LOCK);
 static DEFINE_MUTEX(MTM_COOLER_PROC_DIR_LOCK);
 static DEFINE_MUTEX(MTM_TZ_PROC_DIR_LOCK);
+
+static struct delayed_work _mtm_sysinfo_poll_queue;
 
 //************************************
 //  Macro
@@ -189,27 +202,25 @@ static DEFINE_MUTEX(MTM_TZ_PROC_DIR_LOCK);
 #include <mach/mt_sleep.h>
 #include <linux/wakelock.h>
 
+extern int force_get_tbat(void);
+
 static struct wake_lock mtm_wake_lock;
+static unsigned int gpt_remaining_cnt = 0;
+static int last_batt_raw_temp = 0;
 
 static int mtk_thermal_monitor_get_battery_timeout_time(void)
 {
     if (NULL != tz_last_values[MTK_THERMAL_SENSOR_BATTERY])
     {
-        int batt_temp = *tz_last_values[MTK_THERMAL_SENSOR_BATTERY];
+        int batt_temp = last_batt_raw_temp; //*tz_last_values[MTK_THERMAL_SENSOR_BATTERY];
 
         if (batt_temp <= 25000)
         {
-            if (gpt_is_counting(GPT3))
-                return -1; // 10 min // should be -1 to disable time based mechanism // currently GPT3 is set to 330s periodic wake up AP
-            else
-                return 300;
+            return 330; // max 330
         }
         else if (batt_temp <= 35000 && batt_temp > 25000)
         {
-            if (gpt_is_counting(GPT3))
-                return -1; // 5 min // currently GPT3 is set to 330s periodic wake up AP
-            else
-                return 300;
+            return 300;
         }
         else if (batt_temp <= 45000 && batt_temp > 35000)
             return 150; // 2.5 min
@@ -226,20 +237,22 @@ static int mtk_thermal_monitor_get_battery_timeout_time(void)
 
 static int mtk_thermal_monitor_suspend(struct platform_device *dev, pm_message_t state)
 {
-    // print debug message
-    THRML_ERROR_LOG("[mtk_thermal_monitor_suspend]\n");
-
     // check if phone call on going...
     if (g_mtm_phone_call_ongoing)
     {
         // if yes, based on battery temperature to setup a GPT timer
         int timeout = mtk_thermal_monitor_get_battery_timeout_time();
-        THRML_ERROR_LOG("[mtk_thermal_monitor_suspend] timeout: %d\n", timeout);
         if (timeout > 0)
         {
             // restart a one-shot GPT timer // max 5.5 min
-            gpt_set_cmp(GPT1, timeout * 13000000); //compare unit is (1/13M) s 
-            start_gpt(GPT1);
+            if (gpt_remaining_cnt > 0 && gpt_remaining_cnt <= (timeout * 13000000))
+                gpt_set_cmp(GPT5, gpt_remaining_cnt);
+            else
+                gpt_set_cmp(GPT5, timeout * 13000000); //compare unit is (1/13M) s 
+            
+            start_gpt(GPT5);
+            
+            THRML_ERROR_LOG("[mtk_thermal_monitor_suspend] timeout: %d, gpt_remaining_cnt: %u\n", timeout, gpt_remaining_cnt);
         }
 
         // make GPT able to wake up AP
@@ -247,7 +260,7 @@ static int mtk_thermal_monitor_suspend(struct platform_device *dev, pm_message_t
     }
     else
     {
-        THRML_ERROR_LOG("[mtk_thermal_monitor_suspend] disable GPT wakes AP.\n");
+        THRML_LOG("[mtk_thermal_monitor_suspend] disable GPT wakes AP.\n");
         // make GPT unable to wake up AP
         slp_set_wakesrc(WAKE_SRC_CFG_KEY | WAKE_SRC_GPT, false, false);
     }
@@ -257,25 +270,32 @@ static int mtk_thermal_monitor_suspend(struct platform_device *dev, pm_message_t
 
 static int mtk_thermal_monitor_resume(struct platform_device *dev)
 {
-    // print debug message
-    THRML_ERROR_LOG("[mtk_thermal_monitor_resume]");
-    
-    // cancel my own GPT timer, ok to do it w/o pairing
-    stop_gpt(GPT1);
-
     // take wake lock
     if (NULL != tz_last_values[MTK_THERMAL_SENSOR_BATTERY])
     {
         // check if phone call on going...if yes, we need to confirm battery temp. if not, we don't need this.
         if (g_mtm_phone_call_ongoing)
         {
-            if (!wake_lock_active(&mtm_wake_lock))
+            unsigned int GPT5_cmp;
+            unsigned int GPT5_cnt;
+            int gpt_counting;
+            
+            gpt_counting = gpt_is_counting(GPT5);
+            gpt_get_cmp(GPT5, &GPT5_cmp);
+            gpt_get_cnt(GPT5, &GPT5_cnt);
+            gpt_remaining_cnt = GPT5_cmp - GPT5_cnt;
+            
+            // If no wake lock taken and gpt does timeout!
+            if (!wake_lock_active(&mtm_wake_lock) && !gpt_counting)
             {
-                THRML_ERROR_LOG("[mtk_thermal_monitor_resume] wake_lock()");
+                THRML_ERROR_LOG("[mtk_thermal_monitor_resume] wake_lock() counting=%d, cmp=%u, cnt=%u", gpt_counting, GPT5_cmp, GPT5_cnt);
                 wake_lock(&mtm_wake_lock);
             }
         }
     }
+    
+    // cancel my own GPT timer, ok to do it w/o pairing
+    stop_gpt(GPT5);
 
     // release wake lock until no problem...
     
@@ -825,6 +845,11 @@ static int mtk_sysinfo_get_info(void)
 #if defined(CONFIG_ARCH_MT6575) || defined(CONFIG_ARCH_MT6577)
 
     nBattCurrentCnsmpt = get_sys_battery_info("/sys/devices/platform/mt6329-battery/FG_Battery_CurrentConsumption");
+    // the return value is 0.1mA
+    if (nBattCurrentCnsmpt%10 <5)
+        nBattCurrentCnsmpt /= 10;
+    else
+        nBattCurrentCnsmpt = 1+(nBattCurrentCnsmpt/10);
     
 #if defined(CONFIG_MTK_SMART_BATTERY)
     if (KAL_TRUE == gFG_Is_Charging)
@@ -837,6 +862,12 @@ static int mtk_sysinfo_get_info(void)
 
     // MT6589 PMIC is MT6320
     nBattCurrentCnsmpt = get_sys_battery_info("/sys/devices/platform/mt6320-battery/FG_Battery_CurrentConsumption");
+    // the return value is 0.1mA
+    if (nBattCurrentCnsmpt%10 <5)
+        nBattCurrentCnsmpt /= 10;
+    else
+        nBattCurrentCnsmpt = 1+(nBattCurrentCnsmpt/10);
+
 
 #if defined(CONFIG_MTK_SMART_BATTERY)
     if (KAL_TRUE == gFG_Is_Charging)
@@ -862,14 +893,12 @@ static int mtk_sysinfo_get_info(void)
 
     /* Read CPU Usage Information */
     get_sys_cpu_usage_info_ex();
-    //get_sys_cpu_usage_info(&nCPU0_usage, &nCPU1_usage);
-    //THRML_LOG("NC1=%d OC1=%d NC2=%d OC2=%d \n", cpu_index_list[0].usage, nCPU0_usage, cpu_index_list[1].usage, nCPU1_usage);
 
     /* CPU loading average */
-    nCPU_loading_avg = 0;
+    nCPU_loading_sum = 0;
     for(i=0 ; i<NUMBER_OF_CORE ; i++)
     {
-        nCPU_loading_avg += cpu_index_list[i].usage;
+        nCPU_loading_sum += cpu_index_list[i].usage;
     }
     
 
@@ -883,7 +912,7 @@ static int mtk_sysinfo_get_info(void)
     //******************
 #if defined(CONFIG_ARCH_MT6589)
     gpu_index.usage = mt_gpufreq_cur_load();
-    gpu_index.freq = mt_gpufreq_cur_freq();
+    gpu_index.freq = mt_gpufreq_cur_freq()/1000; // the return value is KHz
 #endif
 
     //******************
@@ -932,6 +961,16 @@ static int mtk_sysinfo_get_info(void)
                             cpu_index_list[2].freq, cpu_index_list[3].freq );
 
     return 0;
+}
+
+static void _mtm_update_sysinfo(struct work_struct *work)
+{
+    if ((true == enable_ThermalMonitor) || (0x0 != g_check_sys_info_flag))
+        mtk_sysinfo_get_info();
+    
+    cancel_delayed_work(&_mtm_sysinfo_poll_queue);
+
+    queue_delayed_work(system_freezable_wq, &_mtm_sysinfo_poll_queue, msecs_to_jiffies(1000));
 }
 
 
@@ -1179,7 +1218,7 @@ static ssize_t _mtkthermal_cooler_write(struct file *file, const char *buffer, u
         {
             if (0 == strncmp(mcdata->conditions[i], "CPU0", 4))
             {
-                mcdata->condition_last_value[i] = &nCPU_loading_avg;
+                mcdata->condition_last_value[i] = &nCPU_loading_sum;
                 g_check_sys_info_flag |= (0x1 << mcdata->id);
             }
             else if (0 == strncmp(mcdata->conditions[i], "BATCC", 5))
@@ -1613,6 +1652,9 @@ static int __init mtkthermal_init(void)
     wake_lock_init(&mtm_wake_lock, WAKE_LOCK_SUSPEND, "alarm");
 #endif
 
+    INIT_DELAYED_WORK(&_mtm_sysinfo_poll_queue, _mtm_update_sysinfo);
+    _mtm_update_sysinfo(NULL);
+
     return err;
 }
 
@@ -1716,8 +1758,11 @@ static int mtk_thermal_wrapper_unbind
         // Clear cldata->tz
         if (thermal == cldata->tz)
         {
-          cldata->tz = NULL;
-          cldata->trip = 0;
+            cldata->tz = NULL;
+            cldata->trip = 0;
+            // clear the state of cooler bounded
+            if (cdev->ops)
+                cdev->ops->set_cur_state(cdev, 0);
         }
 
         for (; i < MTK_THERMAL_MONITOR_COOLER_MAX_EXTRA_CONDITIONS; i++)
@@ -1771,38 +1816,44 @@ static int mtk_thermal_wrapper_get_temp
         ret = ops->get_temp(thermal, &raw_temp);
 
     nTemperature = (int) raw_temp; ///< Long cast to INT.
-    *temperature = _mtkthermal_update_and_get_sma(thermal->devdata, raw_temp); // No strong type cast...
+    
 
 #if defined(CONFIG_MTK_THERMAL_TIME_BASE_PROTECTION)
     // if batt temp raw data < 60C, release wake lock
     if ((tz_last_values[MTK_THERMAL_SENSOR_BATTERY] != NULL) && // batt TZ is registered
         (&(thermal->last_temperature) == tz_last_values[MTK_THERMAL_SENSOR_BATTERY])) // get batt temp this time
     {
-        if (nTemperature < 60000 && wake_lock_active(&mtm_wake_lock)) // unlock when only batt temp below 60C
+        if (wake_lock_active(&mtm_wake_lock))
+        {
+            nTemperature = force_get_tbat()*1000;
+            raw_temp = nTemperature;
+            THRML_ERROR_LOG("[.get_temp] tz: %s wake_lock_active() batt temp=%d\n", thermal->type, nTemperature);
+        }
+        
+        if (nTemperature < 59000 && wake_lock_active(&mtm_wake_lock)) // unlock when only batt temp below 60C
         {
             THRML_ERROR_LOG("[.get_temp] tz: %s wake_unlock()\n", thermal->type);
             wake_unlock(&mtm_wake_lock);
         }
-        else
-        {
-            //THRML_ERROR_LOG("[.get_temp] tz: %s no wake_unlock()\n", thermal->type);
-        }
+        
+        last_batt_raw_temp = nTemperature;
     }
 #endif
+
+    *temperature = _mtkthermal_update_and_get_sma(thermal->devdata, raw_temp); // No strong type cast...
 
     /* Monitor Temperature to StoreLogger */
     THRML_STORAGE_LOG(THRML_LOGGER_MSG_ZONE_TEMP, get_temp, thermal->type, (int) *temperature);
     THRML_LOG("[.get_temp] tz: %s raw: %d sma: %d\n", thermal->type, nTemperature, *temperature);
 
-    // TODO: double confirm the if statement, why ((int)ops == g_SysinfoAttachOps) ?
     /* Collect system info */
+#if 0   // move to _mtm_update_sysinfo()
     if ((ops != NULL) && ((int)ops == g_SysinfoAttachOps))
     {
         if ((true == enable_ThermalMonitor) || (0x0 != g_check_sys_info_flag))
             mtk_sysinfo_get_info();
     }
-
-    //THRML_ERROR_LOG("[.get_temp] test: %d\n", mtk_thermal_get_temp(MTK_THERMAL_SENSOR_CPU));
+#endif
     
 #if MTK_THERMAL_MONITOR_MEASURE_GET_TEMP_OVERHEAD
     dur = _get_current_time_us() - t;
@@ -1947,7 +1998,52 @@ static int mtk_thermal_wrapper_notify
     return ret;
 }
 
+#if defined(CONFIG_ARCH_MT6589)
+static int tdpa_polling_delay = 0;
+static int pa_polling_delay = 0;
+static int mdm_signal_period = 0;
 
+static void set_mdm_signal_period(void)
+{
+    int new_mdm_signal_period = 0;
+    if ((0 == tdpa_polling_delay) && (0 == pa_polling_delay))
+    {
+    }
+    else if (0 == tdpa_polling_delay)
+    {
+        new_mdm_signal_period = pa_polling_delay;
+    }
+    else if (0 == pa_polling_delay)
+    {
+        new_mdm_signal_period = tdpa_polling_delay;
+    }
+    else
+    {
+        new_mdm_signal_period = (pa_polling_delay <= tdpa_polling_delay) ? pa_polling_delay : tdpa_polling_delay;
+    }
+
+    if (new_mdm_signal_period != mdm_signal_period)
+    {
+        if (0 == new_mdm_signal_period)
+        {
+            mtk_mdm_stop_query();
+        }
+        else
+        {
+            if (0 == mdm_signal_period)
+            {
+                mtk_mdm_set_signal_period(new_mdm_signal_period);
+                mtk_mdm_start_query();
+            }
+            else
+            {
+                mtk_mdm_set_signal_period(new_mdm_signal_period);
+            }
+        }
+        mdm_signal_period = new_mdm_signal_period;
+    }
+}
+#endif
 
 //***************************************
 // MTK thermal zone register/unregister
@@ -2043,11 +2139,13 @@ struct thermal_zone_device *mtk_thermal_zone_device_register_wrapper
     // config mtk_mdm timeout period based on PA or TDPA polling delay for better low power
     if (0 == strncmp(type, "mtktstdpa", 9))
     {
-        mtk_mdm_set_signal_period(polling_delay/1000);
+        tdpa_polling_delay = polling_delay/1000;
+        set_mdm_signal_period();
     }
     if (0 == strncmp(type, "mtktspa", 7))
     {
-        mtk_mdm_set_signal_period(polling_delay/1000);
+        pa_polling_delay = polling_delay/1000;
+        set_mdm_signal_period();
     }
 #endif
 

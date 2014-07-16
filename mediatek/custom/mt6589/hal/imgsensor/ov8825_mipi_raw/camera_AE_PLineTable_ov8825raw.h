@@ -4207,32 +4207,32 @@ static strAETable g_AE_ModeTable2 =
     NULL,
 };
 
-static strEvSetting sAEMode3PLineTable_60Hz[1] =
+static strEvSetting sAEMode3PLineTable_60Hz[119] =
 {
-    {249996,1664,1048, 0, 0, 0},  //TV = 2.00(14073 lines)  AV=2.53  SV=5.73  BV=-1.21
-};
-
-static strEvSetting sAEMode3PLineTable_50Hz[1] =
-{
-    {249996,1664,1048, 0, 0, 0},  //TV = 2.00(14073 lines)  AV=2.53  SV=5.73  BV=-1.21
-};
-
-static strAETable g_AE_ModeTable3 =
-{
-    AETABLE_MODE_INDEX3,    //eAETableID
-    1,    //u4TotalIndex
-    20,    //u4StrobeTrigerBV
-    -12,    //i4MaxBV
-    -12,    //i4MinBV
-    LIB3A_AE_ISO_SPEED_AUTO, //ISO SPEED
-    sAEMode3PLineTable_60Hz,
-    sAEMode3PLineTable_50Hz,
-    NULL,
-};
-
-static strEvSetting sAEMode4PLineTable_60Hz[96] =
-{
-    {994,1024,1152, 0, 0, 0},  //TV = 9.97(55 lines)  AV=2.53  SV=5.17  BV=7.33
+    {195,1152,1040, 0, 0, 0},  //TV = 12.32(10 lines)  AV=2.53  SV=5.19  BV=9.66
+    {195,1152,1080, 0, 0, 0},  //TV = 12.32(10 lines)  AV=2.53  SV=5.25  BV=9.60
+    {213,1152,1056, 0, 0, 0},  //TV = 12.20(11 lines)  AV=2.53  SV=5.21  BV=9.51
+    {230,1152,1048, 0, 0, 0},  //TV = 12.09(12 lines)  AV=2.53  SV=5.20  BV=9.41
+    {248,1152,1040, 0, 0, 0},  //TV = 11.98(13 lines)  AV=2.53  SV=5.19  BV=9.31
+    {266,1152,1040, 0, 0, 0},  //TV = 11.88(14 lines)  AV=2.53  SV=5.19  BV=9.21
+    {284,1152,1040, 0, 0, 0},  //TV = 11.78(15 lines)  AV=2.53  SV=5.19  BV=9.12
+    {301,1152,1056, 0, 0, 0},  //TV = 11.70(16 lines)  AV=2.53  SV=5.21  BV=9.01
+    {319,1152,1072, 0, 0, 0},  //TV = 11.61(17 lines)  AV=2.53  SV=5.24  BV=8.90
+    {355,1152,1024, 0, 0, 0},  //TV = 11.46(19 lines)  AV=2.53  SV=5.17  BV=8.82
+    {373,1152,1048, 0, 0, 0},  //TV = 11.39(20 lines)  AV=2.53  SV=5.20  BV=8.71
+    {408,1152,1024, 0, 0, 0},  //TV = 11.26(22 lines)  AV=2.53  SV=5.17  BV=8.62
+    {426,1152,1056, 0, 0, 0},  //TV = 11.20(23 lines)  AV=2.53  SV=5.21  BV=8.51
+    {461,1152,1040, 0, 0, 0},  //TV = 11.08(25 lines)  AV=2.53  SV=5.19  BV=8.42
+    {497,1152,1040, 0, 0, 0},  //TV = 10.97(27 lines)  AV=2.53  SV=5.19  BV=8.31
+    {532,1152,1040, 0, 0, 0},  //TV = 10.88(29 lines)  AV=2.53  SV=5.19  BV=8.21
+    {568,1152,1040, 0, 0, 0},  //TV = 10.78(31 lines)  AV=2.53  SV=5.19  BV=8.12
+    {621,1024,1152, 0, 0, 0},  //TV = 10.65(34 lines)  AV=2.53  SV=5.17  BV=8.01
+    {657,1152,1032, 0, 0, 0},  //TV = 10.57(36 lines)  AV=2.53  SV=5.18  BV=7.92
+    {710,1152,1024, 0, 0, 0},  //TV = 10.46(39 lines)  AV=2.53  SV=5.17  BV=7.82
+    {763,1152,1024, 0, 0, 0},  //TV = 10.36(42 lines)  AV=2.53  SV=5.17  BV=7.71
+    {817,1152,1024, 0, 0, 0},  //TV = 10.26(45 lines)  AV=2.53  SV=5.17  BV=7.61
+    {888,1024,1144, 0, 0, 0},  //TV = 10.14(49 lines)  AV=2.53  SV=5.16  BV=7.50
+    {941,1024,1152, 0, 0, 0},  //TV = 10.05(52 lines)  AV=2.53  SV=5.17  BV=7.41
     {1012,1024,1152, 0, 0, 0},  //TV = 9.95(56 lines)  AV=2.53  SV=5.17  BV=7.30
     {1083,1024,1152, 0, 0, 0},  //TV = 9.85(60 lines)  AV=2.53  SV=5.17  BV=7.21
     {1154,1152,1024, 0, 0, 0},  //TV = 9.76(64 lines)  AV=2.53  SV=5.17  BV=7.12
@@ -4330,9 +4330,32 @@ static strEvSetting sAEMode4PLineTable_60Hz[96] =
     {99987,7936,1024, 0, 0, 0},  //TV = 3.32(5628 lines)  AV=2.53  SV=7.95  BV=-2.11
 };
 
-static strEvSetting sAEMode4PLineTable_50Hz[96] =
+static strEvSetting sAEMode3PLineTable_50Hz[119] =
 {
-    {994,1024,1152, 0, 0, 0},  //TV = 9.97(55 lines)  AV=2.53  SV=5.17  BV=7.33
+    {195,1152,1040, 0, 0, 0},  //TV = 12.32(10 lines)  AV=2.53  SV=5.19  BV=9.66
+    {195,1152,1080, 0, 0, 0},  //TV = 12.32(10 lines)  AV=2.53  SV=5.25  BV=9.60
+    {213,1152,1056, 0, 0, 0},  //TV = 12.20(11 lines)  AV=2.53  SV=5.21  BV=9.51
+    {230,1152,1048, 0, 0, 0},  //TV = 12.09(12 lines)  AV=2.53  SV=5.20  BV=9.41
+    {248,1152,1040, 0, 0, 0},  //TV = 11.98(13 lines)  AV=2.53  SV=5.19  BV=9.31
+    {266,1152,1040, 0, 0, 0},  //TV = 11.88(14 lines)  AV=2.53  SV=5.19  BV=9.21
+    {284,1152,1040, 0, 0, 0},  //TV = 11.78(15 lines)  AV=2.53  SV=5.19  BV=9.12
+    {301,1152,1056, 0, 0, 0},  //TV = 11.70(16 lines)  AV=2.53  SV=5.21  BV=9.01
+    {319,1152,1072, 0, 0, 0},  //TV = 11.61(17 lines)  AV=2.53  SV=5.24  BV=8.90
+    {355,1152,1024, 0, 0, 0},  //TV = 11.46(19 lines)  AV=2.53  SV=5.17  BV=8.82
+    {373,1152,1048, 0, 0, 0},  //TV = 11.39(20 lines)  AV=2.53  SV=5.20  BV=8.71
+    {408,1152,1024, 0, 0, 0},  //TV = 11.26(22 lines)  AV=2.53  SV=5.17  BV=8.62
+    {426,1152,1056, 0, 0, 0},  //TV = 11.20(23 lines)  AV=2.53  SV=5.21  BV=8.51
+    {461,1152,1040, 0, 0, 0},  //TV = 11.08(25 lines)  AV=2.53  SV=5.19  BV=8.42
+    {497,1152,1040, 0, 0, 0},  //TV = 10.97(27 lines)  AV=2.53  SV=5.19  BV=8.31
+    {532,1152,1040, 0, 0, 0},  //TV = 10.88(29 lines)  AV=2.53  SV=5.19  BV=8.21
+    {568,1152,1040, 0, 0, 0},  //TV = 10.78(31 lines)  AV=2.53  SV=5.19  BV=8.12
+    {621,1024,1152, 0, 0, 0},  //TV = 10.65(34 lines)  AV=2.53  SV=5.17  BV=8.01
+    {657,1152,1032, 0, 0, 0},  //TV = 10.57(36 lines)  AV=2.53  SV=5.18  BV=7.92
+    {710,1152,1024, 0, 0, 0},  //TV = 10.46(39 lines)  AV=2.53  SV=5.17  BV=7.82
+    {763,1152,1024, 0, 0, 0},  //TV = 10.36(42 lines)  AV=2.53  SV=5.17  BV=7.71
+    {817,1152,1024, 0, 0, 0},  //TV = 10.26(45 lines)  AV=2.53  SV=5.17  BV=7.61
+    {888,1024,1144, 0, 0, 0},  //TV = 10.14(49 lines)  AV=2.53  SV=5.16  BV=7.50
+    {941,1024,1152, 0, 0, 0},  //TV = 10.05(52 lines)  AV=2.53  SV=5.17  BV=7.41
     {1012,1024,1152, 0, 0, 0},  //TV = 9.95(56 lines)  AV=2.53  SV=5.17  BV=7.30
     {1083,1024,1152, 0, 0, 0},  //TV = 9.85(60 lines)  AV=2.53  SV=5.17  BV=7.21
     {1154,1152,1024, 0, 0, 0},  //TV = 9.76(64 lines)  AV=2.53  SV=5.17  BV=7.12
@@ -4430,13 +4453,36 @@ static strEvSetting sAEMode4PLineTable_50Hz[96] =
     {100005,7936,1024, 0, 0, 0},  //TV = 3.32(5629 lines)  AV=2.53  SV=7.95  BV=-2.11
 };
 
+static strAETable g_AE_ModeTable3 =
+{
+    AETABLE_MODE_INDEX3,    //eAETableID
+    119,    //u4TotalIndex
+    20,    //u4StrobeTrigerBV
+    97,    //i4MaxBV
+    -21,    //i4MinBV
+    LIB3A_AE_ISO_SPEED_AUTO, //ISO SPEED
+    sAEMode3PLineTable_60Hz,
+    sAEMode3PLineTable_50Hz,
+    NULL,
+};
+
+static strEvSetting sAEMode4PLineTable_60Hz[1] =
+{
+    {249996,1664,1048, 0, 0, 0},  //TV = 2.00(14073 lines)  AV=2.53  SV=5.73  BV=-1.21
+};
+
+static strEvSetting sAEMode4PLineTable_50Hz[1] =
+{
+    {249996,1664,1048, 0, 0, 0},  //TV = 2.00(14073 lines)  AV=2.53  SV=5.73  BV=-1.21
+};
+
 static strAETable g_AE_ModeTable4 =
 {
     AETABLE_MODE_INDEX4,    //eAETableID
-    96,    //u4TotalIndex
+    1,    //u4TotalIndex
     20,    //u4StrobeTrigerBV
-    74,    //i4MaxBV
-    -21,    //i4MinBV
+    -12,    //i4MaxBV
+    -12,    //i4MinBV
     LIB3A_AE_ISO_SPEED_AUTO, //ISO SPEED
     sAEMode4PLineTable_60Hz,
     sAEMode4PLineTable_50Hz,
@@ -5372,18 +5418,18 @@ AETABLE_END
 // Table3 PLine -- Use capture sensor setting
 //Index MiniExp1/T MaxExp1/T MinGain MaxGain
 AETABLE_MODE_INDEX3
-1,4,4,1706,1706
-AETABLE_END
-
-// Table4 PLine -- Use capture sensor setting
-//Index MiniExp1/T MaxExp1/T MinGain MaxGain
-AETABLE_MODE_INDEX4
-1,1000,30,1144,1144
+1,5000,30,1144,1144
 2,30,30,1144,2048
 3,30,15,2048,2048
 4,15,15,2048,4096
 5,15,10,4096,4096
 6,10,10,4096,8192
+AETABLE_END
+
+// Table4 PLine -- Use capture sensor setting
+//Index MiniExp1/T MaxExp1/T MinGain MaxGain
+AETABLE_MODE_INDEX4
+1,4,4,1706,1706
 AETABLE_END
 
 // Table5 PLine -- Use capture sensor setting

@@ -94,9 +94,9 @@ int getDefaultStrobeNVRam(int sensorType, void* data, int* ret_size)
 	p->tuningPara[0].antiIsoLevel = -5;
 	p->tuningPara[0].antiExpLevel = -5;
 	p->tuningPara[0].antiStrobeLevel = -10;
-	p->tuningPara[0].antiUnderLevel = 0;
-	p->tuningPara[0].antiOverLevel = 0;
-	p->tuningPara[0].foregroundLevel = 0;
+	p->tuningPara[0].antiUnderLevel = -2;
+	p->tuningPara[0].antiOverLevel = 2;
+	p->tuningPara[0].foregroundLevel = 1;
 	p->tuningPara[0].isRefAfDistance = 0;
 	p->tuningPara[0].accuracyLevel = -10;
 
@@ -104,9 +104,9 @@ int getDefaultStrobeNVRam(int sensorType, void* data, int* ret_size)
 	p->tuningPara[1].antiIsoLevel = -5;
 	p->tuningPara[1].antiExpLevel = -5;
 	p->tuningPara[1].antiStrobeLevel = -10;
-	p->tuningPara[1].antiUnderLevel = 0;
-	p->tuningPara[1].antiOverLevel = 0;
-	p->tuningPara[1].foregroundLevel = 0;
+	p->tuningPara[1].antiUnderLevel = -2;
+	p->tuningPara[1].antiOverLevel = 2;
+	p->tuningPara[1].foregroundLevel = 1;
 	p->tuningPara[1].isRefAfDistance = 0;
 	p->tuningPara[1].accuracyLevel = -10;
 
@@ -114,9 +114,9 @@ int getDefaultStrobeNVRam(int sensorType, void* data, int* ret_size)
 	p->tuningPara[2].antiIsoLevel = -5;
 	p->tuningPara[2].antiExpLevel = -5;
 	p->tuningPara[2].antiStrobeLevel = -10;
-	p->tuningPara[2].antiUnderLevel = 0;
-	p->tuningPara[2].antiOverLevel = 0;
-	p->tuningPara[2].foregroundLevel = 0;
+	p->tuningPara[2].antiUnderLevel = -2;
+	p->tuningPara[2].antiOverLevel = 2;
+	p->tuningPara[2].foregroundLevel = 1;
 	p->tuningPara[2].isRefAfDistance = 0;
 	p->tuningPara[2].accuracyLevel = -10;
 
@@ -124,9 +124,9 @@ int getDefaultStrobeNVRam(int sensorType, void* data, int* ret_size)
 	p->tuningPara[3].antiIsoLevel = -5;
 	p->tuningPara[3].antiExpLevel = -5;
 	p->tuningPara[3].antiStrobeLevel = -10;
-	p->tuningPara[3].antiUnderLevel = 0;
-	p->tuningPara[3].antiOverLevel = 0;
-	p->tuningPara[3].foregroundLevel = 0;
+	p->tuningPara[3].antiUnderLevel = -2;
+	p->tuningPara[3].antiOverLevel = 2;
+	p->tuningPara[3].foregroundLevel = 1;
 	p->tuningPara[3].isRefAfDistance = 0;
 	p->tuningPara[3].accuracyLevel = -10;
 	//is eng level used (or by firmware)

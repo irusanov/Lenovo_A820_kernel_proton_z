@@ -59,21 +59,42 @@ TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE, OR REFUND ANY SOFTWARE LICE
  *     OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF LAWS PRINCIPLES.
  ************************************************************************************************/
 
-#include "camera_custom_fd.h"
+#include "camera_custom_eis.h"
 
-void get_fd_CustomizeData(FD_Customize_PARA  *FDDataOut)
+void get_EIS_CustomizeData(EIS_Customize_Para_t *a_pDataOut)
 {    
-    FDDataOut->FDThreadNum = 2;
-    FDDataOut->FDThreshold = 32;
-    FDDataOut->MajorFaceDecision = 1;
-    FDDataOut->OTRatio = 1088;
-    FDDataOut->SmoothLevel = 1;
-    FDDataOut->FDSkipStep = 4;
-    FDDataOut->FDRectify = 100000;
-    FDDataOut->FDRefresh = 60;
-    FDDataOut->SDThreshold = 69;
-    FDDataOut->SDMainFaceMust = 1;
-    FDDataOut->GSensor = 1;
-}
+    a_pDataOut->sensitivity   = CUSTOMER_EIS_SENSI_LEVEL_HIGH;
+    a_pDataOut->filter_small_motion = 0;
+    a_pDataOut->new_tru_th = 30; // 0~100
+    a_pDataOut->vot_th = 6;      // 1~16
+    a_pDataOut->votb_enlarge_size = 0;  // 0~1280
+    a_pDataOut->min_s_th = 40; // 10~100
+    a_pDataOut->vec_th = 0;   // 0~11   should be even
+    a_pDataOut->spr_offset = 0; //0 ~ MarginX/2
+    a_pDataOut->spr_gain1 = 0; // 0~127
+    a_pDataOut->spr_gain2 = 0; // 0~127
+    a_pDataOut->gmv_pan_array[0] = 0;   //0~5
+    a_pDataOut->gmv_pan_array[1] = 1;   //0~5
+    a_pDataOut->gmv_pan_array[2] = 2;   //0~5
+    a_pDataOut->gmv_pan_array[3] = 5;   //0~5
+    
+    a_pDataOut->gmv_sm_array[0] = 0;    //0~5
+    a_pDataOut->gmv_sm_array[1] = 0;    //0~5
+    a_pDataOut->gmv_sm_array[2] = 1;    //0~5
+    a_pDataOut->gmv_sm_array[3] = 3;    //0~5
 
+    a_pDataOut->cmv_pan_array[0] = 0;   //0~5
+    a_pDataOut->cmv_pan_array[1] = 1;   //0~5
+    a_pDataOut->cmv_pan_array[2] = 1;   //0~5
+    a_pDataOut->cmv_pan_array[3] = 6;   //0~5
+    
+    a_pDataOut->cmv_sm_array[0] = 0;    //0~5
+    a_pDataOut->cmv_sm_array[1] = 0;    //0~5
+    a_pDataOut->cmv_sm_array[2] = 0;    //0~5
+    a_pDataOut->cmv_sm_array[3] = 1;    //0~5
+    
+    a_pDataOut->vot_his_method = ABSOLUTE_HIST; //0 or 1   //SMOOTH_HIST
+    a_pDataOut->smooth_his_step = 3; // 2~6
+    a_pDataOut->eis_debug = 0;
+}
 

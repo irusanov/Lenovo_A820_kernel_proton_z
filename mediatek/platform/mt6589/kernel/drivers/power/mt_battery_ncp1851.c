@@ -146,6 +146,8 @@ extern kal_bool get_gFG_Is_Charging(void);
 extern bool mt_usb_is_device(void);
 extern void mt_usb_connect(void);
 extern void mt_usb_disconnect(void);
+extern bool mt_usb_is_ready(void);
+
 
 extern CHARGER_TYPE mt_charger_type_detection(void);
 extern int PMIC_IMM_GetOneChannelValue(int dwChannel, int deCount, int trimd);
@@ -521,19 +523,19 @@ static char proc_bat_data_ctrl[32];
 
 int bat_thread_control(int start) //for psensor firmware download in factory mode
 {
-    int  gpt_num = GPT5;
+//    int  gpt_num = GPT5;
 
     if(start == 1)
     {
-        start_gpt(gpt_num);
+//        start_gpt(gpt_num);
         printk("Resume bat_thread_kthread after psensor firmware download\n");
     }
     else
     {
-        stop_gpt(gpt_num);
+//        stop_gpt(gpt_num);
         printk("Stop bat_thread_kthread before psensor firmware download\n");
-        while(bat_thread_timeout == 1)
-        msleep(500);
+//        while(bat_thread_timeout == 1)
+//        msleep(500);
         ncp1851_set_chg_en(0);
     }
     return 1;
@@ -3129,6 +3131,8 @@ void BAT_thread_ncp1851(void)
                 // can not power down due to charger exist, so need reset system
                 arch_reset(0,NULL);
             }
+            //avoid SW no feedback
+            mt_power_off();
 #endif
         }
 #endif		
@@ -3521,7 +3525,7 @@ void PrechargeCheckStatus(void)
         {
             wake_lock(&battery_suspend_lock);
 
-            if(BMT_status.charger_type == CHARGER_UNKNOWN)
+            if(BMT_status.charger_type == CHARGER_UNKNOWN && mt_usb_is_ready())
             {
                 CHR_Type_num = mt_charger_type_detection();
                 xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[BATTERY:ncp1851] CHR_Type_num = %d\r\n", CHR_Type_num);
@@ -3813,7 +3817,7 @@ int bat_thread_kthread(void *x)
 
 UINT32 bat_thread_timeout_sum=0;
 
-void bat_thread_wakeup(unsigned long i)
+void bat_thread_wakeup(void)
 {
     if (Enable_BATDRV_LOG == 1) {
         xlog_printk(ANDROID_LOG_DEBUG, "Power/Battery", "******** MT6320 battery : bat_thread_wakeup : 1 ********\n" );
@@ -3825,35 +3829,6 @@ void bat_thread_wakeup(unsigned long i)
     if (Enable_BATDRV_LOG == 1) {
         xlog_printk(ANDROID_LOG_DEBUG, "Power/Battery", "******** MT6320 battery : bat_thread_wakeup : 2 ********\n" );
     }    
-}
-
-void BatThread_XGPTConfig(void)
-{
-    unsigned int clksrc;
-    unsigned int clkdiv;
-    unsigned int cmp;
-    int err;
-
-    #ifdef CONFIG_MT6589_FPGA_CA7
-    clksrc = GPT_CLK_SRC_SYS;
-    clkdiv = GPT_CLK_DIV_1;
-    cmp = 10*6000000;    
-    #else
-    clksrc = GPT_CLK_SRC_RTC;
-    clkdiv = GPT_CLK_DIV_64;
-    cmp = 10*512; // 10s : 512*64=32768
-    #endif
-    
-    xlog_printk(ANDROID_LOG_DEBUG, "Power/Battery", "******** MT6320 battery : BatThread_XGPTConfig !********\n" );
-
-    err = request_gpt(GPT5, GPT_REPEAT, clksrc, clkdiv, cmp, 
-                bat_thread_wakeup, 0);
-
-    if (err) {
-        xlog_printk(ANDROID_LOG_ERROR, "Power/Battery", "fail to request gpt, err=%d\n", err);
-    }                       
-
-    return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -4723,6 +4698,62 @@ void charger_hv_detect_sw_workaround_init(void)
     xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "charger_hv_detect_sw_workaround_init : done\n" );
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////
+//// platform_driver API 
+///////////////////////////////////////////////////////////////////////////////////////////
+static struct hrtimer battery_kthread_timer;
+static struct task_struct *battery_kthread_hrtimer_task = NULL;
+static int battery_kthread_flag = 0;
+static DECLARE_WAIT_QUEUE_HEAD(battery_kthread_waiter);
+
+int battery_kthread_handler(void *unused)
+{
+    ktime_t ktime;
+
+    do
+    {
+        ktime = ktime_set(10, 0);	// 10s, 10* 1000 ms
+    
+//        xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[battery_kthread_handler] \n");
+        wait_event_interruptible(battery_kthread_waiter, battery_kthread_flag != 0);
+    
+        battery_kthread_flag = 0;
+        bat_thread_wakeup();
+        hrtimer_start(&battery_kthread_timer, ktime, HRTIMER_MODE_REL);    
+        
+    } while (!kthread_should_stop());
+    
+    return 0;
+}
+
+enum hrtimer_restart battery_kthread_hrtimer_func(struct hrtimer *timer)
+{
+    battery_kthread_flag = 1; 
+    wake_up_interruptible(&battery_kthread_waiter);
+
+//    xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[battery_kthread_hrtimer_func] \n");
+    
+    return HRTIMER_NORESTART;
+}
+
+void battery_kthread_hrtimer_init(void)
+{
+    ktime_t ktime;
+
+    ktime = ktime_set(10, 0);	// 10s, 10* 1000 ms
+    hrtimer_init(&battery_kthread_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+    battery_kthread_timer.function = battery_kthread_hrtimer_func;    
+    hrtimer_start(&battery_kthread_timer, ktime, HRTIMER_MODE_REL);
+
+    battery_kthread_hrtimer_task = kthread_run(battery_kthread_handler, NULL, "mtk battery_kthread_handler"); 
+    if (IS_ERR(battery_kthread_hrtimer_task))
+    {
+        xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[%s]: failed to create battery_kthread_hrtimer_task thread\n", __FUNCTION__);
+    }
+
+    xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "battery_kthread_hrtimer_init : done\n" );
+}
+
 static int mt6320_battery_probe(struct platform_device *dev)    
 {
     struct class_device *class_dev = NULL;
@@ -4846,15 +4877,14 @@ static int mt6320_battery_probe(struct platform_device *dev)
 
     BMT_status.bat_charging_state = CHR_PRE;
 
-    /* Run Battery Thread Use GPT timer */ 
-    BatThread_XGPTConfig();    
-
     //baton initial setting
     //ret=pmic_config_interface(CHR_CON7, 0x01, PMIC_BATON_TDET_EN_MASK, PMIC_BATON_TDET_EN_SHIFT); //BATON_TDET_EN=1
     //ret=pmic_config_interface(AUXADC_CON0, 0x01, PMIC_RG_BUF_PWD_B_MASK, PMIC_RG_BUF_PWD_B_SHIFT); //RG_BUF_PWD_B=1
     //xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[mt6320_battery_probe] BATON_TDET_EN=1 & RG_BUF_PWD_B=1\n");
 
     //battery kernel thread for 10s check and charger in/out event
+    /* Replace GPT timer by hrtime */
+    battery_kthread_hrtimer_init();     
     kthread_run(bat_thread_kthread, NULL, "bat_thread_kthread"); 
     xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[mt6320_battery_probe] bat_thread_kthread Done\n");    
     
@@ -4893,6 +4923,55 @@ static int mt6320_battery_suspend(struct platform_device *dev, pm_message_t stat
 
     return 0;
 }
+
+int force_get_tbat(void)
+{
+#if defined(CONFIG_POWER_EXT)
+    return 19;
+#else
+    int bat_temperature_volt=0;
+    int bat_temperature_val=0;
+    int fg_r_value=0;
+    kal_int32 fg_current_temp=0;
+    kal_bool fg_current_state=KAL_FALSE;
+    int bat_temperature_volt_temp=0;
+    
+    /* Get V_BAT_Temperature */
+    bat_temperature_volt = get_tbat_volt(2); 
+    if(bat_temperature_volt != 0)
+    {   
+        if( gForceADCsolution == 1 )
+        {
+            /*Use no gas gauge*/
+        }
+        else
+        {
+            fg_r_value = get_r_fg_value();
+            fg_current_temp = fgauge_read_current();
+            fg_current_temp = fg_current_temp/10;
+            fg_current_state = get_gFG_Is_Charging();
+            if(fg_current_state==KAL_TRUE)
+            {
+                bat_temperature_volt_temp = bat_temperature_volt;
+                bat_temperature_volt = bat_temperature_volt - ((fg_current_temp*fg_r_value)/1000);
+            }
+            else
+            {
+                bat_temperature_volt_temp = bat_temperature_volt;
+                bat_temperature_volt = bat_temperature_volt + ((fg_current_temp*fg_r_value)/1000);
+            }
+        }
+        
+        bat_temperature_val = BattVoltToTemp(bat_temperature_volt);        
+    }
+    
+    printk(KERN_CRIT "[tbat] %d,%d,%d,%d,%d,%d\n", 
+        bat_temperature_volt_temp, bat_temperature_volt, fg_current_state, fg_current_temp, fg_r_value, bat_temperature_val);
+    
+    return bat_temperature_val;    
+#endif    
+}
+EXPORT_SYMBOL(force_get_tbat);
 
 static int mt6320_battery_resume(struct platform_device *dev)
 {

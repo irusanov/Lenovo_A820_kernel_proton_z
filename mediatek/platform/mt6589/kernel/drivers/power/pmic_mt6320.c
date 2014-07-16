@@ -514,10 +514,8 @@ CHARGER_TYPE hw_charger_type_detection(void)
     U32 bLineState_C                 = 0;
     U32 ret_val                      = 0;
     U32 reg_val                      = 0;
-    
-#if defined(ACER_C11)
-     msleep(400);
-#endif     
+
+    //msleep(400);
     //xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "mt_charger_type_detection : start!\r\n");
 
 /********* Step 0.0 : enable USB memory and clock *********/
@@ -753,10 +751,6 @@ extern void mt_usb_disconnect(void);
 #endif
 extern void BAT_UpdateChargerStatus(void);
 
-#if defined(ACER_C11)  //for run in test
-extern   int  g_BAT_ChargerTest;
-#endif
-
 void do_chrdet_int_task(void)
 {
     U32 ret=0;
@@ -787,10 +781,6 @@ void do_chrdet_int_task(void)
         xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[do_chrdet_int_task] charger NOT exist!\n");
         g_charger_in_flag = 0;
         g_first_check = 0;
-
-	#if defined(ACER_C11)  //for run in test
-        g_BAT_ChargerTest = 0;
-    #endif
 
         //RG_BC11_BB_CTRL=1
         ret_val=pmic_config_interface(CHR_CON18,0x1,PMIC_RG_BC11_BB_CTRL_MASK,PMIC_RG_BC11_BB_CTRL_SHIFT);

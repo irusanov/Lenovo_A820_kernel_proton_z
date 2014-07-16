@@ -36,6 +36,8 @@
 #define _CAMERA_CUSTOM_IF_
 //
 #include "camera_custom_types.h"
+#include "camera_custom_atv_para.h"
+
 //
 namespace NSCamCustom
 {
@@ -172,6 +174,17 @@ typedef struct customExifInfo_s {
 
 MINT32 custom_SetExif(void **ppCustomExifTag);
 /*******************************************************************************
+* Custom EXIF
+******************************************************************************/
+typedef struct customExif_s
+{
+    MBOOL   bEnCustom;
+    MUINT32 u4ExpProgram;
+    
+} customExif_t;
+
+customExif_t const& getCustomExif();
+
 MUINT32 custom_GetFlashlightGain10X(void);  //cotta : added for high current solution
 MUINT32 custom_BurstFlashlightGain10X(void);
 
@@ -209,29 +222,6 @@ MINT8 get_FB_NRTime();
 *  Get Face beautify Color Target mode Default: 2   2:white  0:red
 *******************************************************************************/
 MINT8 get_FB_ColorTarget();
-* ATV disp delay time
-*******************************************************************************/
-
-#define ATV_MODE_NTSC 30000
-#define ATV_MODE_PAL  25000
-
-#ifdef MTK_MT5192
-//unit: us
-#define ATV_MODE_NTSC_DELAY 5000
-#define ATV_MODE_PAL_DELAY  10000
-
-#else 
-#ifdef MTK_MT5193
-//unit: us
-#define ATV_MODE_NTSC_DELAY 18000
-#define ATV_MODE_PAL_DELAY  26000
-#else
-//unit: us
-#define ATV_MODE_NTSC_DELAY 0
-#define ATV_MODE_PAL_DELAY  0
-#endif
-
-#endif
 
 MINT32 get_atv_disp_delay(MINT32 mode);
 

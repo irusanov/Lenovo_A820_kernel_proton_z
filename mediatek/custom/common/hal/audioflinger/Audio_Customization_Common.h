@@ -43,8 +43,8 @@
 *****************************************************/
 #define DEVICE_MAX_VOLUME           (12)
 #define DEVICE_VOICE_MAX_VOLUME     (12)
-#define DEVICE_MIN_VOLUME           (-32)
-#define DEVICE_VOICE_MIN_VOLUME     (-32)
+#define DEVICE_MIN_VOLUME           (-4)
+#define DEVICE_VOICE_MIN_VOLUME     (-4)
 #define DEVICE_VOLUME_RANGE     (64)
 #define DEVICE_VOLUME_STEP (256)
 
@@ -62,19 +62,19 @@
 * Define this will enable audio compensation filter for loudspeaker
 *Please see ACF Document for detail.
 *****************************************************/
-#define ENABLE_AUDIO_COMPENSATION_FILTER
+//#define ENABLE_AUDIO_COMPENSATION_FILTER
 
 /***************************************************
 * Define this will enable DRC for loudspeaker.
 *****************************************************/
-#define ENABLE_AUDIO_DRC_SPEAKER
+//#define ENABLE_AUDIO_DRC_SPEAKER
 
 
 /***************************************************
 * Define this will enable headphone compensation filter.
 *Please see HCF Document for detail.
 *****************************************************/
-#define ENABLE_HEADPHONE_COMPENSATION_FILTER
+//#define ENABLE_HEADPHONE_COMPENSATION_FILTER
 #define HEADPHONE_COMPENSATION_FLT_MODE (4)
 
 
@@ -105,7 +105,7 @@
 *keep in stereo format,because stereo output can apply
 *on more than 1 speaker.
 *****************************************************/
-//#define ENABLE_STEREO_SPEAKER
+#define ENABLE_STEREO_SPEAKER
 
 
 /****************************************************
