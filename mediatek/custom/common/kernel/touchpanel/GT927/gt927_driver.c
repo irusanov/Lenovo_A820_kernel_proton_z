@@ -34,7 +34,8 @@ static int tpd_wb_end_local[TPD_WARP_CNT]   = TPD_WARP_END;
 #if (defined(TPD_HAVE_CALIBRATION) && !defined(TPD_CUSTOM_CALIBRATION))
 //static int tpd_calmat_local[8]     = TPD_CALIBRATION_MATRIX;
 static int tpd_calmat_driver[8]    = {0};
-static int tpd_def_calmat_local[8] = TPD_CALIBRATION_MATRIX;
+static int tpd_def_calmat_local_normal[8]  = TPD_CALIBRATION_MATRIX_ROTATION_NORMAL;
+static int tpd_def_calmat_local_factory[8] = TPD_CALIBRATION_MATRIX_ROTATION_FACTORY;
 #endif
 
 s32 gtp_send_cfg(struct i2c_client *client);
@@ -103,10 +104,20 @@ u32 abs_y_max = 0;
 u8 gtp_rawdiff_mode = 0;
 u8 cfg_len = 0;
 
+#if GTP_DEBUG_ON
+long last_int_time; // global variable
+#endif
+
 /* proc file system */
 s32 i2c_read_bytes(struct i2c_client *client, u16 addr, u8 *rxbuf, int len);
 s32 i2c_write_bytes(struct i2c_client *client, u16 addr, u8 *txbuf, int len);
 static struct proc_dir_entry *gt927_config_proc = NULL;
+#if GTP_RAWDATA_PROC
+static struct proc_dir_entry *gt927_rawdata_proc = NULL;
+#endif
+#if GTP_DIFFDATA_PROC
+static struct proc_dir_entry *gt927_diffdata_proc = NULL;
+#endif
 
 #define VELOCITY_CUSTOM
 #ifdef VELOCITY_CUSTOM
@@ -328,6 +339,143 @@ s32 tpd_ps_operate(void *self, u32 command, void *buff_in, s32 size_in,
 }
 #endif
 
+#if GTP_RAWDATA_PROC
+static int gt927_rawdata_read_proc(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+    int driving_num = 0;
+    int sensing_num = 0;
+    int i;
+    char *ptr = page;
+    u8 *buf;
+    int raw_temp;
+
+    mt65xx_eint_mask(CUST_EINT_TOUCH_PANEL_NUM);
+
+    driving_num += (config[27 + GTP_ADDR_LENGTH] & 0x1F);
+    driving_num += (config[28 + GTP_ADDR_LENGTH] & 0x1F);
+    sensing_num += (config[29 + GTP_ADDR_LENGTH] & 0x0F);
+    sensing_num += (config[29 + GTP_ADDR_LENGTH] & 0xF0) >> 4;
+    GTP_INFO("TPD driving_num %d", driving_num);
+    GTP_INFO("TPD sensing_num %d", sensing_num);
+    buf = (u8 *)kzalloc(driving_num * sensing_num * 2, GFP_KERNEL);
+
+    //0x8040 write 1 for rawdata/diff access
+    buf[0] = 1;
+    i2c_write_bytes(i2c_client_point, GTP_REG_SLEEP, buf, 1);
+
+    // wait for normal INT finished
+    while (tpd_flag == 1)
+    {
+        msleep(20);
+    }
+
+    msleep(100);
+
+    //check for raw data ready
+    i2c_read_bytes(i2c_client_point, GTP_READ_COOR_ADDR, buf, 1);
+
+    while (buf[0] == 0)
+    {
+        //wait for data ready
+        GTP_INFO("Wati for raw data");
+        i2c_read_bytes(i2c_client_point, GTP_READ_COOR_ADDR, buf, 1);
+        buf[0] &= 0x80;
+        msleep(5);
+    }
+
+    i2c_read_bytes(i2c_client_point, GTP_RAWDATA_REG, buf, driving_num * sensing_num * 2);
+
+    for (i = 0 ; i < driving_num * sensing_num * 2; i = i + 2)
+    {
+        raw_temp = buf[i] * 256 + buf[i + 1];
+        ptr += sprintf(ptr, "%d\t", raw_temp);
+
+        if ((i % (sensing_num * 2)) == (sensing_num - 1) * 2)
+            ptr += sprintf(ptr, "\n");
+    }
+
+    //clear data ready status
+    buf[0] = 0;
+    i2c_write_bytes(i2c_client_point, GTP_READ_COOR_ADDR, buf, 1);
+
+    //0x8040 write 0 for leaving rawdata/diff access mode
+    buf[0] = 0;
+    i2c_write_bytes(i2c_client_point, GTP_REG_SLEEP, buf, 1);
+
+    mt65xx_eint_unmask(CUST_EINT_TOUCH_PANEL_NUM);
+    kfree(buf);
+    *eof = 1;
+    return (ptr - page);
+}
+#endif
+
+#if GTP_DIFFDATA_PROC
+static int gt927_diffdata_read_proc(char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+    int driving_num = 0;
+    int sensing_num = 0;
+    int i;
+    char *ptr = page;
+    u8 *buf;
+    mt65xx_eint_mask(CUST_EINT_TOUCH_PANEL_NUM);
+    driving_num += (config[27 + GTP_ADDR_LENGTH] & 0x1F);
+    driving_num += (config[28 + GTP_ADDR_LENGTH] & 0x1F);
+    sensing_num += (config[29 + GTP_ADDR_LENGTH] & 0x0F);
+    sensing_num += (config[29 + GTP_ADDR_LENGTH] & 0xF0) >> 4;
+    GTP_INFO("TPD driving_num %d", driving_num);
+    GTP_INFO("TPD sensing_num %d", sensing_num);
+    buf = (u8 *)kzalloc(driving_num * sensing_num, GFP_KERNEL);
+
+    //0x8040 write 1 for rawdata/diff access
+    buf[0] = 1;
+    i2c_write_bytes(i2c_client_point, GTP_REG_SLEEP, buf, 1);
+
+    // wait for normal INT finished
+    while (tpd_flag == 1)
+    {
+        msleep(20);
+    }
+
+    msleep(100);
+
+    //check for raw data ready
+    i2c_read_bytes(i2c_client_point, GTP_READ_COOR_ADDR, buf, 1);
+
+    while (buf[0] == 0)
+    {
+        //wait for data ready
+        GTP_INFO("Wati for raw data");
+        i2c_read_bytes(i2c_client_point, GTP_READ_COOR_ADDR, buf, 1);
+        GTP_INFO("0x814E : %2X", buf[0]);
+        buf[0] &=  0x80;
+        msleep(5);
+    }
+
+    i2c_read_bytes(i2c_client_point, GTP_DIFFDATA_REG, buf, driving_num * sensing_num);
+
+    for (i = 0 ; i < driving_num * sensing_num; i = i + 1)
+    {
+        ptr += sprintf(ptr, "%d\t", buf[i]);
+
+        if ((i % (sensing_num)) == (sensing_num - 1))
+            ptr += sprintf(ptr, "\n");
+    }
+
+    //clear data ready status
+    buf[0] = 0;
+    i2c_write_bytes(i2c_client_point, GTP_READ_COOR_ADDR, buf, 1);
+
+    //0x8040 write 0 for leaving rawdata/diff access mode
+    buf[0] = 0;
+    i2c_write_bytes(i2c_client_point, GTP_REG_SLEEP, buf, 1);
+
+    mt65xx_eint_unmask(CUST_EINT_TOUCH_PANEL_NUM);
+    kfree(buf);
+    *eof = 1;
+    return (ptr - page);
+}
+#endif
+
 static int gt927_config_read_proc(char *page, char **start, off_t off, int count, int *eof, void *data)
 {
     char *ptr = page;
@@ -357,6 +505,8 @@ static int gt927_config_read_proc(char *page, char **start, off_t off, int count
             ptr += sprintf(ptr, "\n");
     }
 
+    i2c_read_bytes(i2c_client_point, GTP_REG_VERSION, temp_data, 6);
+    ptr += sprintf(ptr, "PID: %c%c%c%c VID: 0x%02X%02X\n", temp_data[0], temp_data[1], temp_data[2], temp_data[3], temp_data[5], temp_data[4]);
 
     *eof = 1;
     return (ptr - page);
@@ -833,26 +983,12 @@ static int tpd_power_on(struct i2c_client *client)
     int reset_count = 0;
 
 reset_proc:
-#ifdef MT6573
-    // power on CTP
-    //mt_set_gpio_mode(GPIO_CTP_EN_PIN, GPIO_CTP_EN_PIN_M_GPIO);
-    //mt_set_gpio_dir(GPIO_CTP_EN_PIN, GPIO_DIR_OUT);
-    //mt_set_gpio_out(GPIO_CTP_EN_PIN, GPIO_OUT_ONE);
-#endif
-#ifdef MT6575
-    //power on, need confirm with SA
-    //hwPowerOn(MT65XX_POWER_LDO_VGP2, VOL_2800, "TP");
-    //hwPowerOn(MT65XX_POWER_LDO_VGP, VOL_1800, "TP");
-#endif
-#ifdef MT6577
-    //power on, need confirm with SA
-    //hwPowerOn(MT65XX_POWER_LDO_VGP2, VOL_2800, "TP");
-    //hwPowerOn(MT65XX_POWER_LDO_VGP, VOL_1800, "TP");
-#endif
 
-    //MT6589
     //Power on
-    hwPowerOn(MT65XX_POWER_LDO_VGP5, VOL_2800, "TP");
+    hwPowerOn(MT65XX_POWER_LDO, VOL_2800, "TP");
+    #ifdef MT65XX_POWER_LDO_1800
+    hwPowerOn(MT65XX_POWER_LDO_1800, VOL_1800, "TP");
+    #endif
 
     gtp_reset_guitar(client, 20);
 
@@ -886,8 +1022,8 @@ static s32 tpd_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
     s32 err = 0;
     s32 ret = 0;
 
-    u16 version_info;
-#ifdef GTP_HAVE_TOUCH_KEY
+    //u16 version_info;
+#if GTP_HAVE_TOUCH_KEY
     s32 idx = 0;
 #endif
 #ifdef TPD_PROXIMITY
@@ -900,9 +1036,11 @@ static s32 tpd_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
     if (ret < 0)
     {
         GTP_ERROR("I2C communication ERROR!");
+        return 0;
     }
 
 #if GTP_AUTO_UPDATE
+    GTP_INFO("GTP_AUTO_UPDATE!\n");
     ret = gup_init_update_proc(client);
 
     if (ret < 0)
@@ -951,6 +1089,34 @@ static s32 tpd_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
         gt927_config_proc->read_proc = gt927_config_read_proc;
         gt927_config_proc->write_proc = gt927_config_write_proc;
     }
+
+#if GTP_RAWDATA_PROC
+    gt927_rawdata_proc = create_proc_entry(GT927_RAWDATA_PROC_FILE, 0666, NULL);
+
+    if (gt927_rawdata_proc == NULL)
+    {
+        GTP_ERROR("create_proc_entry %s failed\n", GT927_RAWDATA_PROC_FILE);
+    }
+    else
+    {
+        gt927_rawdata_proc->read_proc = gt927_rawdata_read_proc;
+
+    }
+#endif
+
+#if GTP_DIFFDATA_PROC
+    gt927_diffdata_proc = create_proc_entry(GT927_DIFFDATA_PROC_FILE, 0666, NULL);
+
+    if (gt927_diffdata_proc == NULL)
+    {
+        GTP_ERROR("create_proc_entry %s failed\n", GT927_DIFFDATA_PROC_FILE);
+    }
+    else
+    {
+        gt927_diffdata_proc->read_proc = gt927_diffdata_read_proc;
+
+    }
+#endif
 
 #if GTP_CREATE_WR_NODE
     init_wr_node(client);
@@ -1031,6 +1197,17 @@ static s32 tpd_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
 
 static void tpd_eint_interrupt_handler(void)
 {
+#if GTP_DEBUG_ON
+    struct timeval t;
+    long current_time;
+    int report_rate;
+    do_gettimeofday(&t);
+    current_time = (t.tv_sec & 0xFFF) * 1000000 + t.tv_usec;
+    report_rate = 1 * 1000000 / (current_time - last_int_time);
+    GTP_DEBUG("Report Rate: %d Hz", report_rate);
+    last_int_time = current_time;
+#endif
+
     TPD_DEBUG_PRINT_INT;
     tpd_flag = 1;
     wake_up_interruptible(&waiter);
@@ -1057,20 +1234,18 @@ static void force_reset_guitar(void)
     GTP_INFO("force_reset_guitar\n");
 
     //Power off TP
-#if (defined(MT6575) || defined(mt6577))
-    hwPowerDown(MT65XX_POWER_LDO_VGP2, "TP");
+    hwPowerDown(MT65XX_POWER_LDO, "TP");
+    #ifdef MT65XX_POWER_LDO_1800
+    hwPowerDown(MT65XX_POWER_LDO_1800, "TP");
+    #endif
     msleep(30);
     //Power on TP
-    hwPowerOn(MT65XX_POWER_LDO_VGP2, VOL_2800, "TP");
+    hwPowerOn(MT65XX_POWER_LDO, VOL_2800, "TP");
+    #ifdef MT65XX_POWER_LDO_1800
+    hwPowerOn(MT65XX_POWER_LDO_1800, VOL_1800, "TP");
+    #endif
+
     msleep(30);
-#else
-    //Power off TP
-    mt_set_gpio_out(GPIO_CTP_EN_PIN, GPIO_OUT_ZERO);
-    msleep(30);
-    //Power on TP
-    mt_set_gpio_out(GPIO_CTP_EN_PIN, GPIO_OUT_ONE);
-    msleep(30);
-#endif
 
     for (i = 0; i < 5; i++)
     {
@@ -1392,9 +1567,16 @@ static int tpd_local_init(void)
 #endif
 
 #if (defined(TPD_HAVE_CALIBRATION) && !defined(TPD_CUSTOM_CALIBRATION))
-    memcpy(tpd_calmat_driver, tpd_def_calmat_local, 8 * 4);
-    memcpy(tpd_calmat, tpd_def_calmat_local, 8 * 4);
-    memcpy(tpd_def_calmat, tpd_def_calmat_local, 8 * 4);
+    if (FACTORY_BOOT == get_boot_mode())
+    {
+        TPD_DEBUG("Factory mode is detected! \n");
+        memcpy(tpd_calmat_driver, tpd_def_calmat_local_factory, sizeof(tpd_calmat_driver));
+    }
+    else
+    {
+        TPD_DEBUG("Normal mode is detected! \n");
+        memcpy(tpd_calmat_driver, tpd_def_calmat_local_normal, sizeof(tpd_calmat_driver));
+    }
 #endif
 
     // set vendor string
@@ -1425,9 +1607,17 @@ static s8 gtp_enter_sleep(struct i2c_client *client)
     s8 retry = 0;
     u8 i2c_control_buf[3] = {(u8)(GTP_REG_SLEEP >> 8), (u8)GTP_REG_SLEEP, 5};
 #if GTP_POWER_CTRL_SLEEP
-    //MT6589 power down
-    hwPowerDown(MT65XX_POWER_LDO_VGP5, "TP");
-    //hwPowerDown(MT65XX_POWER_LDO_VGP, "TP");
+    GTP_GPIO_OUTPUT(GTP_RST_PORT, 0);
+    msleep(5);
+
+    mt_set_gpio_mode(GTP_GPIO_SDA, GPIO_MODE_00);
+    mt_set_gpio_mode(GTP_GPIO_SCL, GPIO_MODE_00);
+    
+    hwPowerDown(MT65XX_POWER_LDO, "TP");
+    #ifdef MT65XX_POWER_LDO_1800    
+    hwPowerDown(MT65XX_POWER_LDO_1800, "TP");    
+    #endif
+
     GTP_INFO("GTP enter sleep!");
     return 0;
 #else
@@ -1471,6 +1661,9 @@ static s8 gtp_wakeup_sleep(struct i2c_client *client)
     GTP_INFO("GTP wakeup begin.");
 #if GTP_POWER_CTRL_SLEEP
 
+    mt_set_gpio_mode(GTP_GPIO_SDA, GPIO_MODE_01);
+    mt_set_gpio_mode(GTP_GPIO_SCL, GPIO_MODE_01);
+    
     while (retry++ < 5)
     {
         ret = tpd_power_on(client);

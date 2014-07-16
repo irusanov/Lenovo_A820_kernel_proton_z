@@ -165,9 +165,7 @@ int musb_otg_env_init(void){
     #ifndef MTK_BQ24158_SUPPORT
     //set the drvvbus mode as drvvbus(mode 6)
 #if !(defined(CONFIG_MT6585_FPGA) || defined(CONFIG_MT6577_FPGA) || defined(CONFIG_MT6589_FPGA) || defined(CONFIG_MT6582_FPGA))
-#if defined(GPIO_OTG_DRVVBUS_PIN)
     mt_set_gpio_mode(GPIO_OTG_DRVVBUS_PIN,6);
-#endif
     #endif
     #endif
     #endif
@@ -1326,10 +1324,8 @@ static int musb_host_test_mode(unsigned char cmd){
     #else
 
     #if !(defined(CONFIG_MT6585_FPGA) || defined(CONFIG_MT6577_FPGA) || defined(CONFIG_MT6589_FPGA) || defined(CONFIG_MT6582_FPGA))
-    #if defined(GPIO_OTG_DRVVBUS_PIN)
     mt_set_gpio_mode(GPIO_OTG_DRVVBUS_PIN,6);
-    //mt_set_gpio_out (GPIO_OTG_DRVVBUS_PIN, 1); 
-    #endif
+    //mt_set_gpio_out (GPIO_OTG_DRVVBUS_PIN, 1);
     #endif
     #endif
     musb_otg_reset_usb ();

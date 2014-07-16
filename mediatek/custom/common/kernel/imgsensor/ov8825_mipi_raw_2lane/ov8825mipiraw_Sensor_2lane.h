@@ -8,7 +8,7 @@
 #define __SENSOR_H
 
 #define ZSD15FPS
-#define VIDEO_PREVIEW_SYNC  //open this define need re-do Tuning,Don't open it by yourself
+//#define VIDEO_PREVIEW_SYNC  //open this define need re-do Tuning,Don't open it by yourself
 
 typedef enum group_enum {
     PRE_GAIN=0,
@@ -103,18 +103,12 @@ typedef struct
 	/* SENSOR START/EDE POSITION */         	
 	#define OV8825_FULL_X_START						    		(2)
 	#define OV8825_FULL_Y_START						    		(2)
-	#define OV8825_FULL_X_END						        	(3264+200)     
-	#define OV8825_FULL_Y_END						        	(2448) 
 	#define OV8825_PV_X_START						    		(2)
 	#define OV8825_PV_Y_START						    		(2)
-	#define OV8825_PV_X_END						    			(1632) 
-	#define OV8825_PV_Y_END						    			(1224) 
-	
 	#define OV8825_VIDEO_X_START								(2)
 	#define OV8825_VIDEO_Y_START								(2)
-	#define OV8825_VIDEO_X_END 									(2160) 
-	#define OV8825_VIDEO_Y_END 									(1620) 
 
+	
 	#define OV8825_MAX_ANALOG_GAIN					(16)
 	#define OV8825_MIN_ANALOG_GAIN					(1)
 	#define OV8825_ANALOG_GAIN_1X						(0x0020)

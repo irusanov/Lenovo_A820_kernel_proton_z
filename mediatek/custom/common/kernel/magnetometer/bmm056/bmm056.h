@@ -16,13 +16,15 @@
 
 #include <linux/ioctl.h>
 
+//#define BMC056_SHARE_I2C_ADDRESS
+
 #define CALIBRATION_DATA_SIZE	12
 
 /* 7-bit addr: 
 *	0x12 (SDO connected to GND, CSB2 connected to VDDIO)
 *	0x13 (SDO connected to VDDIO, CSB2 connected to VDDIO)
 */
-#define BMM050_I2C_ADDR		0x12
+#define BMM050_I2C_ADDR		0x13
 
 // conversion of magnetic data (for bmm050) to uT units
 // conversion of magnetic data to uT units

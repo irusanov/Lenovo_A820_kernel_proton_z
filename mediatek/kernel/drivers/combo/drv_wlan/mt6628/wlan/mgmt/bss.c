@@ -2049,11 +2049,8 @@ bssRemoveStaRecFromClientList (
 
     if (!LINK_IS_EMPTY(prStaRecOfClientList)) {
         P_STA_RECORD_T prCurrStaRec;
-	 P_STA_RECORD_T prCurrStaRecNext; //added by mtk support
 
-	//sunyugg modify for bug 6199, NULL pointer
-        //LINK_FOR_EACH_ENTRY(prCurrStaRec, prStaRecOfClientList, rLinkEntry, STA_RECORD_T) {
-	 LINK_FOR_EACH_ENTRY_SAFE(prCurrStaRec, prCurrStaRecNext, prStaRecOfClientList, rLinkEntry, STA_RECORD_T){
+        LINK_FOR_EACH_ENTRY(prCurrStaRec, prStaRecOfClientList, rLinkEntry, STA_RECORD_T) {
 
             if (prCurrStaRec == prStaRec) {
 

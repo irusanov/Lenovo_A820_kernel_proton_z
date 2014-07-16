@@ -143,13 +143,6 @@ extern void        tpd_suspend(struct early_suspend *h);
 extern void        tpd_resume(struct early_suspend *h);
 extern void tpd_button_init(void);
 
-#define TPD_INFO_PROC//Punk@add
-
-#ifdef TPD_INFO_PROC
-#define TPD_INFO_PROC_FILE    "driver/tpd_info"
-static struct proc_dir_entry *tpd_info_proc = NULL;
-#endif
-
 //int tpd_load_status = 0; //0: failed, 1: sucess
 int tpd_register_flag=0;
 /* global variable definitions */
@@ -252,59 +245,6 @@ int tpd_driver_remove(struct tpd_driver_t *tpd_drv)
 	}
 	return 0;
 }
-
-#ifdef TPD_INFO_PROC
-unsigned int tp_ver=0xfaff;
-#if defined(ACER_Z1) || defined(ACER_Z2)
-extern unsigned int tpd_msg2133_version_check();
-extern unsigned int tpd_cyttsp_version_check();
-#endif
-
-#if defined(ACER_C11)
-extern unsigned int ic_fw_vid;;
-#endif
-
-static int tpd_info_read_proc(char *page, char **start, off_t off, int count, int *eof, void *data)
-{
-       char *ptr = page;
-	   char *name;
-	   
-       s32 ret;
-	   
-	   
-       name = g_tpd_drv->tpd_device_name;
-       
-#if defined(ACER_Z1) || defined(ACER_Z2)
-       if(g_tpd_drv->tpd_device_name == "MSG2133")
-           tp_ver = tpd_msg2133_version_check();
-       else if(g_tpd_drv->tpd_device_name == "cy8ctst242")
-           tp_ver = tpd_cyttsp_version_check();
-#endif
-	printk("%s ,tpd name=%s\n", __func__,name);
-
-#if defined(ACER_C11)
-    if(name != NULL) 
-		ptr += sprintf( ptr, "TPD name: %s, TPD FW Ver: %x\n",name,ic_fw_vid);
-	else
-		ptr += sprintf( ptr, "Unkown TPD  ");
-#else	
-	if(name != NULL) 
-		ptr += sprintf( ptr, "TPD name: %s, TPD FW Ver: %x\n",name,tp_ver);
-	else
-		ptr += sprintf( ptr, "Unkown TPD  ");
-#endif
-
-	*eof = 1;
-	return ( ptr - page );
-}
-
-static int tpd_info_write_proc(struct file *file, const char *buffer, unsigned long count, void *data)
-{
-	printk("%s \n", __func__);
-	return 0;
-}
-
-#endif
 
 /* touch panel probe */
 static int tpd_probe(struct platform_device *pdev) {
@@ -448,21 +388,7 @@ static int tpd_probe(struct platform_device *pdev) {
     {
     	tpd_button_init();
     }
-    
-#ifdef TPD_INFO_PROC /*Punk@add*/
-	// Create proc file system
-	tpd_info_proc = create_proc_entry( TPD_INFO_PROC_FILE , 0666, NULL);
 
-	if ( tpd_info_proc == NULL )
-	{
-		printk("create_proc_entry %s failed\n", TPD_INFO_PROC_FILE );
-	}
-	else 
-	{
-		tpd_info_proc ->read_proc = tpd_info_read_proc;
-		tpd_info_proc ->write_proc = tpd_info_write_proc;
-	}
-#endif
     return 0;
 }
 

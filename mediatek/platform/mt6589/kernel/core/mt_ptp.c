@@ -76,8 +76,8 @@ static void PTP_set_ptp_volt(void)
     // set PTP_VO_0 ~ PTP_VO_7 to PMIC
     if( freq_0 != 0 )
     {
-        // 1_188v, 1_063v, 1_013v 
-        if( ( (ptp_level == 4) && (PTP_VO_0 < 79) ) || ( (ptp_level == 2) && (PTP_VO_0 < 54) ) || ( (PTP_VO_0 < 51) ) )    
+        // 1.6G : 1_188v, 1.5G : 1_1255v, 1.4G : 1_063v, 1.2G : 1_013v 
+        if( ( (ptp_level == 4) && (PTP_VO_0 < 79) ) || ( (ptp_level == 3) && (PTP_VO_0 < 68) ) || ( (ptp_level == 2) && (PTP_VO_0 < 54) ) || ( (PTP_VO_0 < 51) ) )    
         {
             // restore default DVFS table (PMIC)
             clc_isr_info("PTP Error : ptp_level = 0x%x, PTP_VO_0 = 0x%x \n", ptp_level, PTP_VO_0);
@@ -350,7 +350,7 @@ irqreturn_t MT6589_PTP_ISR(int irq, void *dev_id)
             PTP_INIT_FLAG = 0;
         }
     }
-    else if( (PTPINTSTS & 0x00ff0000) != 0x0 )  // PTP Monitor mode
+    else if( (PTPINTSTS & 0x00ff0002) != 0x0 )  // PTP Monitor mode
     {
         // check if thermal sensor init completed?
         temp_0 = (ptp_read( PTP_TEMP ) & 0xff); // temp_0
@@ -403,7 +403,8 @@ irqreturn_t MT6589_PTP_ISR(int irq, void *dev_id)
         }
         
         // Clear PTP INIT interrupt PTPINTSTS = 0x00ff0000
-        ptp_write(PTP_PTPINTSTS, 0x00ff0000);
+        //ptp_write(PTP_PTPINTSTS, 0x00ff0000);
+        ptp_write(PTP_PTPINTSTS, 0x00ffa002);        
     }
     else // PTP error
     {

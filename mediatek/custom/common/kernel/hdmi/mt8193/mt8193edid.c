@@ -1362,7 +1362,7 @@ void vParserExtEDIDState(u8 *prEdid)
 void mt8193_checkedid(u8 i1noedid)
 {
   u8 bTemp;
-  u8 bRetryCount= 40;
+  u8 bRetryCount= 2;
   u8 i;
   MT8193_EDID_FUNC();
 

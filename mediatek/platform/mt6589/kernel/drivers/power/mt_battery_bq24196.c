@@ -176,19 +176,23 @@ void tbl_charger_otg_vbus(int mode)
     {
         bq24196_set_chg_config(0x3); //OTG
         bq24196_set_boost_lim(0x1); //1.3A on VBUS
-        bq24196_set_en_hiz(0x0);        
+        bq24196_set_en_hiz(0x0);
+#if 0        
         //OTG pin pull high, maybe can consider OTG pin always high
         mt_set_gpio_mode(GPIO_OTG_DRVVBUS_PIN,GPIO_MODE_GPIO);  
         mt_set_gpio_dir(GPIO_OTG_DRVVBUS_PIN,GPIO_DIR_OUT);
-        mt_set_gpio_out(GPIO_OTG_DRVVBUS_PIN,GPIO_OUT_ONE);           
+        mt_set_gpio_out(GPIO_OTG_DRVVBUS_PIN,GPIO_OUT_ONE);
+#endif
     }
     else
     {
         bq24196_set_chg_config(0x0); //OTG & Charge disabled
+#if 0        
         //OTG pin pull low, maybe can consider OTG pin always high
         mt_set_gpio_mode(GPIO_OTG_DRVVBUS_PIN,GPIO_MODE_GPIO);  
         mt_set_gpio_dir(GPIO_OTG_DRVVBUS_PIN,GPIO_DIR_OUT);
-        mt_set_gpio_out(GPIO_OTG_DRVVBUS_PIN,GPIO_OUT_ZERO);                   
+        mt_set_gpio_out(GPIO_OTG_DRVVBUS_PIN,GPIO_OUT_ZERO);
+#endif        
     }
 };
 #endif
@@ -394,6 +398,7 @@ int g_Charging_Over_Time = 0;
 int gForceADCsolution=0;
 
 int gSyncPercentage=0;
+int gSyncPercentageStatus=0;// 0:discharging, 1:charging
 
 unsigned int g_BatteryNotifyCode=0x0000;
 unsigned int g_BN_TestMode=0x0000;
@@ -899,6 +904,10 @@ static void mt6320_battery_update(struct mt6320_battery_data *bat_data)
     //if( (upmu_is_chr_det(CHR)==KAL_TRUE) && (!g_Battery_Fail) )
     if( (upmu_is_chr_det()==KAL_TRUE) && (!g_Battery_Fail) && (g_Charging_Over_Time==0) && (usb_is_discharging_det() == 0))
     {
+        /* clear sync flag when charging/discharging switching */
+        if (gSyncPercentage && !gSyncPercentageStatus)
+            gSyncPercentage=0;
+        
         if ( BMT_status.bat_exist )
         {
             /* Battery Full */
@@ -927,6 +936,7 @@ static void mt6320_battery_update(struct mt6320_battery_data *bat_data)
 				else
 				{
 					gSyncPercentage=1;
+					gSyncPercentageStatus=1;
 #if defined(MTK_JEITA_STANDARD_SUPPORT)
                     //increase after xxs
                     if(gFGsyncTimer_jeita >= g_default_sync_time_out_jeita)
@@ -980,6 +990,7 @@ static void mt6320_battery_update(struct mt6320_battery_data *bat_data)
 					bat_volt_check_point = 100;
 
 					gSyncPercentage=1;
+					gSyncPercentageStatus=1;
 					if (Enable_BATDRV_LOG == 1) {
 						xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[Battery_Recharging] Keep UI as 100. bat_volt_check_point=%d, BMT_status.SOC=%d\r\n",
 						bat_volt_check_point, BMT_status.SOC);
@@ -1006,6 +1017,7 @@ static void mt6320_battery_update(struct mt6320_battery_data *bat_data)
 							bat_volt_check_point=99;
 							//BMT_status.SOC=99;
 							gSyncPercentage=1;
+							gSyncPercentageStatus=1;
 
 							//if (Enable_BATDRV_LOG == 1) {
 								xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[Battery] Use gas gauge : gas gague get 100 first (%d)\r\n", bat_volt_check_point);
@@ -1016,6 +1028,7 @@ static void mt6320_battery_update(struct mt6320_battery_data *bat_data)
 							if(bat_volt_check_point == BMT_status.SOC)
 							{
 								gSyncPercentage=0;
+								gSyncPercentageStatus=1;
 
 								if (Enable_BATDRV_LOG == 1) {
 									xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[Battery] Can sync due to bat_volt_check_point=%d, BMT_status.SOC=%d\r\n",
@@ -1046,6 +1059,9 @@ static void mt6320_battery_update(struct mt6320_battery_data *bat_data)
     /* Only Battery */
     else
     {
+        /* clear sync flag when charging/discharging switching */
+        if (gSyncPercentage && gSyncPercentageStatus)
+            gSyncPercentage=0;
         if(usb_is_discharging_det() == 1)
             bat_data->BAT_STATUS = POWER_SUPPLY_STATUS_CHARGING;
         else
@@ -1064,6 +1080,7 @@ static void mt6320_battery_update(struct mt6320_battery_data *bat_data)
 			else
 			{
 				gSyncPercentage=1;
+				gSyncPercentageStatus=0;
 				bat_volt_check_point--;
 				if(bat_volt_check_point <= 0)
 				{
@@ -1084,6 +1101,7 @@ static void mt6320_battery_update(struct mt6320_battery_data *bat_data)
 		{
 			/*Use gas gauge*/
 			gSyncPercentage=1;
+			gSyncPercentageStatus=0;
 			if(gBAT_counter_15==0)
 			{
 				bat_volt_check_point--;
@@ -1107,6 +1125,7 @@ static void mt6320_battery_update(struct mt6320_battery_data *bat_data)
 		{
 			/*Use gas gauge*/
 			gSyncPercentage=1;
+			gSyncPercentageStatus=0;
 			gBAT_counter_15=1;
 			g_Calibration_FG = 0;
     		FGADC_Reset_SW_Parameter();
@@ -1166,6 +1185,7 @@ static void mt6320_battery_update(struct mt6320_battery_data *bat_data)
 						bat_volt_check_point=1;
 						//BMT_status.SOC=1;
 						gSyncPercentage=1;
+						gSyncPercentageStatus=0;
 
 						//if (Enable_BATDRV_LOG == 1) {
 							xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[Battery] Use gas gauge : gas gague get 0 first (%d)\r\n", bat_volt_check_point);
@@ -1483,7 +1503,7 @@ INT16 BattVoltToTemp(UINT32 dwVolt)
     #endif
 
 #ifdef BEFORE_TREF_REWORK
-    if(upmu_get_cid() == 0x1020)
+//    if(upmu_get_cid() == 0x1020)
         sBaTTMP=22; 
 #endif
     return sBaTTMP;
@@ -1860,10 +1880,13 @@ void ChargerHwInit_bq24196(void)
     upmu_set_rg_bc11_bb_ctrl(1);    //BC11_BB_CTRL    
     upmu_set_rg_bc11_rst(1);        //BC11_RST
 
+#if 0 //no use
     //pull PSEL low
     mt_set_gpio_mode(GPIO_CHR_PSEL_PIN,GPIO_MODE_GPIO);  
     mt_set_gpio_dir(GPIO_CHR_PSEL_PIN,GPIO_DIR_OUT);
-    mt_set_gpio_out(GPIO_CHR_PSEL_PIN,GPIO_OUT_ZERO);    
+    mt_set_gpio_out(GPIO_CHR_PSEL_PIN,GPIO_OUT_ZERO);
+#endif    
+    
     //pull CE low
     mt_set_gpio_mode(GPIO_CHR_CE_PIN,GPIO_MODE_GPIO);  
     mt_set_gpio_dir(GPIO_CHR_CE_PIN,GPIO_DIR_OUT);
@@ -2313,7 +2336,7 @@ int BAT_CheckBatteryStatus_bq24196(void)
 	if(bat_temperature_volt == 0)
 	{
 #ifdef BEFORE_TREF_REWORK	
-	    if(upmu_get_cid() == 0x1020)
+//	    if(upmu_get_cid() == 0x1020)
 	        g_bat_temperature_pre = 22; // MT6320 E1 workaround
 #endif	        
 		BMT_status.temperature = g_bat_temperature_pre;
@@ -3528,11 +3551,12 @@ void PrechargeCheckStatus(void)
 //			bq24196_set_batfet_disable(0x0); // turn on BATFET		
             bq24196_set_chg_config(0x1);
             msleep(100);
-
+#if 0 // no use
 			//pull PSEL low
 			mt_set_gpio_mode(GPIO_CHR_PSEL_PIN,GPIO_MODE_GPIO);  
 			mt_set_gpio_dir(GPIO_CHR_PSEL_PIN,GPIO_DIR_OUT);
-			mt_set_gpio_out(GPIO_CHR_PSEL_PIN,GPIO_OUT_ZERO);	 
+			mt_set_gpio_out(GPIO_CHR_PSEL_PIN,GPIO_OUT_ZERO);
+#endif			
 			//pull CE low
 			mt_set_gpio_mode(GPIO_CHR_CE_PIN,GPIO_MODE_GPIO);  
 			mt_set_gpio_dir(GPIO_CHR_CE_PIN,GPIO_DIR_OUT);

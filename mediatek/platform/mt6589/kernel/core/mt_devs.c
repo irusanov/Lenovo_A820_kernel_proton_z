@@ -26,8 +26,6 @@
 #include <mach/mtk_memcfg.h>
 
 
-//for cts sn
-#define CONFIG_MTK_USB_UNIQUE_SERIAL 
 #define SERIALNO_LEN 32
 static char serial_number[SERIALNO_LEN];
 
@@ -1806,15 +1804,6 @@ __init int mt6589_board_init(void)
 	if (retval != 0)
 		return retval;
 
-#if defined(ACER_C11)
-#if defined(CUSTOM_KERNEL_ALSPS)
-	retval = platform_device_register(&sensor_alsps);
-		printk("sensor_alsps device!");
-	if (retval != 0)
-		return retval;
-#endif
-#endif
-
 #if defined(CUSTOM_KERNEL_ACCELEROMETER)
 	retval = platform_device_register(&sensor_gsensor);
 		printk("sensor_gsensor device!");
@@ -1849,16 +1838,12 @@ __init int mt6589_board_init(void)
 		return retval;
 #endif
 
-#if defined(ACER_C11)
-#else
 #if defined(CUSTOM_KERNEL_ALSPS)
 	retval = platform_device_register(&sensor_alsps);
 		printk("sensor_alsps device!");
 	if (retval != 0)
 		return retval;
 #endif
-#endif
-
 #endif
 
 #if defined(CONFIG_MTK_USBFSH)

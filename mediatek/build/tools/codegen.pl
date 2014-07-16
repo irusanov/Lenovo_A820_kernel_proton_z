@@ -13,6 +13,7 @@ $workingDir = "./";
 my $RelativePath = "./"; #"mediatek/cgen/";
 my $CustomPath = "../custom/"; #"mediatek/custom/";
 my $CommonPath = "../custom/common/cgen/"; #"mediatek/custom/common/cgen/";
+my $CommonProject = "../config/common/ProjectConfig.mk"; #"mediatek/config/common/ProjectConfig.mk"; 
 
 my $PlatformVersion = $ENV{"MTK_PLATFORM"};
 my $ChipSwVersion = $ENV{"MTK_CHIP_VER"};
@@ -62,6 +63,19 @@ my $AP_Editor2_Temp_DB = $dir_APDatabase . "APDB2_$PlatformVersion"."_"."$ChipSw
 my $AP_Editor_DB_Enum_File = $dir_APDatabase . "APDB_$PlatformVersion"."_"."$ChipSwVersion"."_"."$SWMajorVersion"."_"."$SWMinorVersion"."_"."ENUM";
 
 my $Cgen = $dir_Codegen . "Cgen";
+
+my $hardWareVersion = "$PlatformVersion"."_"."$ChipSwVersion";
+
+my $SWVersion = $ENV{"MTK_BUILD_VERNO"};
+open (FILE_HANDLE, "<$CommonProject") or die "cannot open $CommonProject\n";
+while (<FILE_HANDLE>) {
+  if (/^\s*MTK_BUILD_VERNO\s*=\s*(\S+)/) {
+    $SWVersion = $1;
+    print "Find MTK_BUILD_VERNO in $CommonProject\n";
+    last;
+  }
+}
+close FILE_HANDLE;
 
 # auto include the Custom_NvRam_data_item.h into ap_parse_db.c
 my $APDB_SourceFile = $workingDir . "apeditor/app_parse_db.c";
@@ -152,12 +166,12 @@ if (-f $AP_Editor_DB_Enum_File) {
 }
 
 #generate the base database
-print("$Cgen -c $AP_Temp_CL $Tgt_Cnf $Pc_Cnf $AP_Editor2_Temp_DB $AP_Editor_DB_Enum_File >$Log_file\n");
-my $cgenRslt1 = system("$Cgen -c $AP_Temp_CL $Tgt_Cnf $Pc_Cnf $AP_Editor2_Temp_DB $AP_Editor_DB_Enum_File >$Log_file");
+print("$Cgen -c $AP_Temp_CL $Tgt_Cnf $Pc_Cnf $AP_Editor2_Temp_DB $AP_Editor_DB_Enum_File $hardWareVersion $SWVersion >$Log_file\n");
+my $cgenRslt1 = system("$Cgen -c $AP_Temp_CL $Tgt_Cnf $Pc_Cnf $AP_Editor2_Temp_DB $AP_Editor_DB_Enum_File $hardWareVersion $SWVersion >$Log_file");
 print "Generating base database failed!\n" if ($cgenRslt1);
 #add the software version into database
-print("$Cgen -cm $AP_Editor_DB $AP_Editor2_Temp_DB $AP_Temp_CL $AP_Editor_DB_Enum_File >$Log_file\n");
-my $cgenRslt2 = system("$Cgen -cm $AP_Editor_DB $AP_Editor2_Temp_DB $AP_Temp_CL $AP_Editor_DB_Enum_File >$Log_file");
+print("$Cgen -cm $AP_Editor_DB $AP_Editor2_Temp_DB $AP_Temp_CL $AP_Editor_DB_Enum_File $hardWareVersion $SWVersion >$Log_file\n");
+my $cgenRslt2 = system("$Cgen -cm $AP_Editor_DB $AP_Editor2_Temp_DB $AP_Temp_CL $AP_Editor_DB_Enum_File $hardWareVersion $SWVersion >$Log_file");
 print "Adding SW version failed!\n" if ($cgenRslt2);
 if (!$cgenRslt1 && !$cgenRslt2)
 {

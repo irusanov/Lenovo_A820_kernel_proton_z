@@ -123,11 +123,17 @@ static void mtk_set_vbus(struct musb *musb, int is_on)
 	bq24158_set_otg_pl(1);
 	bq24158_set_otg_en(1);
     #elif defined(MTK_NCP1851_SUPPORT) || defined(MTK_BQ24196_SUPPORT)
+        #ifdef MTK_NCP1851_SUPPORT
+        if (musb && musb->vbuserr_retry == 0)
+        {
+            DBG(0,"vbus error with NCP1851.\r\n");
+            tbl_charger_otg_vbus((work_busy(&musb->id_pin_work.work)<< 8)| 0);
+            msleep(10);
+        }
+        #endif
         tbl_charger_otg_vbus((work_busy(&musb->id_pin_work.work)<< 8)| 1);
     #else
-	#if defined(GPIO_OTG_DRVVBUS_PIN)
         mt_set_gpio_out(GPIO_OTG_DRVVBUS_PIN,GPIO_OUT_ONE);
-	#endif
         #endif
     } else {
         //power off VBUS, implement later...
@@ -140,9 +146,7 @@ static void mtk_set_vbus(struct musb *musb, int is_on)
     #elif defined(MTK_NCP1851_SUPPORT) || defined(MTK_BQ24196_SUPPORT)
         tbl_charger_otg_vbus((work_busy(&musb->id_pin_work.work)<< 8)| 0);
     #else
-	#if defined(GPIO_OTG_DRVVBUS_PIN)
         mt_set_gpio_out(GPIO_OTG_DRVVBUS_PIN,GPIO_OUT_ZERO);
-	#endif
     #endif
     }
 #endif
@@ -730,12 +734,10 @@ int __init musb_platform_init(struct musb *musb)
 		musb->board_set_vbus = mtk_set_vbus;
 		#ifndef CONFIG_MT6589_FPGA
 		#ifndef MTK_BQ24196_SUPPORT
-		#if defined(GPIO_OTG_DRVVBUS_PIN)
 		mt_set_gpio_mode(GPIO_OTG_DRVVBUS_PIN,GPIO_OTG_DRVVBUS_PIN_M_GPIO);//should set GPIO2 as gpio mode.
 		mt_set_gpio_dir(GPIO_OTG_DRVVBUS_PIN,GPIO_DIR_OUT);
 		mt_get_gpio_pull_enable(GPIO_OTG_DRVVBUS_PIN);
 		mt_set_gpio_pull_select(GPIO_OTG_DRVVBUS_PIN,GPIO_PULL_UP);
-		#endif
 		#endif
 		#endif
 	}

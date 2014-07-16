@@ -2059,7 +2059,7 @@ void pchr_turn_off_charging_bq24158 (void)
             printk("[BATTERY] pchr_turn_off_charging_bq24158 !\r\n");
         }
 
-        bq24158_config_interface_reg(0x01,0xbc);    
+        bq24158_config_interface_reg(0x01,0x78);      //0xbc->ox78 for CE=0 according to BQ24158 IC design notes and pre-charging could be limited to 500mA
         
 #if defined(CONFIG_USB_MTK_HDRC_HCD)
     }
@@ -3045,8 +3045,8 @@ void BAT_thread_bq24158(void)
     int i=0;
     int BAT_status = 0;
     //kal_uint32 tmp32;
-    int ret_val=0;
 #if !defined(MTK_KERNEL_POWER_OFF_CHARGING)	
+    int ret_val=0;
 
     if(boot_check_once==1)
     {

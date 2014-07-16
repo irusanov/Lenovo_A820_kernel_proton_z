@@ -746,12 +746,13 @@ void Auddrv_DL_Interrupt_Handler(void)  // irq1 ISR handler
     if((Afe_consumed_bytes & 0x1f) != 0 ){
         PRINTK_AUDDRV("[Auddrv] DMA address is not aligned 32 bytes \n");
      }
+
      /*
      PRINTK_AUDDRV("+Auddrv_DL_Interrupt_Handler ReadIdx:%x WriteIdx:%x, DataRemained:%x, Afe_consumed_bytes:%x HW_memory_index = %x \n",
          Afe_Block->u4DMAReadIdx,Afe_Block->u4WriteIdx,Afe_Block->u4DataRemained,Afe_consumed_bytes,HW_memory_index);
          */
 
-     if(Afe_Block->u4DataRemained < Afe_consumed_bytes || Afe_Block->u4DataRemained == 0 || AudIrqReset)
+     if(Afe_Block->u4DataRemained < Afe_consumed_bytes || Afe_Block->u4DataRemained <= 0 ||Afe_Block->u4DataRemained  > Afe_Block->u4BufferSize || AudIrqReset)
      {
          // buffer underflow --> clear  whole buffer
          memset(Afe_Block->pucVirtBufAddr,0,Afe_Block->u4BufferSize);
@@ -2548,10 +2549,17 @@ static ssize_t AudDrv_write(struct file *fp, const char __user *data, size_t cou
        spin_lock_irqsave(&auddrv_DLCtl_lock, flags);
        copy_size = Afe_Block->u4BufferSize - Afe_Block->u4DataRemained;  //  free space of the buffer
        spin_unlock_irqrestore(&auddrv_DLCtl_lock, flags);
-       if(count <= (kal_uint32) copy_size)
+       if(count <=  copy_size )
        {
-           copy_size = count;
-           //PRINTK_AUDDRV("AudDrv_write copy_size:%x \n", copy_size);	// (free  space of buffer)
+           if(copy_size < 0)
+           {
+               copy_size = 0;
+               msleep(DL1_Interrupt_Interval>>1);
+           }
+           else
+           {
+               copy_size = count;
+           }
        }
 
        if(copy_size != 0)

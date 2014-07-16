@@ -1,38 +1,3 @@
-/* Copyright Statement:
- *
- * This software/firmware and related documentation ("MediaTek Software") are
- * protected under relevant copyright laws. The information contained herein
- * is confidential and proprietary to MediaTek Inc. and/or its licensors.
- * Without the prior written permission of MediaTek inc. and/or its licensors,
- * any reproduction, modification, use or disclosure of MediaTek Software,
- * and information contained herein, in whole or in part, shall be strictly prohibited.
- *
- * MediaTek Inc. (C) 2010. All rights reserved.
- *
- * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
- * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
- * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
- * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
- * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
- * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
- * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
- * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
- * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
- * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
- * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
- * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
- * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
- * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
- * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
- * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
- *
- * The following software/firmware and/or related documentation ("MediaTek Software")
- * have been modified by MediaTek Inc. All revisions are subject to any receiver's
- * applicable license agreements with MediaTek Inc.
- */
-
 #include <linux/autoconf.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -2793,7 +2758,6 @@ static void msdc_pm(pm_message_t state, void *data)
 			msdc_pin_reset (host, MSDC_PIN_PULL_UP);
 			msdc_pin_config(host, MSDC_PIN_PULL_UP);
 			host->power_control(host,1);
-			mdelay(10);
 			msdc_restore_emmc_setting(host);
 		}
             (void)mmc_resume_host(host->mmc);
@@ -5412,16 +5376,15 @@ static void msdc_ops_request_legacy(struct mmc_host *mmc, struct mmc_request *mr
     if (mrq->cmd->opcode == 53 && host->sdio_error == -EIO){    // sdio error bypass
         if((sdio_error_count++)%SDIO_ERROR_OUT_INTERVAL == 0){  
             if(host->sdio_error_rec.cmd.opcode == 53){
-                spin_lock(&host->lock);
-                struct mmc_command err_cmd = host->sdio_error_rec.cmd;
-                struct mmc_data err_data = host->sdio_error_rec.data;
-                ERR_MSG("[BYPS]XXX CMD<%d><0x%x> Error<%d> Resp<0x%x>", err_cmd.opcode, err_cmd.arg, err_cmd.error, err_cmd.resp[0]); 
-                if(err_data.error)
-                    ERR_MSG("[BYPS]XXX DAT block<%d> Error<%d>", err_data.blocks, err_data.error);
-                spin_unlock(&host->lock);        
+                cmd = &host->sdio_error_rec.cmd;        
+                data = &host->sdio_error_rec.data;
+                if(!data->error)
+                    data = NULL;
+                if (data) stop = &host->sdio_error_rec.stop;
+                    msdc_dump_trans_error(host, cmd, data, stop); 
+                goto sdio_error_out;    
             }
        }
-       goto sdio_error_out;    
     }
 #endif
         

@@ -3132,7 +3132,7 @@ wlanoidSetAddKey (
     prCmdKey->ucTxKey = ((prNewKey->u4KeyIndex & IS_TRANSMIT_KEY) == IS_TRANSMIT_KEY) ? 1 : 0;
     prCmdKey->ucKeyType = ((prNewKey->u4KeyIndex & IS_UNICAST_KEY) == IS_UNICAST_KEY) ? 1 : 0;
     prCmdKey->ucIsAuthenticator = ((prNewKey->u4KeyIndex & IS_AUTHENTICATOR) == IS_AUTHENTICATOR) ? 1 : 0;
-
+    
     kalMemCopy(prCmdKey->aucPeerAddr, (PUINT_8)prNewKey->arBSSID, MAC_ADDR_LEN);
 
     prCmdKey->ucNetType = 0; /* AIS */
@@ -5753,6 +5753,13 @@ wlanoidSetSwCtrlWrite (
             }
             else if(u2SubId == 0x5) {
                 prAdapter->rWifiVar.rConnSettings.uc2G4BandwidthMode = (UINT_8)u4Data;
+            }
+            else if(u2SubId == 0x0100) {
+                prAdapter->rWifiVar.u8SupportRxGf = (UINT_8)u4Data;
+            }
+            else if(u2SubId == 0x0101) {
+                prAdapter->rWifiVar.u8SupportRxSgi20 = (UINT_8)u4Data;
+                prAdapter->rWifiVar.u8SupportRxSgi40 = (UINT_8)u4Data;
             }
 
 

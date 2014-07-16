@@ -716,7 +716,7 @@ static long lgx_ioctl(struct file* filp, unsigned int cmd, unsigned long arg)
 				//unsigned char* fwbuf = kmalloc(up->fw_size, GFP_KERNEL| GFP_DMA);
                                 inno_msg("download using h file in kernel");
 				if(FIRMWARE_BUF_DATA_SIZE < 40960)
-					fwbuf =3*INNO_BUFFER_SIZE+g_inno_buffer;
+					fwbuf =g_inno_buffer;//3*INNO_BUFFER_SIZE+g_inno_buffer;
 				else{
 					inno_err("fw_size >40k fail");
 					retval = -1;
@@ -1111,7 +1111,7 @@ static int __init init_lgxchar(void)
 
 #ifdef  _buffer_global
       // 4 channel and 40k fw buffer
-       g_inno_buffer=kmalloc(INNO_BUFFER_SIZE*4+40960, GFP_KERNEL| GFP_DMA);         //xingyu 0922
+       g_inno_buffer=kmalloc(INNO_BUFFER_SIZE*3, GFP_KERNEL| GFP_DMA);//kmalloc(INNO_BUFFER_SIZE*4+40960, GFP_KERNEL| GFP_DMA);
 	if(!g_inno_buffer){
               inno_err("kmalloc fail,g_inno_buffer == null");
 		spi_unregister_driver(&INNODev_spi);	

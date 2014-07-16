@@ -142,7 +142,7 @@ CUSTOM_KERNEL_RTC=rtc
 
 # For audio kernel driver's speaker customization folder definition.
 CUSTOM_KERNEL_SOUND=amp_yad
-CUSTOM_KERNEL_SSW=generic
+CUSTOM_KERNEL_SSW=ssw_generic
 
 # Kernel space image sensor driver:Sub camera (front camera) used backup sensor driver.Value is used sub backup sensor name.
 CUSTOM_KERNEL_SUB_BACKUP_IMGSENSOR=
@@ -183,6 +183,8 @@ DEFAULT_INPUT_METHOD=com.sohu.inputmethod.sogou.SogouIME
 # Add these variables to define the default input method and default input method languages.
 DEFAULT_LATIN_IME_LANGUAGES=en-US fr ru
 
+DISABLE_EARPIECE=no
+
 # This feature is for LG encrypt partition
 ENCRY_PARTITION_SUPPORT=no
 
@@ -201,6 +203,8 @@ GOOGLE_RELEASE_RIL=no
 # In Audio record,  Enable/disable AAC encode, yes: enable
 # no:disable
 HAVE_AACENCODE_FEATURE=yes
+
+HAVE_ADPCMENCODE_FEATURE=yes
 
 # AEE (Android Exception Engine) that designed by Mediatek is an exception catching and debugging information generation mechanism.It can collect and dump information to filesystem (/sdcard/mtklog/aee_exp) when fatel occur(E.g. kernel panic/android system server crash and ..) HAVE_AEE_FEATURE will decide this feature enable or not.
 HAVE_AEE_FEATURE=yes
@@ -232,13 +236,15 @@ HAVE_XLOG_FEATURE=yes
 # If set this to yes, the files that generated in kernel build time will be at alps/kernel/out folder
 KBUILD_OUTPUT_SUPPORT=yes
 
+MTK_2IN1_SPK_SUPPORT=no
+
 # There is requirement to implement UMTS TDD specific features in AP side, while have no such UMTS TDD specific options available.
 MODEM_UMTS_TDD128_MODE=no
 MTK_2SDCARD_SWAP=no
 
 # yes: enable this feature
 # no: disable this feature
-MTK_AAL_SUPPORT=no
+MTK_AAL_SUPPORT=yes
 
 # For ACMT DEUG use
 MTK_ACMT_DEBUG=no
@@ -266,6 +272,8 @@ MTK_AUDENH_SUPPORT=yes
 
 # support whether can select MMS ringtone in AudioProfile
 MTK_AUDIOPROFILE_SELECT_MMS_RINGTONE_SUPPORT=no
+
+MTK_AUDIO_ADPCM_SUPPORT=yes
 
 # Ape feature control option which is used for switch audio APE format playback: switch on:  MTK_AUDIO_APE_SUPPORT = yes switch off: MTK_AUDIO_APE_SUPPORT = no
 MTK_AUDIO_APE_SUPPORT=yes
@@ -306,7 +314,7 @@ MTK_BQ24158_SUPPORT=no
 MTK_BQ27541_SUPPORT=no
 
 # Define MTK branch(internal use only)
-MTK_BRANCH=ALPS.JB.SP
+MTK_BRANCH=MAIN2.1
 
 # Enable Brazil operator common requirements
 MTK_BRAZIL_CUSTOMIZATION=no
@@ -415,12 +423,13 @@ MTK_BT_PROFILE_TIMES=no
 
 # When this option set to yes, the MTK Bluetooth solution will be included.
 MTK_BT_SUPPORT=yes
+MTK_BWC_SUPPORT=yes
 
 # An calendar event importer to enable sharing events via Bluetooth.
 MTK_CALENDAR_IMPORTER_APP=yes
 
 # Encode camcorder output file with MP4 encoder
-MTK_CAMCORDER_PROFILE_MID_MP4=no
+MTK_CAMCORDER_PROFILE_MID_MP4=yes
 
 # This option provides the build-time switch to determine which camera will be build in image(Two candidates: android default camera, Mediatek camera)
 MTK_CAMERA_APP=no
@@ -430,6 +439,8 @@ MTK_CAMERA_APP_3DHW_SUPPORT=yes
 
 # yes:MTK extended camera framework no: Android pure camera framework
 MTK_CAMERA_BSP_SUPPORT=yes
+
+MTK_CDS_EM_SUPPORT=yes
 
 # Define hardware chip version
 MTK_CHIP_VER=S01
@@ -466,6 +477,8 @@ MTK_DATAREG_APP=no
 # This option is for Data Usage Enhancement feature
 # When MTK_DATAUSAGE_SUPPORT= yes, should enable MTK_DATAUSAGE_SUPPORT
 MTK_DATAUSAGE_SUPPORT=yes
+
+MTK_DATAUSAGELOCKSCREENCLIENT_SUPPORT=yes
 MTK_DDR3_SUPPORT=no
 
 # support a dedicated APN when enable tethering
@@ -476,7 +489,7 @@ MTK_DEFAULT_DATA_OFF=no
 
 # no: disable this feature
 #  yes: enable this feature
-MTK_DHCPV6C_WIFI=no
+MTK_DHCPV6C_WIFI=yes
 
 # It is used to control dialer search feature, and shared by both Java code and native code.
 MTK_DIALER_SEARCH_SUPPORT=yes
@@ -550,6 +563,8 @@ MTK_FACEBEAUTY_SUPPORT=yes
 # use external charger IC, MTK support
 MTK_FAN5405_SUPPORT=yes
 MTK_FASTBOOT_SUPPORT=no
+MTK_FENCE_SUPPORT=yes
+
 
 # use this feature option to enable/disable File Manager App
 MTK_FILEMANAGER_APP=yes
@@ -561,7 +576,7 @@ MTK_FIRST_MD=1
 MTK_FLIGHT_MODE_POWER_OFF_MD=yes
 
 # use  to wrap the FLV playback feature, AS 50MP do not include the FLV Playback, so set no
-MTK_FLV_PLAYBACK_SUPPORT=no
+MTK_FLV_PLAYBACK_SUPPORT=yes
 
 # yes: build MTK FMRadio no: not build MTK FMRadio
 MTK_FMRADIO_APP=yes
@@ -597,7 +612,7 @@ MTK_GALLERY3D_APP=yes
 MTK_GALLERY_APP=yes
 
 # Open or close MOTA(Mediatek Over-The-Air) feature. Online firmware upgrade.
-MTK_GOOGLEOTA_SUPPORT=no
+MTK_GOOGLEOTA_SUPPORT=yes
 
 # To identify which GPS chip be used on current platform.
 MTK_GPS_CHIP=MTK_GPS_MT6628
@@ -614,8 +629,10 @@ MTK_HEADSET_ICON_SUPPORT=no
 MTK_HIGH_QUALITY_THUMBNAIL=yes
 
 # Used to enable hwcomposer
-MTK_HWC_SUPPORT_V0=yes
-MTK_HW_ENHANCE=no
+MTK_HWC_SUPPORT=yes
+MTK_HWC_SUPPORT_V0=no
+MTK_HWC_VERSION=1.0
+MTK_HW_ENHANCE=yes
 
 # increase the memory limit value for image  support
 MTK_IMAGE_LARGE_MEM_LIMIT=no
@@ -698,10 +715,12 @@ MTK_INTERNAL=no
 # To switch language set. Because some language need third party font support, these language should be removed on custom project first to avoid build error. It is no longer valid after ALPS.GB.TDFD_MP.
 MTK_INTERNAL_LANG_SET=no
 MTK_ION_SUPPORT=yes
-
 # Instant Power On is a software solution, device can boot up in a configurable time without extra hardware cost
 #  It leverages the Android suspend feature to create a new user experience.
 MTK_IPO_SUPPORT=yes
+
+# HYBERNATION
+MTK_IPOH_SUPPORT=yes
 
 # Enable/disable IPv6 Over 3G Modem Feature
 MTK_IPV6_SUPPORT=yes
@@ -726,6 +745,7 @@ MTK_LAUNCHER_UNREAD_SUPPORT=yes
 
 # For Platform: MT6573 If it is equal to "yes", this will disable some features that are not supposed running in 256MB DRAM system. Make it equal to "no" if the DRAM size of the system is larger than 256MB *Refer the memory customer document please For Platform:MT6575 It is deprecated. For Platform: MT6516 If it is equal to "yes", it will disable some features that are not supposed running in 256MB NAND and 128MB DRAM system. *Refer the memory customer document please
 MTK_LCA_SUPPORT=no
+MTK_LCEEFT_SUPPORT=yes
 
 # To set the angle between dimension of UI layout and LCM scan direction
 MTK_LCM_PHYSICAL_ROTATION=0
@@ -765,6 +785,7 @@ MTK_MMUMAP_SUPPORT=no
 
 # mt5192/93 chip support FM radio control option which is only support on mt6516 platform. mt5192/93 FM on:  MTK_MT519X_FM_SUPPORT = yes mt5192/93 off: MTK_MT519X_FM_SUPPORT = no
 MTK_MT519X_FM_SUPPORT=no
+MTK_MT8193_HDCP_SUPPORT=no
 MTK_MT8193_HDMI_SUPPORT=no
 MTK_MT8193_NFI_SUPPORT=no
 MTK_MT8193_SUPPORT=no
@@ -791,6 +812,8 @@ MTK_NAND_PAGE_SIZE=2K
 # Support using UBIFS rather than yaffs2 in NAND
 MTK_NAND_UBIFS_SUPPORT=no
 
+MTK_NATIVE_FENCE_SUPPORT=no
+
 # Control NEON HW support or not
 MTK_NEON_SUPPORT=yes
 
@@ -803,6 +826,10 @@ MTK_NETWORK_TYPE_DISPLAY=no
 
 # Update iptalbes version to 1.4.10 or use Android default iptables(version 1.3.7)
 MTK_NEW_IPTABLES_SUPPORT=yes
+
+MTK_NFC_ADDON_SUPPORT=no
+MTK_NFC_APP_SUPPORT=no
+MTK_NFC_FW_MSR3110=no
 
 # yes: support NFC
 #  no: support NFC
@@ -827,7 +854,8 @@ MTK_OMACP_SUPPORT=yes
 
 # This option is used to enable or disable OMA download feature in our device.    If this feature option is enable, the device can support OMA download.    If this feature option is disable, the device do not support OMA download.
 MTK_OMA_DOWNLOAD_SUPPORT=yes
-MTK_OOBE_APP=no
+MTK_OOBE_APP=yes
+MTK_PCB_BATTERY_SENSOR=no
 
 # This feature option is to define whether we support features for phone number attribution of China (CMCC, CU and CT) MTK_PHONE_NUMBER_GEODESCRIPTION = Yes means that  phone number attribution of China is enabled in current project, vice versa
 MTK_PHONE_NUMBER_GEODESCRIPTION=yes
@@ -852,9 +880,13 @@ MTK_PQ_SUPPORT=yes
 
 # This feature is designed for customer to store product info file to a new nvram  parititon.
 MTK_PRODUCT_INFO_SUPPORT=yes
+MTK_PRODUCT_LOCALES=en_US es_ES zh_CN zh_TW ru_RU pt_BR fr_FR de_DE tr_TR it_IT in_ID ms_MY vi_VN ar_EG  th_TH  pt_PT   nl_NL el_GR hu_HU tl_PH ro_RO cs_CZ ko_KR iw_IL my_MM km_KH hdpi
+
 
 # This is a legacy feature for MT6516 projects. MT6573 projects do NOT support it, and it should always be set to "no".
 MTK_QVGA_LANDSCAPE_SUPPORT=no
+
+MTK_RADIOOFF_POWER_OFF_MD=no
 
 # These feature options are for AT&T related  requirement
 MTK_RAT_BALANCING=no
@@ -869,6 +901,7 @@ MTK_RCSE_SUPPORT=no
 MTK_RELEASE_PACKAGE=rel_customer_basic_mt6589 rel_customer_operator_cu
 MTK_RESOURCE_OPTIMIZATION=
 MTK_RILD_READ_IMSI=no
+MTK_RSDM_APP=no
 
 # use to enable/disable rtp over rtsp feature
 MTK_RTP_OVER_RTSP_SUPPORT=yes
@@ -887,6 +920,7 @@ MTK_SCREEN_OFF_WIFI_OFF=no
 
 # Support SD can Manual Mount/Unmount By User if the SD Card mechanism w/o detect pin.
 MTK_SD_REINIT_SUPPORT=no
+MTK_SD_SUPPORT=yes
 
 # It is used to control database operation for contacts and call log search, and shared by both Java code and native code.
 MTK_SEARCH_DB_SUPPORT=yes
@@ -934,6 +968,7 @@ MTK_SIM1_SOCKET_TYPE=1
 # MTK_SIM1_SOCKET_TYPE=2: support type 2 socket type
 MTK_SIM2_SOCKET_TYPE=1
 MTK_SIM_AUTHENTICATION_SUPPORT=no
+MTK_SIM_HOT_SWAP=yes
 
 # This feature option is to define if we support features for SIM Recovery
 MTK_SIM_RECOVERY=yes
@@ -946,7 +981,7 @@ MTK_SIP_SUPPORT=no
 MTK_SMARTSWITCH_SUPPORT=no
 
 # if MTK_SMSREG_APP=yes,build SmsReg.apk
-MTK_SMSREG_APP=yes
+MTK_SMSREG_APP=no
 
 # A mechansim to filter malicious charging SMS.
 MTK_SMS_FILTER_SUPPORT=yes
@@ -990,6 +1025,7 @@ MTK_SPECIAL_FACTORY_RESET=no
 # no means not report ing specific SM cause to framework from RIL.
 MTK_SPECIFIC_SM_CAUSE=no
 MTK_SPH_EHN_CTRL_SUPPORT=yes
+MTK_SPM_MCDI_ENABLE=yes
 
 # yes: enable
 # no:  disable
@@ -998,6 +1034,8 @@ MTK_SWIP_AAC=no
 
 # libvorbisdec_mtk
 MTK_SWIP_VORBIS=yes
+MTK_SYSTEM_UPDATE_SUPPORT=yes
+MTK_TABLET_DRAM=no
 
 # Force speaker on while make a call or accept a call on tablet
 MTK_TB_APP_CALL_FORCE_SPEAKER_ON=no
@@ -1029,7 +1067,7 @@ MTK_TMP103_SUPPORT=no
 MTK_TODOS_APP=no
 
 # For TTY function enable option.
-MTK_TTY_SUPPORT=no
+MTK_TTY_SUPPORT=yes
 
 # To control whether enable or disable TV-out feature. If choose yes, video or image on your phone can be demonstrated on TV via TV-out cable. Also, this feature can help user to get more fun when playing some games.
 MTK_TVOUT_SUPPORT=no
@@ -1042,6 +1080,7 @@ MTK_USES_HD_VIDEO=yes
 
 # For StageFright's MTK codec switch option. "yes" => default codec without MTK modification.
 MTK_USES_STAGEFRIGHT_DEFAULT_CODE=no
+MTK_USES_VR_DYNAMIC_QUALITY_MECHANISM=yes
 MTK_USE_ANDROID_MM_DEFAULT_CODE=no
 
 # Enable/disable common video features using app VideoPlayer2. Folder:mediatek/source/packages/VideoPlayer2/ CMCC needs some new features, but other operators don't need these. We support a new app for CMCC, and use this app for common projects.
@@ -1063,11 +1102,16 @@ MTK_VIDEO_FAVORITES_WIDGET_APP=yes
 # To enable/disable feature Video Wallpaper on the project. If MTK_VLW_APP = yes MtkVideoLiveWallpaper.apk will be built into bootimage and users can use this feature on their device, vice versa.
 MTK_VLW_APP=yes
 
+MTK_VOICE_UI_SUPPORT=no
+MTK_VOICE_UNLOCK_SUPPORT=yes
+
 # This feature option is to define if we need to enable/disable auto answer function when virtual sim is on/off
 MTK_VSIM_AUTO_ANSWER=no
 
 # Use this option to enable/disable  VSS feature.
-MTK_VSS_SUPPORT=no
+MTK_VSS_SUPPORT=yes
+
+MTK_WAPI_SUPPORT=yes
 
 # This feature option is used for receiving Wap Push message or not. If MTK_WAPPUSH_SUPPORT=yes, the device can receive Wap Push Message sent by operator. Users can read Wap Push Message in Mms inbox.
 MTK_WAPPUSH_SUPPORT=yes
@@ -1088,10 +1132,9 @@ MTK_WEATHER_PROVIDER_APP=yes
 MTK_WEATHER_WIDGET_APP=yes
 
 # Define MTK weekly number(internal use only)
-MTK_WEEK_NO= 
-
-# yes/no
-MTK_WFD_SUPPORT=no
+MTK_WEB_NOTIFICATION_SUPPORT=yes
+MTK_WEEK_NO=W10.24
+MTK_WFD_SUPPORT=yes
 
 # enable WIFI P2P (called wifi direct also) functionality. If turn on this feature, we provide three application based on it. They are contactsSync, FileSharing, Vedio&Audio sharing.  Via ContactsSync, users can exchange businessCard easily.  Via FileSharing, users can free share files each other. Via Audio&Vedio sharing, user can play MP4/MP3/3GP files reside on remote phone
 MTK_WIFI_P2P_SUPPORT=yes
@@ -1103,7 +1146,7 @@ MTK_WLANBT_SINGLEANT=no
 MTK_WLAN_CHIP=MT6628
 
 # This feature option is used for displaying wml web page or not. If MTK_WML_SUPPORT=true, browse can display simple wml web page normally. This feature option only is used for cmcc streaming test.
-MTK_WML_SUPPORT=no
+MTK_WML_SUPPORT=yes
 
 # Standalone feature option for World Clock Widget.
 MTK_WORLD_CLOCK_WIDGET_APP=yes
@@ -1148,6 +1191,8 @@ WIFI_WEP_KEY_ID_SET=no
 # WIFI_WPS_PIN_FROM_AP: yes, show WPS pin from ap item
 #  no, hide WPS pin form ap item.
 WIFI_WPS_PIN_FROM_AP=no
+
+PLATFORM_VERSION_V4_2_2=yes
 
 # Define which modem will be used.
 CUSTOM_MODEM=lenovo89_cu_jb_md1_hspa
@@ -1224,9 +1269,6 @@ LCM_HEIGHT=960
 # To set LCM resolution width size
 LCM_WIDTH=540
 
-# To control resource build. The value would be assigned to PRODUCT_LOCALES under build/target/product/XXX.mk (XXX is each project's name)
-MTK_PRODUCT_LOCALES=en_US es_ES zh_CN zh_TW ru_RU pt_BR fr_FR de_DE tr_TR it_IT in_ID ms_MY vi_VN ar_EG  th_TH  pt_PT   nl_NL el_GR hu_HU tl_PH ro_RO cs_CZ hdpi
-
 # mATV feature control option which is used for swithing on/off mATV feature: switch on:  HAVE_MATV_FEATURE = yes switch off: HAVE_MATV_FEATURE = no
 HAVE_MATV_FEATURE=no
 
@@ -1244,4 +1286,4 @@ MTK_WIFI_HOTSPOT_SUPPORT=yes
 
 # The Wlan switch for the wlan feature in the Android(app, framework, native, kernel).
 MTK_WLAN_SUPPORT=yes
-MTK_BUILD_VERNO = ALPS.JB.SP.V1
+MTK_BUILD_VERNO = ALPS.JB2.MP.V1.14

@@ -1745,7 +1745,9 @@ int __init ccci_md_init_mod_init(void)
 {
     int ret;
 
-    CCCI_MSG("Ver. %s, @ %s %s\n",ccci_version, __DATE__, __TIME__); 
+	//<2013/05/21-25146-EricLin, Remove time stamp logs in kernel.
+    	// CCCI_MSG("Ver. %s, @ %s %s\n",ccci_version, __DATE__, __TIME__); 
+	//>2013/05/21-25146-EricLin
    
     ret = ccci_alloc_smem();
     if (ret)

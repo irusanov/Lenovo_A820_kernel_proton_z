@@ -217,3 +217,10 @@ int pre_hibernate(void)
     return err;
 }
 EXPORT_SYMBOL(pre_hibernate);
+
+int mtk_hibernate_abort(void)
+{
+    toi_abort_hibernate();
+    return 0;
+}
+EXPORT_SYMBOL(mtk_hibernate_abort);

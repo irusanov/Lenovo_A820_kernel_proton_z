@@ -939,7 +939,7 @@ static ssize_t fsg_store_file(struct device *dev, struct device_attribute *attr,
 	int		rc = 0;
 
 
-#ifndef CONFIG_USB_ANDROID_MASS_STORAGE
+#if 0//ndef CONFIG_USB_ANDROID_MASS_STORAGE  //lenovo.sw : no USB_ANDROID_MASS_STORAGE from ics ,support android usb gadget mass storage
 	/* disabled in android because we need to allow closing the backing file
 	 * if the media was removed
 	 */

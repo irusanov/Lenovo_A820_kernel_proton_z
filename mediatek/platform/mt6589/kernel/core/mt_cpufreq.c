@@ -963,12 +963,12 @@ static unsigned int mt_thermal_limited_verify(unsigned int target_freq)
 
     for (index = i; index < (mt_cpu_freqs_num * 4); index++)
     {
-        if (mt_cpu_power[i].cpufreq_ncpu == num_online_cpus())
+        if (mt_cpu_power[index].cpufreq_ncpu == num_online_cpus())
         {
-            if (target_freq >= mt_cpu_power[i].cpufreq_khz)
+            if (target_freq >= mt_cpu_power[index].cpufreq_khz)
             {
-                dprintk("target_freq = %d, ncpu = %d\n", mt_cpu_power[i].cpufreq_khz, num_online_cpus());
-                target_freq = mt_cpu_power[i].cpufreq_khz;
+                dprintk("target_freq = %d, ncpu = %d\n", mt_cpu_power[index].cpufreq_khz, num_online_cpus());
+                target_freq = mt_cpu_power[index].cpufreq_khz;
                 break;
             }
         }

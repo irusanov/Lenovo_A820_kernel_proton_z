@@ -1,38 +1,4 @@
 /*****************************************************************************
-*  Copyright Statement:
-*  --------------------
-*  This software is protected by Copyright and the information contained
-*  herein is confidential. The software may not be copied and the information
-*  contained herein may not be used or disclosed except with the written
-*  permission of MediaTek Inc. (C) 2008
-*
-*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
-*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
-*  RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
-*  AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
-*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
-*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
-*  NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
-*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
-*  SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
-*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
-*  NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S
-*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
-*
-*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE
-*  LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
-*  AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
-*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
-*  MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
-*
-*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
-*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
-*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
-*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
-*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
-*
-*****************************************************************************/
-/*****************************************************************************
  *
  * Filename:
  * ---------
@@ -58,10 +24,6 @@
  * $Revision:$
  * $Modtime:$
  * $Log:$
- *
- * 04 20 2012 chengxue.shen
- * [ALPS00272900] HI542 Sensor Driver Check In
- * HI542 Sensor driver Check in and modify For MT6577 dual core processor
  *
  * 10 31 2011 koli.lin
  * [ALPS00081266] [Li Zhen]
@@ -149,10 +111,16 @@ kal_bool  HI542_Auto_Flicker_mode = KAL_FALSE;
 
 kal_uint16  HI542_sensor_gain_base=0x0;
 /* MAX/MIN Explosure Lines Used By AE Algorithm */
-kal_uint16 HI542_MAX_EXPOSURE_LINES = HI542_PV_PERIOD_LINE_NUMS;//650;
-kal_uint8  HI542_MIN_EXPOSURE_LINES = 2;
+kal_uint32 HI542_MAX_EXPOSURE_LINES = 0x191739;//HI542_PV_PERIOD_LINE_NUMS;//980;
+kal_uint8  HI542_MIN_EXPOSURE_LINES = 4;//2;
 kal_uint32 HI542_isp_master_clock;
-kal_uint16 HI542_CURRENT_FRAME_LINES = HI542_PV_PERIOD_LINE_NUMS;//650;
+kal_uint16 HI542_CURRENT_FRAME_LINES = HI542_PV_PERIOD_LINE_NUMS;//980;
+
+
+
+
+//static MSDK_SCENARIO_ID_ENUM CurrentScenarioId=ACDK_SCENARIO_ID_CAMERA_PREVIEW;
+static MSDK_SCENARIO_ID_ENUM CurrentScenarioId=MSDK_SCENARIO_ID_CAMERA_PREVIEW;
 
 static kal_uint16 HI542_dummy_pixels=0, HI542_dummy_lines=0;
 kal_uint16 HI542_PV_dummy_pixels=0,HI542_PV_dummy_lines=0;
@@ -175,6 +143,9 @@ kal_uint32 HI542_CAP_pclk = 8400;
 kal_uint16 HI542_pv_exposure_lines=0x100,HI542_g_iBackupExtraExp = 0,HI542_extra_exposure_lines = 0;
 
 kal_uint16 HI542_sensor_id=0;
+kal_uint16 old_dummy_line=0;
+
+kal_uint8 Fix_framerate=0;
 
 MSDK_SENSOR_CONFIG_STRUCT HI542SensorConfigData;
 
@@ -192,7 +163,15 @@ typedef enum
   HI542_720P,       //1M 1280x960
   HI542_5M,     //5M 2592x1944
 } HI542_RES_TYPE;
-HI542_RES_TYPE HI542_g_RES=HI542_720P;
+HI542_RES_TYPE HI542_g_RES = HI542_720P;
+
+typedef enum
+{
+  HI542_Video_Auto,      
+  HI542_Video_Night,    
+} HI542_VIDEO_MODE;
+HI542_VIDEO_MODE HI542_V_mode = HI542_Video_Auto;
+
 
 typedef enum
 {
@@ -229,16 +208,40 @@ kal_uint16 get_byte=0;
 void HI542_write_shutter(kal_uint16 shutter)
 {
     kal_uint32 iExp = shutter;
-
-  	kal_uint16 PixelsOneline = HI542_FULL_PERIOD_PIXEL_NUMS;
+	kal_uint16 CurrentFps;
+ 
+  	kal_uint16 PixelsOneline = HI542_FULL_PERIOD_PIXEL_NUMS + HI542_dummy_pixels + 130 +HI542_PV_PERIOD_EXTRA_PIXEL_NUMS;
+	kal_uint16 LinesOneframe = HI542_PV_PERIOD_LINE_NUMS;
 	unsigned long flags;
+	#if 0
+	 kal_uint16 FixedEnableCheck_11;
+	 kal_uint16 FixedEnableCheck_13;
+	 kal_uint32 FixedFpsSet;
+	#endif
+	
 
 	if(HI542_Auto_Flicker_mode)
 	{
-		//Change frame 29.5fps ~ 29.8fps to do auto flick
-		HI542SetMaxFrameRate(296);
-	}
+	//preview size:   PixelsOneline和capture是一样的,  LinesOneframe则是用的preview的size。
 	
+		PixelsOneline = HI542_FULL_PERIOD_PIXEL_NUMS + HI542_dummy_pixels + 130 +HI542_PV_PERIOD_EXTRA_PIXEL_NUMS;
+		//2790
+		LinesOneframe = HI542_PV_PERIOD_LINE_NUMS + HI542_dummy_lines + HI542_PV_PERIOD_EXTRA_LINE_NUMS;
+		//980
+		if(shutter < LinesOneframe)
+			CurrentFps = (10 * 84000000) /LinesOneframe / PixelsOneline;
+		else
+			CurrentFps = (10 * 84000000) / shutter / PixelsOneline;
+		printk("[HI542YUV]:currentFps :%d\n", CurrentFps);
+
+		//Change frame 29.5fps ~ 29.8fps to do auto flick
+		if(300 == CurrentFps)
+		HI542SetMaxFrameRate(296);
+		else if(150 == CurrentFps)
+		HI542SetMaxFrameRate(146);
+
+	}
+
     if(HI542_720P == HI542_g_RES)
     {
         PixelsOneline = (HI542_FULL_PERIOD_PIXEL_NUMS + HI542_dummy_pixels + 130 + HI542_PV_PERIOD_EXTRA_PIXEL_NUMS);     //2790
@@ -254,12 +257,70 @@ void HI542_write_shutter(kal_uint16 shutter)
             EXPTIME[28:0]={EXPTIMEH[4:0],EXPTIMEM1[7:0],EXPTIMEM2[7:0],EXPTIMEL[7:0]}
             Exposure time = EXPTIME/OPCLK       in pixels
       */
+     #if 0
+	 FixedFpsSet=iExp+2*PixelsOneline;
+	 FixedEnableCheck_11=HI542_read_cmos_sensor(0x0011);
+	 FixedEnableCheck_13=HI542_read_cmos_sensor(0x0013);
+	 HI542_write_cmos_sensor(0x0011,0x04 | FixedEnableCheck_11);
+	 HI542_write_cmos_sensor(0x0013,0x40 | FixedEnableCheck_13);
+	 /*
+	 if(iExp<0x2a4c20)
+	 	{
+	 	HI542_write_cmos_sensor(0x0120, 0x00);
+    	HI542_write_cmos_sensor(0x0121, 0x2a);
+    	HI542_write_cmos_sensor(0x0122, 0x4c);
+    	HI542_write_cmos_sensor(0x0123, 0x20);
+	 	}
+	 else
+	 */
+	 	
+	 	HI542_write_cmos_sensor(0x0120, (FixedFpsSet >> 24) & 0xFF);
+    	HI542_write_cmos_sensor(0x0121, (FixedFpsSet >> 16) & 0xFF);
+    	HI542_write_cmos_sensor(0x0122, (FixedFpsSet >> 8 ) & 0xFF);
+    	HI542_write_cmos_sensor(0x0123, (FixedFpsSet) & 0xFF);
+	 
 
-	HI542_write_cmos_sensor(0x0115, (iExp >> 24) & 0xFF);
-    HI542_write_cmos_sensor(0x0116, (iExp >> 16) & 0xFF);
-    HI542_write_cmos_sensor(0x0117, (iExp >> 8 ) & 0xFF);
-    HI542_write_cmos_sensor(0x0118, (iExp) & 0xFF);
 	
+
+	    HI542_write_cmos_sensor(0x011c, (iExp >> 24) & 0xFF);
+    	HI542_write_cmos_sensor(0x011d, (iExp >> 16) & 0xFF);
+    	HI542_write_cmos_sensor(0x011e, (iExp >> 8 ) & 0xFF);
+    	HI542_write_cmos_sensor(0x011f, (iExp) & 0xFF);
+ #endif	
+ if(Fix_framerate==0)
+ 	{
+		 HI542_write_cmos_sensor(0x0120, ((iExp+2*PixelsOneline) >> 24) & 0xFF);
+		 HI542_write_cmos_sensor(0x0121, ((iExp+2*PixelsOneline) >> 16) & 0xFF);
+		 HI542_write_cmos_sensor(0x0122, ((iExp+2*PixelsOneline) >> 8 ) & 0xFF);
+		 HI542_write_cmos_sensor(0x0123, ((iExp+2*PixelsOneline)) & 0xFF);
+	  
+ 		HI542_write_cmos_sensor(0x011C, (iExp >> 24) & 0xFF);
+		HI542_write_cmos_sensor(0x011D, (iExp >> 16) & 0xFF);
+		HI542_write_cmos_sensor(0x011E, (iExp >> 8 ) & 0xFF);
+		HI542_write_cmos_sensor(0x011F, (iExp) & 0xFF);
+  	}
+ 
+		HI542_write_cmos_sensor(0x0115, (iExp >> 24) & 0xFF);
+    	HI542_write_cmos_sensor(0x0116, (iExp >> 16) & 0xFF);
+    	HI542_write_cmos_sensor(0x0117, (iExp >> 8 ) & 0xFF);
+    	HI542_write_cmos_sensor(0x0118, (iExp) & 0xFF);
+
+		
+
+/*
+	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0115 :0x%x\n", HI542_read_cmos_sensor(0x0115));
+	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0116 :0x%x\n", HI542_read_cmos_sensor(0x0116));
+	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0117 :0x%x\n", HI542_read_cmos_sensor(0x0117));
+	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0118 :0x%x\n", HI542_read_cmos_sensor(0x0118));
+    
+	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0129 :0x%x\n", HI542_read_cmos_sensor(0x0129));
+
+	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0040 :0x%x\n", HI542_read_cmos_sensor(0x0040));
+	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0041 :0x%x\n", HI542_read_cmos_sensor(0x0041));
+	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0042 :0x%x\n", HI542_read_cmos_sensor(0x0042));
+	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0043 :0x%x\n", HI542_read_cmos_sensor(0x0043));
+*/
+ 
 	spin_lock_irqsave(&hi542_drv_lock,flags);
     HI542_g_iBackupExtraExp = shutter;    
 	spin_unlock_irqrestore(&hi542_drv_lock,flags);
@@ -317,16 +378,17 @@ static kal_uint16 HI542Gain2Reg(const kal_uint8 iGain)
 {
     kal_uint8 iReg;
 	kal_uint8 iBaseGain = 64;
-
+ 
+	mdelay(5);
 	printk("[HI542YUV FUNCTION TEST]:HI542_SetGain iGain :0x%x\n", iGain); 
 
     //! For HI542 sensor, AG is common gain for R,G and B channel 
     //!AG = 256/(B[7:0] + 32)  of 0x0129 
 
 	iReg = 256*iBaseGain/iGain - 32;
-	
-    HI542_write_cmos_sensor(0x0129, iReg); 
-   
+ 
+		  HI542_write_cmos_sensor(0x0129, iReg);  
+ 
 }   /*  HI542_SetGain  */
 
 /*************************************************************************
@@ -692,6 +754,7 @@ static void HI542_SetDummy(const kal_uint16 iPixels, const kal_uint16 iLines)
     {
         ExtraPixelsOneline = iPixels + HI542_PV_PERIOD_EXTRA_PIXEL_NUMS;
 		ExtraLinesOneframe = iLines + HI542_PV_PERIOD_EXTRA_LINE_NUMS;
+		
         if(HI542_MPEG4_encode_mode == KAL_FALSE)//for Fix video framerate
         {
             spin_lock(&hi542_drv_lock);
@@ -724,17 +787,33 @@ UINT32 HI542SetMaxFrameRate(UINT16 u2FrameRate)
 	kal_int16 dummy_line;
 	kal_uint16 LinesOneframe;
 	kal_uint16 PixelsOneline;
+	kal_uint16 CurrentFps;
+	kal_uint16 SetFps = u2FrameRate;
 
 	PixelsOneline = HI542_FULL_PERIOD_PIXEL_NUMS + HI542_dummy_pixels + 130 + HI542_FULL_PERIOD_EXTRA_PIXEL_NUMS;
 	LinesOneframe = HI542_PV_PERIOD_LINE_NUMS + HI542_dummy_lines + HI542_PV_PERIOD_EXTRA_LINE_NUMS;
 		
 	printk("[HI542SetMaxFrameRate]u2FrameRate=%d,PixelsOneline=%d,LinesOneframe=%d",u2FrameRate,PixelsOneline,LinesOneframe);
 
-	LinesOneframe = (10 * 84000000) / u2FrameRate / PixelsOneline;
+	if(HI542_MPEG4_encode_mode == KAL_TRUE)
+	{
+		CurrentFps = (10 * 84000000)/LinesOneframe/PixelsOneline;
+		if(300 == CurrentFps)
+			SetFps = 296;
+		else if(150 == CurrentFps)
+			SetFps = 146;
+	}
+	
+	LinesOneframe = (10 * 84000000) / SetFps / PixelsOneline;
 
 		dummy_line = LinesOneframe - (HI542_PV_PERIOD_LINE_NUMS + HI542_PV_PERIOD_EXTRA_LINE_NUMS);
 	    /* to fix VSYNC, to fix frame rate */
-		HI542_SetDummy(0, dummy_line); /* modify dummy_pixel must gen AE table again */	
+	if(old_dummy_line!=dummy_line)
+		{
+		  HI542_SetDummy(0, dummy_line); /* modify dummy_pixel must gen AE table again */	
+		  old_dummy_line=dummy_line;
+		}
+	return ERROR_NONE;
 }
 
 /*******************************************************************************
@@ -757,60 +836,73 @@ static void HI542_Sensor_Init(void)
 	//I2C_BYTE	= 0x21
 	//
 	////// Mode Controls
-	//HI542_write_cmos_sensor(0x0014,0x42}	// B[7] Justification control (Data Justification on output Data)
-	//HI542_write_cmos_sensor(0x0015,0x00}	// B[7] Tris,PCLK Inverting
-	//HI542_write_cmos_sensor(0x0036,0x00}	// MIPI Spec --> 0.9
-	//HI542_write_cmos_sensor(0x0017,0x2B}	// YUV422:0x18 RAW10:0x2B RAW8:0x2A RAW12:0x2C
-	//HI542_write_cmos_sensor(0x0019,0x04}	// Select Data_ID by REGISTER(0x0017)
-	//HI542_write_cmos_sensor(0x0002,0x15}	// B[7:2] ui_x4_clk_lane (Unit interval time step 0.25ns) 3ns  0.25 X 12
-	//HI542_write_cmos_sensor(0x0003,0x00}	// B[4] hs_invert_clk_lane (Invert HS signals)
-	//HI542_write_cmos_sensor(0x0004,0x02}	// B[4] hs_rx_term_e_subLVDS_clk_lane (Enables the hs-termination for subLVDs mode)
-	//HI542_write_cmos_sensor(0x0005,0x03}	// B[5] force_rx_mod_data_lane (Force lane module into receive mode wait for stop state)
-	//HI542_write_cmos_sensor(0x0006,0x01}	// B[5] Cd_off Contention_detector on/off
-	//HI542_write_cmos_sensor(0x0009,0x01}	// B[5] force_rx_mod_data_lane (Force lane module into receive mode wait for stop state)
-	//HI542_write_cmos_sensor(0x000A,0x01}	// B[5] Cd_off Contention_detector on/off
-	
+#if 0
+	HI542_write_cmos_sensor(0x0014,0x42);	// B[7] Justification control (Data Justification on output Data)
+	HI542_write_cmos_sensor(0x0015,0x00);	// B[7] Tris,PCLK Inverting
+	HI542_write_cmos_sensor(0x0036,0x00);	//  Spec --> 0.9
+	HI542_write_cmos_sensor(0x0017,0x2B);	// YUV422:0x18 RAW10:0x2B RAW8:0x2A RAW12:0x2C
+	HI542_write_cmos_sensor(0x0019,0x04);	// Select Data_ID by REGISTER(0x0017)
+	HI542_write_cmos_sensor(0x0002,0x15);	// B[7:2] ui_x4_clk_lane (Unit interval time step 0.25ns) 3ns  0.25 X 12
+	HI542_write_cmos_sensor(0x0003,0x00);	// B[4] hs_invert_clk_lane (Invert HS signals)
+	HI542_write_cmos_sensor(0x0004,0x02);	// B[4] hs_rx_term_e_subLVDS_clk_lane (Enables the hs-termination for subLVDs mode)
+	HI542_write_cmos_sensor(0x0005,0x03);	// B[5] force_rx_mod_data_lane (Force lane module into receive mode wait for stop state)
+	HI542_write_cmos_sensor(0x0006,0x01);	// B[5] Cd_off Contention_detector on/off
+	HI542_write_cmos_sensor(0x0009,0x01);	// B[5] force_rx_mod_data_lane (Force lane module into receive mode wait for stop state)
+	HI542_write_cmos_sensor(0x000A,0x01);	// B[5] Cd_off Contention_detector on/off
+#endif
 	//I2C_ID = 0x40
 	//I2C_BYTE	= 0x21
 	///////////////////////////////////////////////////
 	///////////////////////////////////////////////////
+
 	
-	HI542_write_cmos_sensor(0x0001,0x02);				 
-	HI542_write_cmos_sensor(0x0001,0x01);
+	HI542_write_cmos_sensor(0x0001,0x02);//  sw reset			 
+	HI542_write_cmos_sensor(0x0001,0x01);  //sleep
+	
+	HI542_write_cmos_sensor(0x03d4,0x28);
+	mdelay(10);
 	///////////////////////////////////////////////////
 	///////////////////////////////////////////////////
 	
-	HI542_write_cmos_sensor(0x0010,0x00);  
+	//HI542_write_cmos_sensor(0x0010,0x00);  
 	HI542_write_cmos_sensor(0x0011,0x90);  
-	HI542_write_cmos_sensor(0x0012,0x08);  
-	HI542_write_cmos_sensor(0x0013,0x00);  
+	//HI542_write_cmos_sensor(0x0012,0x08);  
+	//HI542_write_cmos_sensor(0x0013,0x00);  
 	HI542_write_cmos_sensor(0x0020,0x00);  
 	HI542_write_cmos_sensor(0x0021,0x00);  
 	HI542_write_cmos_sensor(0x0022,0x00);  
 	HI542_write_cmos_sensor(0x0023,0x00);  
-	HI542_write_cmos_sensor(0x0024,0x07);  
-	HI542_write_cmos_sensor(0x0025,0xA8);  
-	HI542_write_cmos_sensor(0x0026,0x0A);  
-	HI542_write_cmos_sensor(0x0027,0xB0);    
+	
+	//HI542_write_cmos_sensor(0x0024,0x07);  
+	//HI542_write_cmos_sensor(0x0025,0xA8);  
+	//HI542_write_cmos_sensor(0x0026,0x0A);  
+	//HI542_write_cmos_sensor(0x0027,0xB0);  
+	
 	HI542_write_cmos_sensor(0x0038,0x02);  
-	HI542_write_cmos_sensor(0x0039,0x2C);  
-	HI542_write_cmos_sensor(0x003A,0x02);  
-	HI542_write_cmos_sensor(0x003B,0x2C);  
+	HI542_write_cmos_sensor(0x0039,0x2C); 
+	
+	//HI542_write_cmos_sensor(0x003A,0x02);  
+	//HI542_write_cmos_sensor(0x003B,0x2C);  
+	
 	HI542_write_cmos_sensor(0x003C,0x00);  
 	HI542_write_cmos_sensor(0x003D,0x0C);  
 	HI542_write_cmos_sensor(0x003E,0x00);  
 	HI542_write_cmos_sensor(0x003F,0x0C);  
 	HI542_write_cmos_sensor(0x0040,0x00);  //Hblank H
-	HI542_write_cmos_sensor(0x0041,0x34);  //2E} Hblank L
+	HI542_write_cmos_sensor(0x0041,0x35);  //2E} Hblank L
+//changed by zhiqiang original 35
+
 	HI542_write_cmos_sensor(0x0042,0x00);  
-	HI542_write_cmos_sensor(0x0043,0x0C);  
+	HI542_write_cmos_sensor(0x0043,0x14);  
 	HI542_write_cmos_sensor(0x0045,0x07);  
 	HI542_write_cmos_sensor(0x0046,0x01);  
 	HI542_write_cmos_sensor(0x0047,0xD0);  
-	HI542_write_cmos_sensor(0x004A,0x02);   
-	HI542_write_cmos_sensor(0x004B,0xD8);    
-	HI542_write_cmos_sensor(0x004C,0x05);  
-	HI542_write_cmos_sensor(0x004D,0x08);  
+	
+	//HI542_write_cmos_sensor(0x004A,0x02);   
+	//HI542_write_cmos_sensor(0x004B,0xD8);    
+	//HI542_write_cmos_sensor(0x004C,0x05);  
+	//HI542_write_cmos_sensor(0x004D,0x08);  
+
 	HI542_write_cmos_sensor(0x0050,0x00);  
 	HI542_write_cmos_sensor(0x0052,0x10);  
 	HI542_write_cmos_sensor(0x0053,0x10);  
@@ -823,16 +915,18 @@ static void HI542_Sensor_Init(void)
 	HI542_write_cmos_sensor(0x005A,0x08);  
 	HI542_write_cmos_sensor(0x005B,0x02);  
 	HI542_write_cmos_sensor(0x0070,0x03);	//EMI OFF
-	HI542_write_cmos_sensor(0x0080,0xC0);  
+	
+	//HI542_write_cmos_sensor(0x0080,0xC0);  
 	HI542_write_cmos_sensor(0x0081,0x01);  //09},//0B},BLC scheme
 	HI542_write_cmos_sensor(0x0082,0x23);  
 	HI542_write_cmos_sensor(0x0083,0x00);  
-	HI542_write_cmos_sensor(0x0084,0x30);  
+
+	//HI542_write_cmos_sensor(0x0084,0x30);  
 	HI542_write_cmos_sensor(0x0085,0x00);  
 	HI542_write_cmos_sensor(0x0086,0x00);  
 	HI542_write_cmos_sensor(0x008C,0x02);  
-	HI542_write_cmos_sensor(0x008D,0xFA);  
-	HI542_write_cmos_sensor(0x0090,0x0b);  
+	//HI542_write_cmos_sensor(0x008D,0xFA);  
+	//HI542_write_cmos_sensor(0x0090,0x0b);  
 	HI542_write_cmos_sensor(0x00A0,0x0f);  //0C},//0B},RAMP DC OFFSET
 	HI542_write_cmos_sensor(0x00A1,0x00);  
 	HI542_write_cmos_sensor(0x00A2,0x00);  
@@ -840,7 +934,7 @@ static void HI542_Sensor_Init(void)
 	HI542_write_cmos_sensor(0x00A4,0xFF);  
 	HI542_write_cmos_sensor(0x00A5,0x00);  
 	HI542_write_cmos_sensor(0x00A6,0x00);  
-	HI542_write_cmos_sensor(0x00A7,0xa6);  
+	//HI542_write_cmos_sensor(0x00A7,0xa6);  
 	HI542_write_cmos_sensor(0x00A8,0x7F);  
 	HI542_write_cmos_sensor(0x00A9,0x7F);  
 	HI542_write_cmos_sensor(0x00AA,0x7F);  
@@ -858,17 +952,18 @@ static void HI542_Sensor_Init(void)
 	HI542_write_cmos_sensor(0x00DB,0xb0);  
 	HI542_write_cmos_sensor(0x00DC,0x01);  
 	HI542_write_cmos_sensor(0x00DD,0xc9);  //c5},
-	HI542_write_cmos_sensor(0x0119,0x00);  
-	HI542_write_cmos_sensor(0x011A,0x00);  
-	HI542_write_cmos_sensor(0x011B,0x00);  
+	//HI542_write_cmos_sensor(0x0119,0x00);  
+	//HI542_write_cmos_sensor(0x011A,0x00);  
+	//HI542_write_cmos_sensor(0x011B,0x00);  
 	HI542_write_cmos_sensor(0x011C,0x1F);  
 	HI542_write_cmos_sensor(0x011D,0xFF);  
 	HI542_write_cmos_sensor(0x011E,0xFF);  
 	HI542_write_cmos_sensor(0x011F,0xFF);  
-	HI542_write_cmos_sensor(0x0115,0x00);  
-	HI542_write_cmos_sensor(0x0116,0x16);  
-	HI542_write_cmos_sensor(0x0117,0x27);  
-	HI542_write_cmos_sensor(0x0118,0xE0);  
+	
+	//HI542_write_cmos_sensor(0x0115,0x00);  
+	//HI542_write_cmos_sensor(0x0116,0x16);  
+	//HI542_write_cmos_sensor(0x0117,0x27);  
+	//HI542_write_cmos_sensor(0x0118,0xE0);  
 	HI542_write_cmos_sensor(0x012A,0xFF);  
 	HI542_write_cmos_sensor(0x012B,0x00);  
 	HI542_write_cmos_sensor(0x0129,0x40);  
@@ -876,10 +971,10 @@ static void HI542_Sensor_Init(void)
 	HI542_write_cmos_sensor(0x0212,0x00);  
 	HI542_write_cmos_sensor(0x0213,0x00);  
 	HI542_write_cmos_sensor(0x0216,0x00);  
-	HI542_write_cmos_sensor(0x0217,0x40);  
-	HI542_write_cmos_sensor(0x0218,0x00);  
+	//HI542_write_cmos_sensor(0x0217,0x40);  
+	//HI542_write_cmos_sensor(0x0218,0x00);  
 	HI542_write_cmos_sensor(0x0219,0x33);  //66},Pixel bias
-	HI542_write_cmos_sensor(0x021A,0x15);  //15},
+	//HI542_write_cmos_sensor(0x021A,0x15);  //15},
 	HI542_write_cmos_sensor(0x021B,0x55);  
 	HI542_write_cmos_sensor(0x021C,0x85);  
 	HI542_write_cmos_sensor(0x021D,0xFF);  
@@ -888,25 +983,28 @@ static void HI542_Sensor_Init(void)
 	HI542_write_cmos_sensor(0x0220,0x02);  
 	HI542_write_cmos_sensor(0x0221,0x00);  
 	HI542_write_cmos_sensor(0x0222,0xA0);  
-	HI542_write_cmos_sensor(0x0223,0x2D);  
-	HI542_write_cmos_sensor(0x0224,0x24);  
-	HI542_write_cmos_sensor(0x0225,0x00);  
-	HI542_write_cmos_sensor(0x0226,0x3F);  
+	
+	//HI542_write_cmos_sensor(0x0223,0x2D);  
+	//HI542_write_cmos_sensor(0x0224,0x24);  
+	//HI542_write_cmos_sensor(0x0225,0x00);  
+	//HI542_write_cmos_sensor(0x0226,0x3F);  
 	HI542_write_cmos_sensor(0x0227,0x0A);  
 	HI542_write_cmos_sensor(0x0228,0x5C);  
 	HI542_write_cmos_sensor(0x0229,0x2d);  //41},//00},//2C},RAMP swing range
 	HI542_write_cmos_sensor(0x022A,0x04);  
-	HI542_write_cmos_sensor(0x022B,0x9f);  
+	
+	//HI542_write_cmos_sensor(0x022B,0x9f);  
 	HI542_write_cmos_sensor(0x022C,0x01);  
 	HI542_write_cmos_sensor(0x022D,0x23);  
-	HI542_write_cmos_sensor(0x0232,0x10);  
+	//HI542_write_cmos_sensor(0x0232,0x10);  
 	HI542_write_cmos_sensor(0x0237,0x00);  
 	HI542_write_cmos_sensor(0x0238,0x00);  
 	HI542_write_cmos_sensor(0x0239,0xA5);  
 	HI542_write_cmos_sensor(0x023A,0x20);  
 	HI542_write_cmos_sensor(0x023B,0x00);  
 	HI542_write_cmos_sensor(0x023C,0x22);  
-	HI542_write_cmos_sensor(0x023E,0x00);  
+	
+	//HI542_write_cmos_sensor(0x023E,0x00);  
 	HI542_write_cmos_sensor(0x023F,0x80);  
 	HI542_write_cmos_sensor(0x0240,0x04);  
 	HI542_write_cmos_sensor(0x0241,0x07);  
@@ -1100,17 +1198,19 @@ static void HI542_Sensor_Init(void)
 	HI542_write_cmos_sensor(0x03B3,0x55);  
 	HI542_write_cmos_sensor(0x03B4,0x00);  
 	HI542_write_cmos_sensor(0x03B5,0x0A);  
-	HI542_write_cmos_sensor(0x03D0,0xee);  
-	HI542_write_cmos_sensor(0x03D1,0x15);  
-	HI542_write_cmos_sensor(0x03D2,0xb0);  
+	
+	//HI542_write_cmos_sensor(0x03D0,0xee);  
+	//HI542_write_cmos_sensor(0x03D1,0x15);  
+	//HI542_write_cmos_sensor(0x03D2,0xb0);  
 	HI542_write_cmos_sensor(0x03D3,0x08);  
-	HI542_write_cmos_sensor(0x03D4,0x18);  //08},LDO OUTPUT 
+	//HI542_write_cmos_sensor(0x03D4,0x18);  //08},LDO OUTPUT 
 	HI542_write_cmos_sensor(0x03D5,0x44);  
-	HI542_write_cmos_sensor(0x03D6,0x54);  
+	HI542_write_cmos_sensor(0x03D6,0x51);  
 	HI542_write_cmos_sensor(0x03D7,0x56);  
 	HI542_write_cmos_sensor(0x03D8,0x44);  
 	HI542_write_cmos_sensor(0x03D9,0x06);  
-	HI542_write_cmos_sensor(0x0500,0x18);  
+
+	//HI542_write_cmos_sensor(0x0500,0x18);  
 	HI542_write_cmos_sensor(0x0580,0x01);  
 	HI542_write_cmos_sensor(0x0581,0x00);  
 	HI542_write_cmos_sensor(0x0582,0x80);  
@@ -1122,31 +1222,38 @@ static void HI542_Sensor_Init(void)
 	HI542_write_cmos_sensor(0x0588,0x80);  
 	HI542_write_cmos_sensor(0x0589,0x00);  
 	HI542_write_cmos_sensor(0x058A,0x80);  
-	HI542_write_cmos_sensor(0x05A0,0x01);  
-	HI542_write_cmos_sensor(0x05B0,0x01);  
+	
+	//HI542_write_cmos_sensor(0x05A0,0x01);  
+	//HI542_write_cmos_sensor(0x05B0,0x01);  
 	HI542_write_cmos_sensor(0x05C2,0x00);  
 	HI542_write_cmos_sensor(0x05C3,0x00);  
 	HI542_write_cmos_sensor(0x0080,0xC7);  
 	HI542_write_cmos_sensor(0x0119,0x00);  
 	HI542_write_cmos_sensor(0x011A,0x15);  
 	HI542_write_cmos_sensor(0x011B,0xC0);  
+/*
 	HI542_write_cmos_sensor(0x0115,0x00);  
 	HI542_write_cmos_sensor(0x0116,0x2A);  
 	HI542_write_cmos_sensor(0x0117,0x4C);  
 	HI542_write_cmos_sensor(0x0118,0x20);  
+*/
 	HI542_write_cmos_sensor(0x0223,0xED);  
 	HI542_write_cmos_sensor(0x0224,0xE4);  
 	HI542_write_cmos_sensor(0x0225,0x09);  
 	HI542_write_cmos_sensor(0x0226,0x36);  
 	HI542_write_cmos_sensor(0x023E,0x80);  
 	HI542_write_cmos_sensor(0x05B0,0x00);  
+
+	HI542_write_cmos_sensor(0x03D2,0xAD);
 	HI542_write_cmos_sensor(0x03D0,0xe9);  
 	HI542_write_cmos_sensor(0x03D1,0x75);  
-	HI542_write_cmos_sensor(0x03D2,0xAC);  
-	HI542_write_cmos_sensor(0x0800,0x0F);  //07},//0F},EMI disable
+
+
+	
+	HI542_write_cmos_sensor(0x0800,0x0F); //EMI disable
 	HI542_write_cmos_sensor(0x0801,0x08);  
-	HI542_write_cmos_sensor(0x0802,0x00);  //04},//00},apb clock speed down
-	HI542_write_cmos_sensor(0x0010,0x05);  
+	HI542_write_cmos_sensor(0x0802,0x02);  //04},//00},apb clock speed down
+	//HI542_write_cmos_sensor(0x0010,0x05);  
 	HI542_write_cmos_sensor(0x0012,0x00);  
 	HI542_write_cmos_sensor(0x0013,0x00);  
 	HI542_write_cmos_sensor(0x0024,0x07);  
@@ -1154,31 +1261,32 @@ static void HI542_Sensor_Init(void)
 	HI542_write_cmos_sensor(0x0026,0x0A);  
 	HI542_write_cmos_sensor(0x0027,0x30);  
 	HI542_write_cmos_sensor(0x0030,0x00);  
-	HI542_write_cmos_sensor(0x0031,0xFF);  
-	HI542_write_cmos_sensor(0x0032,0x06);  
-	HI542_write_cmos_sensor(0x0033,0xB0);  
-	HI542_write_cmos_sensor(0x0034,0x02);  
-	HI542_write_cmos_sensor(0x0035,0xD8);  
+	HI542_write_cmos_sensor(0x0031,0x03);  
+	HI542_write_cmos_sensor(0x0032,0x07);  
+	HI542_write_cmos_sensor(0x0033,0xAC);  
+	HI542_write_cmos_sensor(0x0034,0x03);  
+	HI542_write_cmos_sensor(0x0035,0xD4);  
 	HI542_write_cmos_sensor(0x003A,0x00);  
 	HI542_write_cmos_sensor(0x003B,0x2E);  
 	HI542_write_cmos_sensor(0x004A,0x03);  
-	HI542_write_cmos_sensor(0x004B,0xC8);  
+	HI542_write_cmos_sensor(0x004B,0xD4);  
 	HI542_write_cmos_sensor(0x004C,0x05);  
-	HI542_write_cmos_sensor(0x004D,0x08);  
+	HI542_write_cmos_sensor(0x004D,0x18);  
 	HI542_write_cmos_sensor(0x0C98,0x05);  
 	HI542_write_cmos_sensor(0x0C99,0x5E);  
 	HI542_write_cmos_sensor(0x0C9A,0x05);  
-	HI542_write_cmos_sensor(0x0C9B,0x62);  
-	HI542_write_cmos_sensor(0x0500,0x18);  
+	HI542_write_cmos_sensor(0x0C9B,0x62);
+	
+	//HI542_write_cmos_sensor(0x0500,0x18);  
 	HI542_write_cmos_sensor(0x05A0,0x01);  
 	HI542_write_cmos_sensor(0x0084,0x30);  //10},BLC control
 	HI542_write_cmos_sensor(0x008D,0xFF);  
 	HI542_write_cmos_sensor(0x0090,0x02);  //0b},BLC defect pixel th
 	HI542_write_cmos_sensor(0x00A7,0x80);  //FF},
-	HI542_write_cmos_sensor(0x021A,0x05);  
+	HI542_write_cmos_sensor(0x021A,0x15);  
 	HI542_write_cmos_sensor(0x022B,0xb0);  //f0},RAMP filter
 	HI542_write_cmos_sensor(0x0232,0x37);  //17},black sun enable
-	HI542_write_cmos_sensor(0x0010,0x01);  //01},
+	HI542_write_cmos_sensor(0x0010,0x41);  //01},
 	HI542_write_cmos_sensor(0x0740,0x1A);  
 	HI542_write_cmos_sensor(0x0742,0x1A);  
 	HI542_write_cmos_sensor(0x0743,0x1A);  
@@ -1217,43 +1325,43 @@ static void HI542_Sensor_Init(void)
 	HI542_write_cmos_sensor(0x02c5,0xE4);  //indoor NCP voltage
 	HI542_write_cmos_sensor(0x02c6,0xE4);  //dark1 NCP voltage
 	HI542_write_cmos_sensor(0x02c7,0xdb);  //24},//dark2 NCP voltage
+
+	//#if define _INTERFACE
+#if 0
+	HI542_write_cmos_sensor(0x061A,0x01);  
+	HI542_write_cmos_sensor(0x061B,0x03);  
+	HI542_write_cmos_sensor(0x061C,0x00);  
+	HI542_write_cmos_sensor(0x061D,0x00);  
+	HI542_write_cmos_sensor(0x061E,0x00);  
+	HI542_write_cmos_sensor(0x061F,0x03);  
+	HI542_write_cmos_sensor(0x0613,0x01);  
+	HI542_write_cmos_sensor(0x0615,0x01);  
+	HI542_write_cmos_sensor(0x0616,0x01);  
+	HI542_write_cmos_sensor(0x0617,0x00);  
+	HI542_write_cmos_sensor(0x0619,0x00); 
+
+	HI542_write_cmos_sensor(0x0661,0x03);  
+	HI542_write_cmos_sensor(0x0650,0x03);  
+	HI542_write_cmos_sensor(0x0651,0x02);  
+	HI542_write_cmos_sensor(0x0652,0x10);  
+	HI542_write_cmos_sensor(0x0655,0x04);  
+	HI542_write_cmos_sensor(0x0654,0x08); 
+
 	
-	//HI542_write_cmos_sensor(0x061A,0x01);  
-	//HI542_write_cmos_sensor(0x061B,0x04);  
-	//HI542_write_cmos_sensor(0x061C,0x00);  
-	//HI542_write_cmos_sensor(0x061D,0x00);  
-	//HI542_write_cmos_sensor(0x061E,0x00);  
-	//HI542_write_cmos_sensor(0x061F,0x03);  
-	//HI542_write_cmos_sensor(0x0613,0x01);  
-	//HI542_write_cmos_sensor(0x0615,0x01);  
-	//HI542_write_cmos_sensor(0x0616,0x01);  
-	//HI542_write_cmos_sensor(0x0617,0x00);  
-	//HI542_write_cmos_sensor(0x0619,0x01);  
-	//HI542_write_cmos_sensor(0x0008,0x0F);  
-	//HI542_write_cmos_sensor(0x0630,0x05);  
-	//HI542_write_cmos_sensor(0x0631,0x08);  
-	//HI542_write_cmos_sensor(0x0632,0x03);  
-	//HI542_write_cmos_sensor(0x0633,0xC8);  
-	//HI542_write_cmos_sensor(0x0663,0x05);  //0a},trail time 
-	//HI542_write_cmos_sensor(0x0660,0x03);  
-										
-	//HI542_write_cmos_sensor(0x0119,0x00);   
-	//HI542_write_cmos_sensor(0x011A,0x2b);   
-	//HI542_write_cmos_sensor(0x011B,0x80);   
-	//									 );  
-	//HI542_write_cmos_sensor(0x0010,0x00);   
-	//HI542_write_cmos_sensor(0x0011,0x00);   
-	//HI542_write_cmos_sensor(0x0500,0x11);   
-	//									 
-	//HI542_write_cmos_sensor(0x0630,0x0A);   
-	//HI542_write_cmos_sensor(0x0631,0x30);   
-	//HI542_write_cmos_sensor(0x0632,0x07);   
-	//HI542_write_cmos_sensor(0x0633,0xA8);   
+	HI542_write_cmos_sensor(0x0008,0x0F);  
+	HI542_write_cmos_sensor(0x0630,0x05);  
+	HI542_write_cmos_sensor(0x0631,0x18);  
+	HI542_write_cmos_sensor(0x0632,0x03);  
+	HI542_write_cmos_sensor(0x0633,0xD4);  
+	HI542_write_cmos_sensor(0x0663,0x05);  //0a},trail time 
+	HI542_write_cmos_sensor(0x0660,0x03);  	
+#endif
 	
 	HI542_write_cmos_sensor(0x0001,0x00);	//PWRCTLB  
 	
 	//END
 	//[END]
+	HI542_Auto_Flicker_mode = KAL_FALSE; 
 
     printk("[HI542Raw] Init Success \n");
 }   /*  HI542_Sensor_Init  */
@@ -1278,7 +1386,7 @@ void HI542_set_preview_setting(void)
 	////// Mode Controls
 	//HI542_write_cmos_sensor(0x0014,0x42); 	// B[7] Justification control (Data Justification on output Data)
 	//HI542_write_cmos_sensor(0x0015,0x00); 	// B[7] Tris,PCLK Inverting
-	//HI542_write_cmos_sensor(0x0036,0x00); 	// MIPI Spec --> 0.9
+	//HI542_write_cmos_sensor(0x0036,0x00); 	//  Spec --> 0.9
 	//HI542_write_cmos_sensor(0x0017,0x2B); // YUV422:0x18 RAW10:0x2B RAW8:0x2A RAW12:0x2C
 	//HI542_write_cmos_sensor(0x0019,0x04); 	// Select Data_ID by REGISTER(0x0017)
 	//HI542_write_cmos_sensor(0x0002,0x15); // B[7:2] ui_x4_clk_lane (Unit interval time step 0.25ns) 3ns  0.25 X 12
@@ -1291,20 +1399,57 @@ void HI542_set_preview_setting(void)
 	
 	//I2C_ID = 0x40
 	//I2C_BYTE	= 0x21
+
+	//HI542_write_cmos_sensor(0x0632, 0x00);
+	//HI542_write_cmos_sensor(0x0633, 0x00);
+
+
+
+//                   fixed 15fps
+	HI542_write_cmos_sensor(0x0001, 0x01);	  
+	HI542_write_cmos_sensor(0x0001, 0x00);
+	HI542_write_cmos_sensor(0x0001, 0x01);
 	
-		HI542_write_cmos_sensor(0x0001, 0x01);
-		HI542_write_cmos_sensor(0x0001, 0x00);
-		HI542_write_cmos_sensor(0x0001, 0x01);
-											  
-		HI542_write_cmos_sensor(0x0119, 0x00);
-		HI542_write_cmos_sensor(0x011A, 0x15);
-		HI542_write_cmos_sensor(0x011B, 0xC0);
-										
-		HI542_write_cmos_sensor(0x0010, 0x01);
-		HI542_write_cmos_sensor(0x0011, 0x00);
-		HI542_write_cmos_sensor(0x0500, 0x19);
-									  
-		HI542_write_cmos_sensor(0x0001, 0x00);	 
+	HI542_write_cmos_sensor(0x0010, 0x41);
+		HI542_write_cmos_sensor(0x0011, 0x03);
+	HI542_write_cmos_sensor(0x0034, 0x03);
+	HI542_write_cmos_sensor(0x0035, 0xD4);
+	HI542_write_cmos_sensor(0x0040, 0x00);
+	HI542_write_cmos_sensor(0x0041, 0x35);
+
+	HI542_write_cmos_sensor(0x0042, 0x00);
+	HI542_write_cmos_sensor(0x0043, 0x14);
+	HI542_write_cmos_sensor(0x0500, 0x19);
+
+
+#if 0
+	HI542_write_cmos_sensor(0x0011, 0x00); //fixed frame setting turn off
+	HI542_write_cmos_sensor(0x0013, 0x00); //fixed frame setting turn off
+#else
+HI542_write_cmos_sensor(0x0011, 0x04); //fixed frame setting turn off
+HI542_write_cmos_sensor(0x0013, 0x40); //fixed frame setting turn off
+
+#endif
+
+
+	//HI542_write_cmos_sensor(0x0010, 0x01);
+	//HI542_write_cmos_sensor(0x0011, 0x00);
+	//HI542_write_cmos_sensor(0x0120, 0x00); //Fixed exposure time 15
+	//HI542_write_cmos_sensor(0x0121, 0x55); //Fixed exposure time 15
+	//HI542_write_cmos_sensor(0x0122, 0x79); //Fixed exposure time 15
+	//HI542_write_cmos_sensor(0x0123, 0x01); //Fixed exposure time 15
+	
+	HI542_write_cmos_sensor(0x011C,0x1F); // Max exposure time 
+	HI542_write_cmos_sensor(0x011D,0xFF); // Max exposure time 
+	HI542_write_cmos_sensor(0x011E,0xFF); // Max exposure time/
+	HI542_write_cmos_sensor(0x011F,0xFF); // Max exposure time 
+/*
+	HI542_write_cmos_sensor(0x0115, 0x00); //// manual exposure time
+	HI542_write_cmos_sensor(0x0116, 0x2A); //// manual exposure time
+	HI542_write_cmos_sensor(0x0117, 0x4C); //// manual exposure time
+	HI542_write_cmos_sensor(0x0118, 0x20); //// manual exposure time
+*/
+	HI542_write_cmos_sensor(0x0001, 0x00);	 
 	
 	//END
 	//[END]
@@ -1318,69 +1463,158 @@ void HI542_set_preview_setting(void)
 
 /*******************************************************************************
 *
+capture setting
 ********************************************************************************/
 void HI542_set_5M15fps(void)
 {
+	
+		spin_lock(&hi542_drv_lock);
+		HI542_g_RES = HI542_5M;
+		spin_unlock(&hi542_drv_lock);
+	
+	
+	
+		//HI542_write_cmos_sensor(0x0632, 0x00);
+		//HI542_write_cmos_sensor(0x0633, 0x00);
+		HI542_write_cmos_sensor(0x0001, 0x01);	  
+		HI542_write_cmos_sensor(0x0001, 0x00);
+		HI542_write_cmos_sensor(0x0001, 0x01);
+		
+	//	HI542_write_cmos_sensor(0x0020, 0x00);
+	//	HI542_write_cmos_sensor(0x0021, 0x00);
+	//	HI542_write_cmos_sensor(0x0022, 0x00);
+	//	HI542_write_cmos_sensor(0x0023, 0x00);
+	
+	
+		HI542_write_cmos_sensor(0x0010, 0x40);
+		HI542_write_cmos_sensor(0x0011, 0x04);
+		HI542_write_cmos_sensor(0x0013, 0x40);
+	
+		HI542_write_cmos_sensor(0x0034, 0x07);
+		HI542_write_cmos_sensor(0x0035, 0xA8);
+	
+		HI542_write_cmos_sensor(0x0500, 0x11);
+		
 
-    spin_lock(&hi542_drv_lock);
-    HI542_g_RES = HI542_5M;
+	
+		HI542_write_cmos_sensor(0x0001, 0x00);	
+	
+	
+	
+	
+		spin_lock(&hi542_drv_lock);
+		HI542_CAP_pclk = 8400; 
+		HI542_sensor_pclk = 84000000;//19500000;
+		spin_unlock(&hi542_drv_lock);
+		
+		SENSORDB("Set 5M End\n"); 
+}
+
+
+
+
+
+
+void HI542_set_video15fps(void)
+{
+
+	HI542_write_cmos_sensor(0x0001, 0x01);	  
+	HI542_write_cmos_sensor(0x0001, 0x00);
+	HI542_write_cmos_sensor(0x0001, 0x01);
+	
+	HI542_write_cmos_sensor(0x0010, 0x41);
+	HI542_write_cmos_sensor(0x0011, 0x00);
+	
+	HI542_write_cmos_sensor(0x0034, 0x03);
+	HI542_write_cmos_sensor(0x0035, 0xD4);
+
+	HI542_write_cmos_sensor(0x0040, 0x00);
+	HI542_write_cmos_sensor(0x0041, 0x35);
+//changed by zhiqiang  original 35
+	
+	HI542_write_cmos_sensor(0x0042, 0x03);
+	HI542_write_cmos_sensor(0x0043, 0x28);
+
+	HI542_write_cmos_sensor(0x0500, 0x19);
+	
+
+
+	HI542_write_cmos_sensor(0x0011, 0x04);	
+	HI542_write_cmos_sensor(0x0013, 0x40);
+	
+	HI542_write_cmos_sensor(0x0120, 0x00);
+	HI542_write_cmos_sensor(0x0121, 0x55);
+	HI542_write_cmos_sensor(0x0122, 0x79);
+	HI542_write_cmos_sensor(0x0123, 0x01);
+	
+	HI542_write_cmos_sensor(0x011C, 0x00);	
+	HI542_write_cmos_sensor(0x011D, 0x55);
+	HI542_write_cmos_sensor(0x011E, 0x63);
+	HI542_write_cmos_sensor(0x011F, 0x33);
+/*
+	HI542_write_cmos_sensor(0x0115, 0x00);
+	HI542_write_cmos_sensor(0x0116, 0x55);
+	HI542_write_cmos_sensor(0x0117, 0x79);
+	HI542_write_cmos_sensor(0x0118, 0x01);
+*/
+	HI542_write_cmos_sensor(0x0001, 0x00);
+	spin_lock(&hi542_drv_lock);
+	Fix_framerate=1;
 	spin_unlock(&hi542_drv_lock);
 
-	//[SENSOR_INITIALIZATION]
-	//DISP_DATE = "2010-02-09 13:27:00"
-	//DISP_WIDTH = 2608
-	//DISP_HEIGHT = 1960
-	//DISP_FORMAT = BAYER10
-	//DISP_DATABUS = 16
-	//DISP_DATAORDER = BG
-	//MCLK = 24.00
-	//PLL = 2.00
-	//
-	//BEGIN
-	//I2C_ID = 0x14
-	//I2C_BYTE	= 0x21
-	//
-	////// Mode Controls
-	//HI542_write_cmos_sensor(0x0014,0x42); 	// B[7] Justification control (Data Justification on output Data)
-	//HI542_write_cmos_sensor(0x0015,0x00); 	// B[7] Tris,PCLK Inverting
-	//HI542_write_cmos_sensor(0x0036,0x00); 	// MIPI Spec --> 0.9
-	//HI542_write_cmos_sensor(0x0017,0x2B); // YUV422:0x18 RAW10:0x2B RAW8:0x2A RAW12:0x2C
-	//HI542_write_cmos_sensor(0x0019,0x04); 	// Select Data_ID by REGISTER(0x0017)
-	//HI542_write_cmos_sensor(0x0002,0x15); // B[7:2] ui_x4_clk_lane (Unit interval time step 0.25ns) 3ns  0.25 X 12
-	//HI542_write_cmos_sensor(0x0003,0x00); 	// B[4] hs_invert_clk_lane (Invert HS signals)
-	//HI542_write_cmos_sensor(0x0004,0x02);  // B[4] hs_rx_term_e_subLVDS_clk_lane (Enables the hs-termination for subLVDs mode)
-	//HI542_write_cmos_sensor(0x0005,0x03); 	// B[5] force_rx_mod_data_lane (Force lane module into receive mode wait for stop state)
-	//HI542_write_cmos_sensor(0x0006,0x01); 	// B[5] Cd_off Contention_detector on/off
-	//HI542_write_cmos_sensor(0x0009,0x01); 	// B[5] force_rx_mod_data_lane (Force lane module into receive mode wait for stop state)
-	//HI542_write_cmos_sensor(0x000A,0x01); 	// B[5] Cd_off Contention_detector on/off
-	
-	//I2C_ID = 0x40
-	//I2C_BYTE	= 0x21
-	
-		HI542_write_cmos_sensor(0x0001, 0x01);
-		HI542_write_cmos_sensor(0x0001, 0x00);			
-		HI542_write_cmos_sensor(0x0001, 0x01);
-												  
-		HI542_write_cmos_sensor(0x0119, 0x00);
-		HI542_write_cmos_sensor(0x011A, 0x2b);
-		HI542_write_cmos_sensor(0x011B, 0x80);
-										 
-		HI542_write_cmos_sensor(0x0010, 0x00);
-		HI542_write_cmos_sensor(0x0011, 0x00);
-		HI542_write_cmos_sensor(0x0500, 0x11);
-										 
-		HI542_write_cmos_sensor(0x0001, 0x00);	 
-	
-	//END
-	//[END]
-
-    spin_lock(&hi542_drv_lock);
-    HI542_CAP_pclk = 8400; 
-    HI542_sensor_pclk = 84000000;//19500000;
-    spin_unlock(&hi542_drv_lock);
-	
-    SENSORDB("Set 5M End\n"); 
+    SENSORDB("Set fixed15fps End\n"); 
 }
+
+
+
+void HI542_set_video30fps(void)
+{
+	HI542_write_cmos_sensor(0x0001, 0x01);	  
+	HI542_write_cmos_sensor(0x0001, 0x00);
+	HI542_write_cmos_sensor(0x0001, 0x01);
+	
+	HI542_write_cmos_sensor(0x0010, 0x41);
+	HI542_write_cmos_sensor(0x0011, 0x00);
+	
+	HI542_write_cmos_sensor(0x0034, 0x03);
+	HI542_write_cmos_sensor(0x0035, 0xD4);
+
+	HI542_write_cmos_sensor(0x0040, 0x00);
+	HI542_write_cmos_sensor(0x0041, 0x35);
+//changed by zhiqiang   original 35
+	
+	HI542_write_cmos_sensor(0x0042, 0x00);
+	HI542_write_cmos_sensor(0x0043, 0x20);
+
+	HI542_write_cmos_sensor(0x0500, 0x19);
+	
+
+
+	HI542_write_cmos_sensor(0x0011, 0x04);	
+	HI542_write_cmos_sensor(0x0013, 0x40);
+
+	HI542_write_cmos_sensor(0x0120, 0x00);
+	HI542_write_cmos_sensor(0x0121, 0x2A);
+	HI542_write_cmos_sensor(0x0122, 0xC1);
+	HI542_write_cmos_sensor(0x0123, 0xF4);
+
+	HI542_write_cmos_sensor(0x011C, 0x1F);	
+	HI542_write_cmos_sensor(0x011D, 0xFF);
+	HI542_write_cmos_sensor(0x011E, 0xFF);
+	HI542_write_cmos_sensor(0x011F, 0xFF);
+/*
+	HI542_write_cmos_sensor(0x0115, 0x00);
+	HI542_write_cmos_sensor(0x0116, 0x26);
+	HI542_write_cmos_sensor(0x0117, 0xb6);
+	HI542_write_cmos_sensor(0x0118, 0x3b);
+*/
+	HI542_write_cmos_sensor(0x0001, 0x00);	
+	spin_lock(&hi542_drv_lock);
+	Fix_framerate=1;
+	spin_unlock(&hi542_drv_lock);
+	SENSORDB("Set fixed30fps End\n"); 
+}
+
 
 /*******************************************************************************
 *
@@ -1481,43 +1715,44 @@ void HI542_set_5M(void)
 
 UINT32 HI542Open(void)
 {
-    int  retry = 0; 
+	int  retry = 0; 
 	kal_uint16 temp_data;
 
 	temp_data= HI542_read_cmos_sensor(0x0004);
-	
-	spin_lock(&hi542_drv_lock);
-    HI542_sensor_id = temp_data;
-	spin_unlock(&hi542_drv_lock);
-    // check if sensor ID correct
-    retry = 3; 
-    do {
-       
-     	temp_data= HI542_read_cmos_sensor(0x0004);
-		
-        spin_lock(&hi542_drv_lock);
-        HI542_sensor_id = temp_data;
-	    spin_unlock(&hi542_drv_lock);  
-        if (HI542_sensor_id == HI542_SENSOR_ID)
-            break; 
-        SENSORDB("Read Sensor ID Fail = 0x%04x\n", HI542_sensor_id); 
-        retry--; 
-    } while (retry > 0);
+	SENSORDB("HI542Open\n"); 
 
-    if (HI542_sensor_id != HI542_SENSOR_ID)
-        return ERROR_SENSOR_CONNECT_FAIL;
-	
+	spin_lock(&hi542_drv_lock);
+	HI542_sensor_id = temp_data;
+	spin_unlock(&hi542_drv_lock);
+	// check if sensor ID correct
+	retry = 3; 
+	do {
+
+		temp_data= HI542_read_cmos_sensor(0x0004);
+
+		spin_lock(&hi542_drv_lock);
+		HI542_sensor_id = temp_data;
+		spin_unlock(&hi542_drv_lock);  
+		if (HI542_sensor_id == HI542_SENSOR_ID)
+			break; 
+		SENSORDB("Read Sensor ID Fail = 0x%04x\n", HI542_sensor_id); 
+		retry--; 
+	} while (retry > 0);
+
+	if (HI542_sensor_id != HI542_SENSOR_ID)
+		return ERROR_SENSOR_CONNECT_FAIL;
+
 	printk("[HI542YUV]:HI542Open Read Sensor ID :0x%x\n", HI542_sensor_id);  
 
-    HI542_Sensor_Init();
+	HI542_Sensor_Init();
 
 	temp_data = read_HI542_gain();
-	
+
 	spin_lock(&hi542_drv_lock);
-    HI542_sensor_gain_base = temp_data;
+	HI542_sensor_gain_base = temp_data;
 	spin_unlock(&hi542_drv_lock);
 
-    printk("[HI542YUV]:HI542Open Read Sensor BaseGain :0x%x\n", HI542_sensor_gain_base); 
+	printk("[HI542YUV]:HI542Open Read Sensor BaseGain :0x%x\n", HI542_sensor_gain_base); 
 	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0024 :0x%x\n", HI542_read_cmos_sensor(0x0024));
 	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0025 :0x%x\n", HI542_read_cmos_sensor(0x0025));
 	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0026 :0x%x\n", HI542_read_cmos_sensor(0x0026));
@@ -1525,10 +1760,12 @@ UINT32 HI542Open(void)
 	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0500 :0x%x\n", HI542_read_cmos_sensor(0x0500));
 
 	spin_lock(&hi542_drv_lock);
-    HI542_g_iBackupExtraExp = 0;
-    spin_unlock(&hi542_drv_lock);	
+	HI542_g_iBackupExtraExp = 0;
+	Fix_framerate=0;
+	spin_unlock(&hi542_drv_lock);	
 
-    return ERROR_NONE;
+
+	return ERROR_NONE;
 }
 
 
@@ -1550,38 +1787,40 @@ UINT32 HI542Open(void)
 *************************************************************************/
 UINT32 HI542GetSensorID(UINT32 *sensorID) 
 {
-    int  retry = 3; 
+	int  retry = 3; 
 	kal_uint16 temp_data;
 
 	temp_data= HI542_read_cmos_sensor(0x0004);
-	
+
+	SENSORDB("HI542GetSensorID\n"); 
+
 	spin_lock(&hi542_drv_lock);
-    HI542_sensor_id = temp_data;
+	HI542_sensor_id = temp_data;
 	spin_unlock(&hi542_drv_lock);
-    // check if sensor ID correct
-    retry = 3; 
-    do {
-     	temp_data= HI542_read_cmos_sensor(0x0004);
-		
-        spin_lock(&hi542_drv_lock);
-        HI542_sensor_id = temp_data;
-	    spin_unlock(&hi542_drv_lock);  
-        if (HI542_sensor_id == HI542_SENSOR_ID)
-            break; 
-        SENSORDB("Read Sensor ID Fail = 0x%04x\n", HI542_sensor_id); 
-        retry--; 
-    } while (retry > 0);
+	// check if sensor ID correct
+	retry = 3; 
+	do {
+		temp_data= HI542_read_cmos_sensor(0x0004);
+
+		spin_lock(&hi542_drv_lock);
+		HI542_sensor_id = temp_data;
+		spin_unlock(&hi542_drv_lock);  
+		if (HI542_sensor_id == HI542_SENSOR_ID)
+		break; 
+		SENSORDB("Read Sensor ID Fail = 0x%04x\n", HI542_sensor_id); 
+		retry--; 
+	} while (retry > 0);
 
 
 	printk("[HI542YUV]:HI542Open Read Sensor ID :0x%x\n", HI542_sensor_id);  
-	
-    *sensorID = HI542_sensor_id;
 
-    if (*sensorID != HI542_SENSOR_ID) {
-        *sensorID = 0xFFFFFFFF; 
-        return ERROR_SENSOR_CONNECT_FAIL;
-    }
-    return ERROR_NONE;
+	*sensorID = HI542_sensor_id;
+
+	if (*sensorID != HI542_SENSOR_ID) {
+		*sensorID = 0xFFFFFFFF; 
+		return ERROR_SENSOR_CONNECT_FAIL;
+	}
+	return ERROR_NONE;
 }
 
 
@@ -1604,21 +1843,30 @@ UINT32 HI542GetSensorID(UINT32 *sensorID)
 void HI542_SetShutter(kal_uint16 iShutter)
 {
 	unsigned long flags;
+	kal_uint32 realshutter = iShutter;
+    if (realshutter < 4 )
+        realshutter = 4;
 
-    if (iShutter < 4 )
-        iShutter = 4;
+    printk("[HI542YUV FUNCTION TEST]:HI542_SetShutter iShutter :0x%x\n", realshutter);
 
-    printk("[HI542YUV FUNCTION TEST]:HI542_SetShutter iShutter :0x%x\n", iShutter);
-	
     spin_lock_irqsave(&hi542_drv_lock,flags);
-    HI542_pv_exposure_lines = iShutter;
+    HI542_pv_exposure_lines = realshutter;
 	spin_unlock_irqrestore(&hi542_drv_lock,flags);
     /*  shutter calc
             EXPTIME[28:0]={EXPTIMEH[4:0],EXPTIMEM1[7:0],EXPTIMEM2[7:0],EXPTIMEL[7:0]}
             Exposure time = EXPTIME/OPCLK       in pixels
       */
-   
-    HI542_write_shutter(iShutter);
+
+/*
+	if(HI542_MPEG4_encode_mode == KAL_TRUE)
+	{
+		if(HI542_V_mode == HI542_Video_Night)
+		{
+			realshutter = 0x07D7;
+		}
+	}
+  */ 
+    HI542_write_shutter(realshutter);
 
 }   /*  HI542_SetShutter   */
 
@@ -1758,35 +2006,32 @@ void HI542_Set_Mirror_Flip(kal_uint8 image_mirror)
 	//MOD1[0x03],
 	//Sensor mirror image control, bit[1]
 	//Sensor flip image control, bit[0];
-	iTemp = HI542_read_cmos_sensor(0x3818) & 0x9f;	//Clear the mirror and flip bits.
+	iTemp = HI542_read_cmos_sensor(0x0011) & 0xFC;	//Clear the mirror and flip bits.
     switch (image_mirror)
 	{
 	    case IMAGE_NORMAL:
-	        HI542_write_cmos_sensor(0x3818, iTemp | 0xc0);	//Set normal
-	         HI542_write_cmos_sensor(0x3621, 0xc7);
+	        HI542_write_cmos_sensor(0x0011, iTemp | 0x00);	//Set normal
 			
                 //SET_FIRST_GRAB_COLOR(BAYER_Gr);
 	        break;
 
 		case IMAGE_V_MIRROR:
-			HI542_write_cmos_sensor(0x3818, iTemp | 0xe0);	//Set flip
-			HI542_write_cmos_sensor(0x3621, 0xc7);
+			HI542_write_cmos_sensor(0x0011, iTemp | 0x02);	//Set flip
 			
                 //SET_FIRST_GRAB_COLOR(BAYER_B);
 			break;
 			
 		case IMAGE_H_MIRROR:
-			HI542_write_cmos_sensor(0x3818, iTemp | 0x80);	//Set mirror
-			HI542_write_cmos_sensor(0x3621, 0xe7);
+			HI542_write_cmos_sensor(0x0011, iTemp | 0x01);	//Set mirror
                 //SET_FIRST_GRAB_COLOR(BAYER_Gr);
 			break;
 				
 	    case IMAGE_HV_MIRROR:
-	        HI542_write_cmos_sensor(0x3818, iTemp | 0xa0);	//Set mirror and flip
-	        HI542_write_cmos_sensor(0x3621, 0xe7);
+	        HI542_write_cmos_sensor(0x0011, iTemp | 0x03);	//Set mirror and flip
                 //SET_FIRST_GRAB_COLOR(BAYER_B);
 	        break;
     }
+
 }
 
 
@@ -1812,7 +2057,7 @@ UINT32 HI542Preview(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 {
     kal_uint16 iStartX = 0, iStartY = 0;
 
-	printk("[HI542YUV FUNCTION TEST]:HI542Preview...................\n"); 
+	
 
     spin_lock(&hi542_drv_lock);
     g_iHI542_Mode = HI542_MODE_PREVIEW;
@@ -1825,11 +2070,16 @@ UINT32 HI542Preview(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 	spin_lock(&hi542_drv_lock);
     if(sensor_config_data->SensorOperationMode==MSDK_SENSOR_OPERATION_MODE_VIDEO)		// MPEG4 Encode Mode
     {
+    
         HI542_MPEG4_encode_mode = KAL_TRUE;
+		Fix_framerate=1;
+		printk("[HI542YUV FUNCTION TEST]:HI542 video mode...................\n"); 
     }
     else
     {
         HI542_MPEG4_encode_mode = KAL_FALSE;
+		Fix_framerate=0;
+		printk("[HI542YUV FUNCTION TEST]:HI542 Preview mode..................\n"); 
     }
 	spin_unlock(&hi542_drv_lock);
 
@@ -1847,7 +2097,7 @@ UINT32 HI542Preview(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
     HI542_PV_dummy_lines = HI542_dummy_lines;
 	spin_unlock(&hi542_drv_lock);
 
-    HI542_SetDummy(HI542_dummy_pixels, HI542_dummy_lines);
+    //HI542_SetDummy(HI542_dummy_pixels, HI542_dummy_lines);
     //HI542_SetShutter(HI542_pv_exposure_lines);
 
     memcpy(&HI542SensorConfigData, sensor_config_data, sizeof(MSDK_SENSOR_CONFIG_STRUCT));
@@ -1867,110 +2117,130 @@ UINT32 HI542Preview(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 UINT32 HI542Capture(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
                                                 MSDK_SENSOR_CONFIG_STRUCT *sensor_config_data)
 {
-    kal_uint32 shutter=HI542_pv_exposure_lines;
-    kal_uint16 iStartX = 0, iStartY = 0;
+	kal_uint32 shutter=HI542_pv_exposure_lines;
+	kal_uint16 iStartX = 0, iStartY = 0;
 
-    printk("[HI542YUV FUNCTION TEST]:HI542Capture before calc...................shutter= 0x%x\n",shutter);  
-	
+	printk("[HI542YUV FUNCTION TEST]:HI542Capture before calc...................shutter= 0x%x\n",shutter);  
+
 	spin_lock(&hi542_drv_lock);
-    g_iHI542_Mode = HI542_MODE_CAPTURE;
+	g_iHI542_Mode = HI542_MODE_CAPTURE;
 	HI542_MPEG4_encode_mode = KAL_FALSE; 
 	HI542_Auto_Flicker_mode = KAL_FALSE; 
 	spin_unlock(&hi542_drv_lock);
 
-    if(sensor_config_data->EnableShutterTansfer==KAL_TRUE)
-        shutter=sensor_config_data->CaptureShutter;
+	if(sensor_config_data->EnableShutterTansfer==KAL_TRUE)
+		shutter=sensor_config_data->CaptureShutter;
 
-    if ((image_window->ImageTargetWidth<= HI542_IMAGE_SENSOR_PV_WIDTH) &&
-        (image_window->ImageTargetHeight<= HI542_IMAGE_SENSOR_PV_HEIGHT)) {
-
+	/* Remove for 89
+	if ((image_window->ImageTargetWidth<= HI542_IMAGE_SENSOR_PV_WIDTH) && (image_window->ImageTargetHeight<= HI542_IMAGE_SENSOR_PV_HEIGHT))
+	{
 		spin_lock(&hi542_drv_lock);
 		HI542_dummy_pixels= 0;
-        HI542_dummy_lines = 0;
+		HI542_dummy_lines = 0;
 		spin_unlock(&hi542_drv_lock);
 
-        shutter = ((UINT32)(shutter*(HI542_FULL_PERIOD_PIXEL_NUMS + HI542_PV_PERIOD_EXTRA_PIXEL_NUMS + HI542_PV_dummy_pixels))) /
-                                                        ((HI542_FULL_PERIOD_PIXEL_NUMS+ HI542_FULL_PERIOD_EXTRA_PIXEL_NUMS + HI542_dummy_pixels)) ;
-        shutter = shutter * HI542_CAP_pclk / HI542_PV_pclk;     
+		shutter = ((UINT32)(shutter*(HI542_FULL_PERIOD_PIXEL_NUMS + HI542_PV_PERIOD_EXTRA_PIXEL_NUMS + HI542_PV_dummy_pixels))) /
+		((HI542_FULL_PERIOD_PIXEL_NUMS+ HI542_FULL_PERIOD_EXTRA_PIXEL_NUMS + HI542_dummy_pixels)) ;
+		shutter = shutter * HI542_CAP_pclk / HI542_PV_pclk;     
 
-	    printk("[HI542YUV FUNCTION TEST]:HI542Capture preview mode...................shutter= 0x%x\n",shutter); 
-				
-        iStartX = HI542_IMAGE_SENSOR_PV_STARTX;
-        iStartY = HI542_IMAGE_SENSOR_PV_STARTY;
-        image_window->GrabStartX=iStartX;
-        image_window->GrabStartY=iStartY;
-        image_window->ExposureWindowWidth=HI542_IMAGE_SENSOR_PV_WIDTH - 2*iStartX;
-        image_window->ExposureWindowHeight=HI542_IMAGE_SENSOR_PV_HEIGHT- 2*iStartY;
-    }
-    else { // 5M  Mode
+		printk("[HI542YUV FUNCTION TEST]:HI542Capture preview mode...................shutter= 0x%x\n",shutter); 
 
-	    spin_lock(&hi542_drv_lock);
-        HI542_dummy_pixels= 0;
-        HI542_dummy_lines = 0;   
+		iStartX = HI542_IMAGE_SENSOR_PV_STARTX;
+		iStartY = HI542_IMAGE_SENSOR_PV_STARTY;
+		image_window->GrabStartX=iStartX;
+		image_window->GrabStartY=iStartY;
+		image_window->ExposureWindowWidth=HI542_IMAGE_SENSOR_PV_WIDTH - 2*iStartX;
+		image_window->ExposureWindowHeight=HI542_IMAGE_SENSOR_PV_HEIGHT- 2*iStartY;
+	}
+	else 
+	*/
+	{ // 5M  Mode
+		spin_lock(&hi542_drv_lock);
+		HI542_dummy_pixels= 0;
+		HI542_dummy_lines = 0;   
 		spin_unlock(&hi542_drv_lock);
 
-        HI542_set_5M15fps();
+		HI542_set_5M15fps();
+		//SVGA Internal CLK = 1/4 UXGA Internal CLK
+		//shutter = 4* shutter;
+
+		/*
+		shutter = ((UINT32)(shutter*(HI542_FULL_PERIOD_PIXEL_NUMS + HI542_PV_PERIOD_EXTRA_PIXEL_NUMS + HI542_PV_dummy_pixels))) /
+		((HI542_FULL_PERIOD_PIXEL_NUMS+ HI542_FULL_PERIOD_EXTRA_PIXEL_NUMS + HI542_dummy_pixels)) ;
+		shutter = shutter * HI542_CAP_pclk / HI542_PV_pclk; 
+		iStartX = 2* HI542_IMAGE_SENSOR_PV_STARTX;
+		iStartY = 2* HI542_IMAGE_SENSOR_PV_STARTY;
+
+		printk("[HI542YUV FUNCTION TEST]:HI542Capture full size mode...................shutter= 0x%x\n",shutter);
+
+		image_window->GrabStartX=iStartX;
+		image_window->GrabStartY=iStartY;
+		image_window->ExposureWindowWidth=HI542_IMAGE_SENSOR_FULL_WIDTH -2*iStartX;
+		image_window->ExposureWindowHeight=HI542_IMAGE_SENSOR_FULL_HEIGHT-2*iStartY;
+		*/
+
+	}//5M Capture
+
+	// config flashlight preview setting
+	//sensor_config_data->SensorImageMirror = IMAGE_HV_MIRROR; 
+	//HI542SetFlipMirror(sensor_config_data->SensorImageMirror); 
+
+	if(HI542_5M == HI542_g_RES) //add start
+	{
+		sensor_config_data->DefaultPclk = 84000000;
+		sensor_config_data->Pixels = HI542_FULL_PERIOD_PIXEL_NUMS + HI542_FULL_PERIOD_EXTRA_PIXEL_NUMS + HI542_PV_dummy_pixels;
+		sensor_config_data->FrameLines =HI542_FULL_PERIOD_LINE_NUMS+HI542_PV_dummy_lines;
+	}
+	else
+	{
+		sensor_config_data->DefaultPclk = 32500000;
+		sensor_config_data->Pixels = HI542_FULL_PERIOD_PIXEL_NUMS + HI542_PV_PERIOD_EXTRA_PIXEL_NUMS+HI542_dummy_pixels;
+		sensor_config_data->FrameLines =HI542_FULL_PERIOD_LINE_NUMS+HI542_dummy_lines;
+	}
+	sensor_config_data->Lines = image_window->ExposureWindowHeight;
+	sensor_config_data->Shutter =shutter;
+
+
+	HI542_SetDummy(HI542_dummy_pixels, HI542_dummy_lines);
+
+	/*
+	HI542_SetShutter(shutter);
+	*/
 	
-        //sensor_config_data->SensorImageMirror = IMAGE_HV_MIRROR; 
-     
-        //HI542SetFlipMirror(sensor_config_data->SensorImageMirror); 
-   
-        //SVGA Internal CLK = 1/4 UXGA Internal CLK
-        //shutter = 4* shutter;
-        shutter = ((UINT32)(shutter*(HI542_FULL_PERIOD_PIXEL_NUMS + HI542_PV_PERIOD_EXTRA_PIXEL_NUMS + HI542_PV_dummy_pixels))) /
-                                                        ((HI542_FULL_PERIOD_PIXEL_NUMS+ HI542_FULL_PERIOD_EXTRA_PIXEL_NUMS + HI542_dummy_pixels)) ;
-        shutter = shutter * HI542_CAP_pclk / HI542_PV_pclk; 
-        iStartX = 2* HI542_IMAGE_SENSOR_PV_STARTX;
-        iStartY = 2* HI542_IMAGE_SENSOR_PV_STARTY;
-		
-        printk("[HI542YUV FUNCTION TEST]:HI542Capture full size mode...................shutter= 0x%x\n",shutter);
-		
-        image_window->GrabStartX=iStartX;
-        image_window->GrabStartY=iStartY;
-        image_window->ExposureWindowWidth=HI542_IMAGE_SENSOR_FULL_WIDTH -2*iStartX;
-        image_window->ExposureWindowHeight=HI542_IMAGE_SENSOR_FULL_HEIGHT-2*iStartY;
-    }//5M Capture
-    // config flashlight preview setting
-    if(HI542_5M == HI542_g_RES) //add start
-    {
-        sensor_config_data->DefaultPclk = 84000000;
-        sensor_config_data->Pixels = HI542_FULL_PERIOD_PIXEL_NUMS + HI542_PV_PERIOD_EXTRA_PIXEL_NUMS + HI542_PV_dummy_pixels;
-        sensor_config_data->FrameLines =HI542_FULL_PERIOD_LINE_NUMS+HI542_PV_dummy_lines;
-    }
-    else
-    {
-        sensor_config_data->DefaultPclk = 32500000;
-        sensor_config_data->Pixels = HI542_FULL_PERIOD_PIXEL_NUMS + HI542_PV_PERIOD_EXTRA_PIXEL_NUMS+HI542_dummy_pixels;
-        sensor_config_data->FrameLines =HI542_FULL_PERIOD_LINE_NUMS+HI542_dummy_lines;
-    }
-    sensor_config_data->Lines = image_window->ExposureWindowHeight;
-    sensor_config_data->Shutter =shutter;
+	memcpy(&HI542SensorConfigData, sensor_config_data, sizeof(MSDK_SENSOR_CONFIG_STRUCT));
+	mdelay(300);
+	printk("[HI542YUV FUNCTION TEST]:HI542Capture full size mode...................shutter= 0x%x\n",shutter);
 
-    //HI542_SetDummy(HI542_dummy_pixels, HI542_dummy_lines);
-    HI542_SetDummy(HI542_dummy_pixels, HI542_dummy_lines);
-    HI542_SetShutter(shutter);
-    
-    memcpy(&HI542SensorConfigData, sensor_config_data, sizeof(MSDK_SENSOR_CONFIG_STRUCT));
+	image_window->GrabStartX=iStartX;
+	image_window->GrabStartY=iStartY;
+	image_window->ExposureWindowWidth=HI542_IMAGE_SENSOR_FULL_WIDTH -2*iStartX;
+	image_window->ExposureWindowHeight=HI542_IMAGE_SENSOR_FULL_HEIGHT-2*iStartY;
 
-   mdelay(300);
+	/*  
+	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0115 :0x%x\n", HI542_read_cmos_sensor(0x0115));
+	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0116 :0x%x\n", HI542_read_cmos_sensor(0x0116));
+	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0117 :0x%x\n", HI542_read_cmos_sensor(0x0117));
+	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0118 :0x%x\n", HI542_read_cmos_sensor(0x0118));
+	printk("[HI542YUV]:HI542Open Read Sensor REG 0x0129 :0x%x\n", HI542_read_cmos_sensor(0x0129));
+	*/
 
-   
-   printk("[HI542YUV]:HI542Open Read Sensor REG 0x0115 :0x%x\n", HI542_read_cmos_sensor(0x0115));
-   printk("[HI542YUV]:HI542Open Read Sensor REG 0x0116 :0x%x\n", HI542_read_cmos_sensor(0x0116));
-   printk("[HI542YUV]:HI542Open Read Sensor REG 0x0117 :0x%x\n", HI542_read_cmos_sensor(0x0117));
-   printk("[HI542YUV]:HI542Open Read Sensor REG 0x0118 :0x%x\n", HI542_read_cmos_sensor(0x0118));
-   printk("[HI542YUV]:HI542Open Read Sensor REG 0x0129 :0x%x\n", HI542_read_cmos_sensor(0x0129));
-
-    return ERROR_NONE;
+	return ERROR_NONE;
 }	/* HI542Capture() */
 
 UINT32 HI542GetResolution(MSDK_SENSOR_RESOLUTION_INFO_STRUCT *pSensorResolution)
 {
-    pSensorResolution->SensorFullWidth=IMAGE_SENSOR_FULL_WIDTH - 50*HI542_IMAGE_SENSOR_PV_STARTX;
-    pSensorResolution->SensorFullHeight=IMAGE_SENSOR_FULL_HEIGHT - 47*HI542_IMAGE_SENSOR_PV_STARTY;
+    pSensorResolution->SensorFullWidth=IMAGE_SENSOR_FULL_WIDTH - 36*HI542_IMAGE_SENSOR_PV_STARTX;
+    pSensorResolution->SensorFullHeight=IMAGE_SENSOR_FULL_HEIGHT - 26*HI542_IMAGE_SENSOR_PV_STARTY;
     pSensorResolution->SensorPreviewWidth=IMAGE_SENSOR_PV_WIDTH - 2*HI542_IMAGE_SENSOR_PV_STARTX;
     pSensorResolution->SensorPreviewHeight=IMAGE_SENSOR_PV_HEIGHT - 2*HI542_IMAGE_SENSOR_PV_STARTY;
-
+    pSensorResolution->SensorVideoWidth=IMAGE_SENSOR_PV_WIDTH - 2*HI542_IMAGE_SENSOR_PV_STARTX;
+    pSensorResolution->SensorVideoHeight=IMAGE_SENSOR_PV_HEIGHT - 2*HI542_IMAGE_SENSOR_PV_STARTY;
+    pSensorResolution->Sensor3DFullWidth=IMAGE_SENSOR_FULL_WIDTH - 36*HI542_IMAGE_SENSOR_PV_STARTX;
+    pSensorResolution->Sensor3DFullHeight=IMAGE_SENSOR_FULL_HEIGHT - 26*HI542_IMAGE_SENSOR_PV_STARTY;
+    pSensorResolution->Sensor3DPreviewWidth=IMAGE_SENSOR_PV_WIDTH - 2*HI542_IMAGE_SENSOR_PV_STARTX;
+    pSensorResolution->Sensor3DPreviewHeight=IMAGE_SENSOR_PV_HEIGHT - 2*HI542_IMAGE_SENSOR_PV_STARTY;
+    pSensorResolution->Sensor3DVideoWidth=IMAGE_SENSOR_PV_WIDTH - 2*HI542_IMAGE_SENSOR_PV_STARTX;
+    pSensorResolution->Sensor3DVideoHeight=IMAGE_SENSOR_PV_HEIGHT - 2*HI542_IMAGE_SENSOR_PV_STARTY;
     return ERROR_NONE;
 }   /* HI542GetResolution() */
 
@@ -1981,8 +2251,8 @@ UINT32 HI542GetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
     switch(ScenarioId)
     {
     	case MSDK_SCENARIO_ID_CAMERA_ZSD:
-			 pSensorInfo->SensorPreviewResolutionX=IMAGE_SENSOR_FULL_WIDTH - 50*HI542_IMAGE_SENSOR_PV_STARTX;
-			 pSensorInfo->SensorPreviewResolutionY=IMAGE_SENSOR_FULL_HEIGHT - 47*HI542_IMAGE_SENSOR_PV_STARTY;
+			 pSensorInfo->SensorPreviewResolutionX=IMAGE_SENSOR_FULL_WIDTH - 36*HI542_IMAGE_SENSOR_PV_STARTX;
+			 pSensorInfo->SensorPreviewResolutionY=IMAGE_SENSOR_FULL_HEIGHT - 26*HI542_IMAGE_SENSOR_PV_STARTY;
 			 pSensorInfo->SensorCameraPreviewFrameRate=15;
 			 break;
 
@@ -1992,23 +2262,23 @@ UINT32 HI542GetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
 			 pSensorInfo->SensorCameraPreviewFrameRate=30;
     }
 	
-    pSensorInfo->SensorFullResolutionX=IMAGE_SENSOR_FULL_WIDTH - 50*HI542_IMAGE_SENSOR_PV_STARTX;
-    pSensorInfo->SensorFullResolutionY=IMAGE_SENSOR_FULL_HEIGHT - 47*HI542_IMAGE_SENSOR_PV_STARTY;
+    pSensorInfo->SensorFullResolutionX=IMAGE_SENSOR_FULL_WIDTH - 36*HI542_IMAGE_SENSOR_PV_STARTX;
+    pSensorInfo->SensorFullResolutionY=IMAGE_SENSOR_FULL_HEIGHT - 26*HI542_IMAGE_SENSOR_PV_STARTY;
 
     pSensorInfo->SensorVideoFrameRate=30;
     pSensorInfo->SensorStillCaptureFrameRate=10;
     pSensorInfo->SensorWebCamCaptureFrameRate=15;
     pSensorInfo->SensorResetActiveHigh=FALSE;
     pSensorInfo->SensorResetDelayCount=5;
-    pSensorInfo->SensorOutputDataFormat=SENSOR_OUTPUT_FORMAT_RAW_Gb;
+    pSensorInfo->SensorOutputDataFormat=SENSOR_OUTPUT_FORMAT_RAW_B;	//SENSOR_OUTPUT_FORMAT_RAW_R;	//SENSOR_OUTPUT_FORMAT_RAW_B;	//SENSOR_OUTPUT_FORMAT_RAW_Gr;
     pSensorInfo->SensorClockPolarity=SENSOR_CLOCK_POLARITY_LOW; /*??? */
     pSensorInfo->SensorClockFallingPolarity=SENSOR_CLOCK_POLARITY_LOW;
     pSensorInfo->SensorHsyncPolarity = SENSOR_CLOCK_POLARITY_LOW;
     pSensorInfo->SensorVsyncPolarity = SENSOR_CLOCK_POLARITY_LOW;
     pSensorInfo->SensorInterruptDelayLines = 1;
     pSensorInfo->SensroInterfaceType=SENSOR_INTERFACE_TYPE_PARALLEL;
-    pSensorInfo->SensorDriver3D = 0;   // the sensor driver is 2D
-
+    //pSensorInfo->SensorDriver3D = 0;   // the sensor driver is 2D
+    /*
     pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_100_MODE].MaxWidth=CAM_SIZE_2M_WIDTH;
     pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_100_MODE].MaxHeight=CAM_SIZE_2M_HEIGHT;
     pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_100_MODE].ISOSupported=TRUE;
@@ -2033,7 +2303,7 @@ UINT32 HI542GetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
     pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_1600_MODE].MaxHeight=CAM_SIZE_05M_HEIGHT;
     pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_1600_MODE].ISOSupported=FALSE;
     pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_1600_MODE].BinningEnable=TRUE;
-
+    */
     pSensorInfo->CaptureDelayFrame = 1; 
     pSensorInfo->PreviewDelayFrame = 2; 
     pSensorInfo->VideoDelayFrame = 5; 
@@ -2047,26 +2317,30 @@ UINT32 HI542GetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
     {
         case MSDK_SCENARIO_ID_CAMERA_PREVIEW:
         case MSDK_SCENARIO_ID_VIDEO_PREVIEW:
-        case MSDK_SCENARIO_ID_VIDEO_CAPTURE_MPEG4:
+        case MSDK_SCENARIO_ID_CAMERA_3D_PREVIEW:
+        case MSDK_SCENARIO_ID_CAMERA_3D_VIDEO:
+        //case MSDK_SCENARIO_ID_VIDEO_CAPTURE_MPEG4:
             pSensorInfo->SensorClockFreq=24;
             pSensorInfo->SensorClockDividCount=	3;
             pSensorInfo->SensorClockRisingCount= 0;
             pSensorInfo->SensorClockFallingCount= 2;
             pSensorInfo->SensorPixelClockCount= 3;
             pSensorInfo->SensorDataLatchCount= 2;
-            pSensorInfo->SensorGrabStartX = 1; 
-            pSensorInfo->SensorGrabStartY = 1;             
+            pSensorInfo->SensorGrabStartX = 2; 
+            pSensorInfo->SensorGrabStartY = 2;             
             break;
         case MSDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG:
-        case MSDK_SCENARIO_ID_CAMERA_CAPTURE_MEM:
+        case MSDK_SCENARIO_ID_CAMERA_3D_CAPTURE:
+        //case MSDK_SCENARIO_ID_CAMERA_CAPTURE_MEM:
+        case MSDK_SCENARIO_ID_CAMERA_ZSD:
             pSensorInfo->SensorClockFreq=24;
             pSensorInfo->SensorClockDividCount=	3;
             pSensorInfo->SensorClockRisingCount= 0;
             pSensorInfo->SensorClockFallingCount= 2;
             pSensorInfo->SensorPixelClockCount= 3;
             pSensorInfo->SensorDataLatchCount= 2;
-            pSensorInfo->SensorGrabStartX = 13; 
-            pSensorInfo->SensorGrabStartY = 23;             
+            pSensorInfo->SensorGrabStartX = 4; 
+            pSensorInfo->SensorGrabStartY = 4;             
             break;
         default:
             pSensorInfo->SensorClockFreq=24;
@@ -2090,15 +2364,16 @@ UINT32 HI542GetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
 UINT32 HI542Control(MSDK_SCENARIO_ID_ENUM ScenarioId, MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *pImageWindow,
                                                 MSDK_SENSOR_CONFIG_STRUCT *pSensorConfigData)
 {
+ CurrentScenarioId=ScenarioId;
     switch (ScenarioId)
     {
         case MSDK_SCENARIO_ID_CAMERA_PREVIEW:
         case MSDK_SCENARIO_ID_VIDEO_PREVIEW:
-        case MSDK_SCENARIO_ID_VIDEO_CAPTURE_MPEG4:
+        //case MSDK_SCENARIO_ID_VIDEO_CAPTURE_MPEG4:
             HI542Preview(pImageWindow, pSensorConfigData);
             break;
         case MSDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG:
-        case MSDK_SCENARIO_ID_CAMERA_CAPTURE_MEM:
+        //case MSDK_SCENARIO_ID_CAMERA_CAPTURE_MEM:
 		case MSDK_SCENARIO_ID_CAMERA_ZSD:
             HI542Capture(pImageWindow, pSensorConfigData);
             break;
@@ -2117,18 +2392,22 @@ UINT32 HI542Control(MSDK_SCENARIO_ID_ENUM ScenarioId, MSDK_SENSOR_EXPOSURE_WINDO
 
 UINT32 HI542SetVideoMode(UINT16 u2FrameRate)
 {
-//    SENSORDB("[HI542SetVideoMode] frame rate = %d\n", u2FrameRate);
+//	fixed mode setting
 
+	
 	spin_lock(&hi542_drv_lock);
     HI542_MPEG4_encode_mode = KAL_TRUE; 
 	spin_unlock(&hi542_drv_lock);
-
 	printk("[HI542YUV FUNCTION TEST]:HI542SetVideoMode :u2FrameRate= Ox%x\n...................\n",u2FrameRate); 
+
+	if(u2FrameRate >30 || u2FrameRate <5)
+	    SENSORDB("Error frame rate seting");
 
     if (u2FrameRate == 30)
     {
+    		HI542_set_video30fps();
             //HI542_MAX_EXPOSURE_LINES = (kal_uint16)((HI542_sensor_pclk/30)/(HI542_PV_PERIOD_PIXEL_NUMS + HI542_FULL_PERIOD_EXTRA_PIXEL_NUMS + HI542_PV_dummy_pixels));
-
+			HI542_V_mode = HI542_Video_Auto;
 			spin_lock(&hi542_drv_lock);
 			HI542_MAX_EXPOSURE_LINES =  HI542_PV_PERIOD_EXTRA_LINE_NUMS; 
 			spin_unlock(&hi542_drv_lock);
@@ -2146,10 +2425,12 @@ UINT32 HI542SetVideoMode(UINT16 u2FrameRate)
     }
     else if (u2FrameRate == 15)       
     {
-            //HI542_MAX_EXPOSURE_LINES = (kal_uint16)((HI542_sensor_pclk/15)/(HI542_PV_PERIOD_PIXEL_NUMS + HI542_FULL_PERIOD_EXTRA_PIXEL_NUMS + HI542_PV_dummy_pixels));
+    		HI542_set_video15fps();
 
 			spin_lock(&hi542_drv_lock);
+     		HI542_V_mode = HI542_Video_Night;
 			HI542_MAX_EXPOSURE_LINES = (HI542_PV_PERIOD_LINE_NUMS + HI542_PV_PERIOD_EXTRA_LINE_NUMS) * 2 - HI542_PV_PERIOD_LINE_NUMS;  
+
 			spin_unlock(&hi542_drv_lock);
 
 			HI542_write_cmos_sensor(0x0042, (HI542_MAX_EXPOSURE_LINES >> 8) & 0xFF);
@@ -2158,13 +2439,14 @@ UINT32 HI542SetVideoMode(UINT16 u2FrameRate)
 			spin_lock(&hi542_drv_lock);
 			HI542_CURRENT_FRAME_LINES = HI542_MAX_EXPOSURE_LINES;
             HI542_MAX_EXPOSURE_LINES = HI542_CURRENT_FRAME_LINES - HI542_SHUTTER_LINES_GAP;
-            spin_unlock(&hi542_drv_lock);			
+            spin_unlock(&hi542_drv_lock);				
     }
     else if(u2FrameRate == 0)
 	{
 
 		    spin_lock(&hi542_drv_lock);
 		    HI542_MPEG4_encode_mode = KAL_FALSE; 
+			Fix_framerate=0;
 		    spin_unlock(&hi542_drv_lock);
 			printk("disable video mode %d\n",u2FrameRate);
 
@@ -2175,8 +2457,10 @@ UINT32 HI542SetVideoMode(UINT16 u2FrameRate)
     return TRUE;
 }
 
+
 UINT32 HI542SetAutoFlickerMode(kal_bool bEnable, UINT16 u2FrameRate)
 {
+
     printk("[HI542YUV FUNCTION TEST]:HI542SetAutoFlickerMode :bEnable = %x,u2FrameRate= Ox%x\n...................\n",bEnable,u2FrameRate); 
  
     if(bEnable)
@@ -2184,9 +2468,22 @@ UINT32 HI542SetAutoFlickerMode(kal_bool bEnable, UINT16 u2FrameRate)
      spin_lock(&hi542_drv_lock);
    	 HI542_Auto_Flicker_mode = KAL_TRUE; 
 	 spin_unlock(&hi542_drv_lock);
-   	 /*Change frame rate 29.5fps to 29.8fps to do Auto flick*/
-   	 if(HI542_MPEG4_encode_mode == KAL_TRUE)
-   		 HI542SetMaxFrameRate(296);
+
+   	 //Change frame rate 29.5fps to 29.8fps to do Auto flick
+  	 if(HI542_MPEG4_encode_mode == KAL_TRUE)
+  	 {
+	    switch(HI542_V_mode)
+			{
+				case HI542_Video_Auto:
+	 				HI542SetMaxFrameRate(296);
+					break;
+				case HI542_Video_Night:
+	 				HI542SetMaxFrameRate(146);		
+					break;
+				default:
+					break;
+			}
+  	 }	
     }
 	else
     {//Cancel Auto flick
@@ -2194,13 +2491,27 @@ UINT32 HI542SetAutoFlickerMode(kal_bool bEnable, UINT16 u2FrameRate)
    	 HI542_Auto_Flicker_mode = KAL_FALSE;
 	 spin_unlock(&hi542_drv_lock);
    	 if(HI542_MPEG4_encode_mode == KAL_TRUE)
-   		 HI542SetMaxFrameRate(300);
+   	 	{
+		 switch(HI542_V_mode)
+			 {
+				 case HI542_Video_Auto:
+					 HI542SetMaxFrameRate(300);
+					 break;
+				 case HI542_Video_Night:
+					 HI542SetMaxFrameRate(150); 
+					break;
+				default:
+					break;					 
+			 }	 
+   	 	}
 
 	  printk("Disable Auto flicker\n"); 
     }
 
     return TRUE;
 }
+
+
 
 UINT32 HI542SetTestPatternMode(kal_bool bEnable)
 {
@@ -2228,6 +2539,74 @@ UINT32 HI542SetSoftwarePWDNMode(kal_bool bEnable)
     return TRUE;
 }
 
+UINT32 HI542SetMaxFramerateByScenario(MSDK_SCENARIO_ID_ENUM scenarioId, MUINT32 frameRate)
+{
+	kal_uint32 pclk;
+	kal_int16 dummyLine;
+	kal_uint16 lineLength,frameHeight;
+		
+	printk("HI542SetMaxFramerateByScenario: scenarioId = %d, frame rate = %d\n",scenarioId,frameRate);
+	switch (scenarioId) {
+		case MSDK_SCENARIO_ID_CAMERA_PREVIEW:
+			pclk = 8400000;	//138670000;
+			lineLength = HI542_PV_PERIOD_PIXEL_NUMS;
+			frameHeight = (10 * pclk)/frameRate/lineLength;
+			dummyLine = frameHeight - HI542_PV_PERIOD_LINE_NUMS;
+			if(dummyLine<0)	dummyLine = 0;
+			HI542_SetDummy(0, dummyLine);
+			break;
+		case MSDK_SCENARIO_ID_VIDEO_PREVIEW:
+			pclk = 8400000;	//147330000;
+			lineLength = HI542_PV_PERIOD_PIXEL_NUMS;
+			frameHeight = (10 * pclk)/frameRate/lineLength;
+			dummyLine = frameHeight - HI542_PV_PERIOD_LINE_NUMS;
+			if(dummyLine<0)	dummyLine = 0;
+			HI542_SetDummy(0, dummyLine);
+			break;
+		case MSDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG:
+		case MSDK_SCENARIO_ID_CAMERA_ZSD:			
+			pclk = 8400000;
+			lineLength = HI542_FULL_PERIOD_PIXEL_NUMS;
+			frameHeight = (10 * pclk)/frameRate/lineLength;
+			dummyLine = frameHeight - HI542_FULL_PERIOD_LINE_NUMS;
+			if(dummyLine<0)	dummyLine = 0;
+			HI542_SetDummy(0, dummyLine);			
+			break;		
+		case MSDK_SCENARIO_ID_CAMERA_3D_PREVIEW: //added
+			break;
+		case MSDK_SCENARIO_ID_CAMERA_3D_VIDEO:
+			break;
+		case MSDK_SCENARIO_ID_CAMERA_3D_CAPTURE: //added   
+			break;
+		default:
+			break;
+	}	
+	return ERROR_NONE;
+}
+
+
+UINT32 HI542GetDefaultFramerateByScenario(MSDK_SCENARIO_ID_ENUM scenarioId, MUINT32 *pframeRate)
+{
+	switch (scenarioId) {
+		case MSDK_SCENARIO_ID_CAMERA_PREVIEW:
+		case MSDK_SCENARIO_ID_VIDEO_PREVIEW:
+			 *pframeRate = 300;
+			 break;
+		case MSDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG:
+		case MSDK_SCENARIO_ID_CAMERA_ZSD:
+			 *pframeRate = 150;
+			break;		
+        case MSDK_SCENARIO_ID_CAMERA_3D_PREVIEW: //added
+        case MSDK_SCENARIO_ID_CAMERA_3D_VIDEO:
+        case MSDK_SCENARIO_ID_CAMERA_3D_CAPTURE: //added   
+			 *pframeRate = 150;
+			break;		
+		default:
+			break;
+	}
+	return ERROR_NONE;
+}
+
 UINT32 HI542FeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
                                                                 UINT8 *pFeaturePara,UINT32 *pFeatureParaLen)
 {    
@@ -2252,9 +2631,22 @@ UINT32 HI542FeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
             *pFeatureParaLen=4;
             break;
         case SENSOR_FEATURE_GET_PERIOD:
-            *pFeatureReturnPara16++=HI542_PV_PERIOD_EXTRA_PIXEL_NUMS + HI542_FULL_PERIOD_PIXEL_NUMS + 130 + HI542_dummy_pixels;//HI542_PV_PERIOD_PIXEL_NUMS+HI542_dummy_pixels;
-            *pFeatureReturnPara16=HI542_PV_PERIOD_LINE_NUMS+HI542_PV_PERIOD_EXTRA_LINE_NUMS+HI542_dummy_lines;
-            *pFeatureParaLen=4;
+
+			switch(CurrentScenarioId)
+			 {
+			 	case MSDK_SCENARIO_ID_CAMERA_ZSD:
+					*pFeatureReturnPara16++=HI542_FULL_PERIOD_EXTRA_PIXEL_NUMS + HI542_FULL_PERIOD_PIXEL_NUMS + 130;//HI542_PV_PERIOD_PIXEL_NUMS+HI542_dummy_pixels;
+					*pFeatureReturnPara16=HI542_FULL_PERIOD_LINE_NUMS+HI542_FULL_PERIOD_EXTRA_LINE_NUMS;
+					*pFeatureParaLen=4;
+					break;
+				default:
+					*pFeatureReturnPara16++=HI542_PV_PERIOD_EXTRA_PIXEL_NUMS + HI542_PV_PERIOD_PIXEL_NUMS + 130;//HI542_PV_PERIOD_PIXEL_NUMS+HI542_dummy_pixels;
+					*pFeatureReturnPara16=HI542_PV_PERIOD_LINE_NUMS+HI542_PV_PERIOD_EXTRA_LINE_NUMS;
+					*pFeatureParaLen=4;
+					break;
+					
+			 }
+			
             break;
         case SENSOR_FEATURE_GET_PIXEL_CLOCK_FREQ:
             *pFeatureReturnPara32 = 84000000; //19500000;
@@ -2375,7 +2767,7 @@ UINT32 HI542FeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
         case SENSOR_FEATURE_GET_ENG_INFO:
             pSensorEngInfo->SensorId = 135;
             pSensorEngInfo->SensorType = CMOS_SENSOR;
-            pSensorEngInfo->SensorOutputDataFormat=SENSOR_OUTPUT_FORMAT_RAW_Gb;
+            pSensorEngInfo->SensorOutputDataFormat=SENSOR_OUTPUT_FORMAT_RAW_B;	//SENSOR_OUTPUT_FORMAT_RAW_B;	//SENSOR_OUTPUT_FORMAT_RAW_R;	//SENSOR_OUTPUT_FORMAT_RAW_Gr;
             *pFeatureParaLen=sizeof(MSDK_SENSOR_ENG_INFO_STRUCT);
             break;
         case SENSOR_FEATURE_GET_LENS_DRIVER_ID:
@@ -2400,13 +2792,19 @@ UINT32 HI542FeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
             break; 
         case SENSOR_FEATURE_SET_AUTO_FLICKER_MODE:
             HI542SetAutoFlickerMode((BOOL)*pFeatureData16, *(pFeatureData16+1));            
-	        break;
+            break;
         case SENSOR_FEATURE_SET_TEST_PATTERN:
             HI542SetTestPatternMode((BOOL)*pFeatureData16);        	
             break;
         case SENSOR_FEATURE_SET_SOFTWARE_PWDN:
             HI542SetSoftwarePWDNMode((BOOL)*pFeatureData16);        	        	
             break;
+        case SENSOR_FEATURE_SET_MAX_FRAME_RATE_BY_SCENARIO:
+            HI542SetMaxFramerateByScenario((MSDK_SCENARIO_ID_ENUM)*pFeatureData32, *(pFeatureData32+1));        	        	
+            break;  
+        case SENSOR_FEATURE_GET_DEFAULT_FRAME_RATE_BY_SCENARIO:
+            HI542GetDefaultFramerateByScenario((MSDK_SCENARIO_ID_ENUM)*pFeatureData32, (MUINT32 *)(*(pFeatureData32+1)));        	        	
+            break;  
         default:
             break;
     }

@@ -72,6 +72,10 @@ static struct sensor_init_info* gsensor_init_list[MAX_CHOOSE_G_NUM]= {0}; //modi
 static char msensor_name[25];
 static struct sensor_init_info* msensor_init_list[MAX_CHOOSE_G_NUM]= {0}; //modified
 #endif
+#if defined(MTK_AUTO_DETECT_ALSPS)
+static char alsps_name[25];
+static struct sensor_init_info* alsps_init_list[MAX_CHOOSE_G_NUM]= {0}; //modified
+#endif
 
 /*----------------------------------------------------------------------------*/
 struct dev_context {
@@ -1437,6 +1441,107 @@ static struct platform_driver gsensor_driver = {
 EXPORT_SYMBOL_GPL(hwmsen_gsensor_add);
 
 #endif
+#if defined(MTK_AUTO_DETECT_ALSPS)//
+
+int hwmsen_alsps_remove(struct platform_device *pdev)
+{
+    //int err =0;
+	int i=0;
+	for(i = 0; i < MAX_CHOOSE_G_NUM; i++)
+	{
+	   if(0 ==  strcmp(alsps_name,alsps_init_list[i]->name))
+	   {
+	      if(NULL == alsps_init_list[i]->uninit)
+	      {
+	        HWM_LOG(" hwmsen_alsps_remove null pointer +\n");
+	        return -1;
+	      }
+	      alsps_init_list[i]->uninit();
+	   }
+	}
+    return 0;
+}
+
+static int alsps_probe(struct platform_device *pdev) 
+{
+    int i =0;
+	int err=0;
+	HWM_LOG(" alsps_probe +\n");
+
+	//
+/*
+     for(i = 0; i < MAX_CHOOSE_G_NUM; i++)
+     {
+       HWM_LOG(" alsps_init_list[i]=%d\n",alsps_init_list[i]);
+     }
+*/
+	//
+	for(i = 0; i < MAX_CHOOSE_G_NUM; i++)
+	{
+	  if(0 != alsps_init_list[i])
+	  {
+	    err = alsps_init_list[i]->init();
+		if(0 == err)
+		{
+		   strcpy(alsps_name,alsps_init_list[i]->name);
+		   break;
+		}
+                else
+                {
+                   HWM_ERR(" chenlj2 alsps %s probe err\n", alsps_name);
+                   //alsps_init_list[i]->uninit();
+                }
+	  }
+	}
+
+	if(i == MAX_CHOOSE_G_NUM)
+	{
+	   HWM_ERR("chenlj2 alsps probe fail\n");
+	}
+	return 0;
+}
+
+
+static struct platform_driver alsps_driver = {
+	.probe      = alsps_probe,
+	.remove     = hwmsen_alsps_remove,    
+	.driver     = 
+	{
+		.name  = "als_ps",
+//		.owner = THIS_MODULE,
+	}
+};
+
+ int hwmsen_alsps_add(struct sensor_init_info* obj) 
+{
+    int err=0;
+	int i =0;
+	
+	HWM_FUN(f);
+
+	for(i =0; i < MAX_CHOOSE_G_NUM; i++ )
+	{
+	    if(NULL == alsps_init_list[i])
+	    {
+	     alsps_init_list[i] = kzalloc(sizeof(struct sensor_init_info), GFP_KERNEL);
+		  if(NULL == alsps_init_list[i])
+		  {
+		     HWM_ERR("chenlj2 kzalloc error");
+		     return -1;
+		  }
+		  obj->platform_diver_addr = &alsps_driver;
+	      alsps_init_list[i] = obj;
+		  
+		  break;
+	    }
+	}
+		
+	return err;
+}
+EXPORT_SYMBOL_GPL(hwmsen_alsps_add);
+
+#endif
+
 
 /*----------------------------------------------------------------------------*/
 static int __init hwmsen_init(void) 
@@ -1453,6 +1558,14 @@ static int __init hwmsen_init(void)
     if(platform_driver_register(&gsensor_driver))
 	{
 		HWM_ERR("failed to register gensor driver");
+		return -ENODEV;
+	}
+#endif
+
+#if defined(MTK_AUTO_DETECT_ALSPS)
+    if(platform_driver_register(&alsps_driver))
+	{
+		HWM_ERR("failed to register alsps driver");
 		return -ENODEV;
 	}
 #endif

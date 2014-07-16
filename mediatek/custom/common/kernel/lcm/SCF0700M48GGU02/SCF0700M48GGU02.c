@@ -1,44 +1,9 @@
-/*****************************************************************************
-*  Copyright Statement:
-*  --------------------
-*  This software is protected by Copyright and the information contained
-*  herein is confidential. The software may not be copied and the information
-*  contained herein may not be used or disclosed except with the written
-*  permission of MediaTek Inc. (C) 2008
-*
-*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
-*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
-*  RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
-*  AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
-*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
-*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
-*  NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
-*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
-*  SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
-*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
-*  NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S
-*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
-*
-*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE
-*  LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
-*  AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
-*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
-*  MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
-*
-*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
-*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
-*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
-*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
-*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
-*
-*****************************************************************************/
-
-
 #ifndef BUILD_LK
 #include <linux/string.h>
 #endif
 #ifdef BUILD_LK
 #include <platform/mt_gpio.h>
+#include <platform/mt_pmic.h>
 #include <debug.h>
 #elif (defined BUILD_UBOOT)
 #include <asm/arch/mt6577_gpio.h>
@@ -46,6 +11,7 @@
 #include <mach/mt_gpio.h>
 #include <linux/xlog.h>
 #include "mt8193_iic.h"
+#include <mach/mt_pm_ldo.h>
 #endif
 #include "lcm_drv.h"
 #include "mt8193_lvds.h"
@@ -75,16 +41,20 @@
 #define V_START (VSYNC_PULSE_WIDTH + VSYNC_BACK_PORCH)
 #define V_END (V_START + FRAME_HEIGHT - 1)
 
-#define V_DELAY  0x0402
-#define H_DELAY  0x03FE
+#define V_DELAY  0x0002
+#define H_DELAY  0x041D
 
 #ifdef BUILD_LK
 #define MT8193_REG_WRITE(add, data) mt8193_reg_i2c_write(add, data)
+#define MT8193_REG_READ(add) mt8193_reg_i2c_read(add)
 #elif (defined BUILD_UBOOT)
     // do nothing in uboot
 #else
 extern int mt8193_i2c_write(u16 addr, u32 data);
+extern int mt8193_i2c_read(u16 addr, u32 *data);
+
 #define MT8193_REG_WRITE(add, data) mt8193_i2c_write(add, data)
+#define MT8193_REG_READ(add) lcm_mt8193_i2c_read(add)
 #endif
 // ---------------------------------------------------------------------------
 //  Local Variables
@@ -129,6 +99,7 @@ static void lcm_set_util_funcs(const LCM_UTIL_FUNCS *util)
 }
 
 #ifdef BUILD_LK
+#define I2C_CH                0
 #define MT8193_I2C_ADDR       0x3A
 int mt8193_reg_i2c_write(u16 addr, u32 data)
 {
@@ -156,7 +127,7 @@ int mt8193_reg_i2c_write(u16 addr, u32 data)
         lens = 6;
     }
 
-	ret_code = mt_i2c_write(2, MT8193_I2C_ADDR, buffer, lens, 0); // 0:I2C_PATH_NORMAL
+	ret_code = mt_i2c_write(I2C_CH, MT8193_I2C_ADDR, buffer, lens, 0); // 0:I2C_PATH_NORMAL
     if (ret_code != 0)
     {
         printf("[LK/LCM] mt_i2c_write reg[0x%X] fail, Error code [0x%X] \n", addr, ret_code);
@@ -164,6 +135,59 @@ int mt8193_reg_i2c_write(u16 addr, u32 data)
     }
 	
 	return 0;
+}
+
+u32 mt8193_reg_i2c_read(u16 addr)
+{
+    
+    u8 buffer[8] = {0};
+    u8 lens;
+    u32 ret_code = 0;
+    u32 data;
+
+    if(((addr >> 8) & 0xFF) >= 0x80) // 8 bit : fast mode
+    {
+        buffer[0] = (addr >> 8) & 0xFF;
+        lens = 1;
+    }
+    else // 16 bit : noraml mode
+    {
+        buffer[0] = ( addr >> 8 ) & 0xFF;
+        buffer[1] = addr & 0xFF;     
+        lens = 2;
+    }
+
+    ret_code = mt_i2c_write(I2C_CH, MT8193_I2C_ADDR, buffer, lens, 0);    // set register command
+    if (ret_code != 0)
+        return ret_code;
+
+    lens = 4;
+    ret_code = mt_i2c_read(I2C_CH, MT8193_I2C_ADDR, buffer, lens, 0);
+    if (ret_code != 0)
+    {
+        return ret_code;
+    }
+    
+    data = (buffer[3] << 24) | (buffer[2] << 16) | (buffer[1] << 8) | (buffer[0]); //LSB fisrt
+
+    return data;
+    
+}
+#elif (defined BUILD_UBOOT)
+    // do nothing in uboot
+#else
+u32 lcm_mt8193_i2c_read(u16 addr)
+{
+   u32 u4Reg = 0;
+   u32 ret_code = 0;
+	
+   ret_code = mt8193_i2c_read(addr, &u4Reg);
+   if (ret_code != 0)
+   {
+	   return ret_code;
+   }
+
+   return u4Reg;
 }
 #endif
 
@@ -185,7 +209,9 @@ static void lcm_mt8193_TTL_func2_init(void)
     MT8193_REG_WRITE(0x1208, 0x09490492);
     MT8193_REG_WRITE(0x120c, 0x00001249);	
     MT8193_REG_WRITE(0x124c, 0x8081ff7f);
-    MT8193_REG_WRITE(0x1224, 0x00049249);	
+    MT8193_REG_WRITE(0x1224, 0x00049249);
+    MT8193_REG_WRITE(0x122c, 0x00000040);
+    MT8193_REG_WRITE(0x1230, 0x00000040);		
 	MDELAY(10);
 }
 
@@ -202,10 +228,48 @@ static void lcm_mt8193_set_ckgen(void)
 	MDELAY(10);
 }
 
+static void lcm_mt8193_ckgen_power_on(void)
+{
+    u32 u4Reg = 0;
+	
+	u4Reg = MT8193_REG_READ(REG_LVDS_ANACFG2);
+	u4Reg &= (~(RG_VPLL_BG_PD | RG_VPLL_BIAS_PD));
+	MT8193_REG_WRITE(REG_LVDS_ANACFG2, u4Reg);	
+
+	u4Reg = MT8193_REG_READ(REG_LVDS_ANACFG4);
+	u4Reg &= (~(RG_VPLL_RST | RG_VPLL_PD));
+	MT8193_REG_WRITE(REG_LVDS_ANACFG4, u4Reg);
+	
+	u4Reg = MT8193_REG_READ(REG_LVDS_ANACFG0);
+	u4Reg &= (~(RG_LVDS_APD | RG_LVDS_BIASA_PD));
+	MT8193_REG_WRITE(REG_LVDS_ANACFG0, u4Reg);
+
+	MDELAY(5);
+}
+
+static void lcm_mt8193_ckgen_power_off(void)
+{
+    u32 u4Reg = 0;
+	
+	u4Reg = MT8193_REG_READ(REG_LVDS_ANACFG2);
+	u4Reg |= (RG_VPLL_BG_PD | RG_VPLL_BIAS_PD);
+	MT8193_REG_WRITE(REG_LVDS_ANACFG2, u4Reg);	
+
+	u4Reg = MT8193_REG_READ(REG_LVDS_ANACFG4);
+	u4Reg |= (RG_VPLL_RST | RG_VPLL_PD);
+	MT8193_REG_WRITE(REG_LVDS_ANACFG4, u4Reg);
+	
+	u4Reg = MT8193_REG_READ(REG_LVDS_ANACFG0);
+	u4Reg |= (RG_LVDS_APD | RG_LVDS_BIASA_PD);
+	MT8193_REG_WRITE(REG_LVDS_ANACFG0, u4Reg);
+
+	MDELAY(5);
+}
+
 static void lcm_mt8193_set_lvdstx(void)
 {
-    MT8193_REG_WRITE(LVDS_OUTPUT_CTRL, (RG_LVDSRX_FIFO_EN | RG_OUT_FIFO_EN | RG_LVDS_E));
     MT8193_REG_WRITE(LVDS_CLK_CTRL, (RG_TEST_CK_EN | RG_RX_CK_EN | RG_TX_CK_EN));
+    MT8193_REG_WRITE(LVDS_OUTPUT_CTRL, (RG_LVDSRX_FIFO_EN | RG_SYNC_TRIG_MODE | RG_OUT_FIFO_EN | RG_LVDS_E));
 	MT8193_REG_WRITE(LVDS_CH_SWAP, RG_SWAP_SEL);
 }
 
@@ -224,6 +288,8 @@ static void lcm_mt8193_set_dgi0(void)
 
 static void lcm_mt8193_set_dgi0_func1(void)
 {
+	MT8193_REG_WRITE(DGI0_DATA_OUT_CTRL, (DATA_OUT_SWAP | TTL_TIM_SWAP));  //HSYNC -> DE
+	//MT8193_REG_WRITE(DGI0_DATA_OUT_CTRL, (DATA_OUT_SWAP | TTL_TIM_SWAP2)); //VSYNC -> DE	
 	MT8193_REG_WRITE(DGI0_TTL_ANAIF_CTRL1, PAD_TTL_EN_PP);
 }
 
@@ -305,7 +371,7 @@ static void lcm_mt8193_lvds_clk_reset(void)
 	MDELAY(5);
 	MT8193_REG_WRITE(LVDS_CLK_RESET, (RG_CTSCLK_RESET_B | RG_PCLK_RESET_B));
     MT8193_REG_WRITE(LVDS_CLK_CTRL, (RG_TEST_CK_EN | RG_RX_CK_EN | RG_TX_CK_EN));
-	MT8193_REG_WRITE(LVDS_OUTPUT_CTRL, (RG_LVDSRX_FIFO_EN | RG_OUT_FIFO_EN | RG_LVDS_E));
+	MT8193_REG_WRITE(LVDS_OUTPUT_CTRL, (RG_LVDSRX_FIFO_EN | RG_SYNC_TRIG_MODE | RG_OUT_FIFO_EN | RG_LVDS_E));
 	MDELAY(5);
 }
 
@@ -320,12 +386,11 @@ static void lcm_get_params(LCM_PARAMS *params)
     params->io_select_mode = 0;	
 
     /* RGB interface configurations */
-    
-    params->dpi.mipi_pll_clk_ref  = 0;      //the most important parameters: set pll clk to 66Mhz and dpi clk to 33Mhz
-    params->dpi.mipi_pll_clk_div1 = 2;      // 1->144.8MHz, 2->130MHz, 3->204.8MHz
-    params->dpi.mipi_pll_clk_div2 = 4;
-    params->dpi.dpi_clk_div       = 4;      //  {4, 2}  => pll/4
-    params->dpi.dpi_clk_duty      = 2;      //  {2, 1}  => pll/2
+    params->dpi.mipi_pll_clk_ref  = 0;
+    params->dpi.mipi_pll_clk_div1 = 0x80000081;  //lvds pll 130M
+    params->dpi.mipi_pll_clk_div2 = 0x800a2762;
+    params->dpi.dpi_clk_div       = 4;           //{2,1} pll/2, 65M
+    params->dpi.dpi_clk_duty      = 2;
 
     params->dpi.clk_pol           = LCM_POLARITY_FALLING;
     params->dpi.de_pol            = LCM_POLARITY_RISING;
@@ -347,22 +412,27 @@ static void lcm_get_params(LCM_PARAMS *params)
 
     params->dpi.intermediat_buffer_num = 0;
 
-    params->dpi.io_driving_current = LCM_DRIVING_CURRENT_2MA;
+    params->dpi.io_driving_current = LCM_DRIVING_CURRENT_6575_12MA;
 }
 
 
 static void lcm_init(void)
 {
 #ifdef BUILD_LK
+	printf("[LK/LCM] lcm_init()  \n");
+
 	lcm_mt8193_TTL_func1_init();
 	//lcm_mt8193_TTL_func2_init();
+
+    lcm_mt8193_lvds_power_on();
+	lcm_mt8193_ckgen_power_on();
 	lcm_mt8193_anaif_clock_enable();
     lcm_mt8193_set_ckgen();
-	lcm_mt8193_dgi0_clock_enable();
+	lcm_mt8193_lvds_clk_reset();
     lcm_mt8193_set_dgi0();
-	//lcm_mt8193_set_lvdstx();
 	lcm_mt8193_set_dgi0_func1();	
-	//lcm_mt8193_set_dgi0_func2();	
+	//lcm_mt8193_set_dgi0_func2();		
+	lcm_mt8193_set_lvdstx();	
 	lcm_mt8193_reset_counter();
     lcm_mt8193_sw_reset();
 	lcm_mt8193_clear_counter();
@@ -371,14 +441,22 @@ static void lcm_init(void)
     // do nothing in uboot
 #else
 #if 0
+	lcm_mt8193_TTL_func1_init();
+	//lcm_mt8193_TTL_func2_init();
+	lcm_mt8193_set_dgi0_func1();	
+	//lcm_mt8193_set_dgi0_func2();	
+
+    lcm_mt8193_lvds_power_on();
+	lcm_mt8193_ckgen_power_on();
 	lcm_mt8193_anaif_clock_enable();
     lcm_mt8193_set_ckgen();
-	lcm_mt8193_dgi0_clock_enable();
+	lcm_mt8193_lvds_clk_reset();
     lcm_mt8193_set_dgi0();
 	lcm_mt8193_set_lvdstx();	
 	lcm_mt8193_reset_counter();
     lcm_mt8193_sw_reset();
 	lcm_mt8193_clear_counter();
+
 #endif
 #endif
 }
@@ -395,6 +473,7 @@ static void lcm_suspend(void)
 
     lcm_mt8193_anaif_clock_disable();
     lcm_mt8193_dgi0_clock_disable();
+	lcm_mt8193_ckgen_power_off();
     lcm_mt8193_lvds_power_off();
 #endif
 
@@ -410,12 +489,22 @@ static void lcm_resume(void)
 #else
 	printk("[LCM] lcm_resume() enter\n");
 
-    lcm_mt8193_lvds_power_on();	
+	lcm_mt8193_TTL_func1_init();
+	//lcm_mt8193_TTL_func2_init();	
+
+    lcm_mt8193_lvds_power_on();
+	lcm_mt8193_ckgen_power_on();
+	lcm_mt8193_anaif_clock_enable();
+    lcm_mt8193_set_ckgen();
 	lcm_mt8193_lvds_clk_reset();
-    lcm_mt8193_anaif_clock_enable();
+    lcm_mt8193_set_dgi0();
+	lcm_mt8193_set_dgi0_func1();	
+	//lcm_mt8193_set_dgi0_func2();			
+	lcm_mt8193_set_lvdstx();	
 	lcm_mt8193_reset_counter();
     lcm_mt8193_sw_reset();
-	lcm_mt8193_clear_counter();	
+	lcm_mt8193_clear_counter();
+
 #endif
 
 }
@@ -429,4 +518,5 @@ LCM_DRIVER scf0700m48ggu02_lcm_drv =
 	.suspend        = lcm_suspend,
 	.resume         = lcm_resume,
 };
+
 

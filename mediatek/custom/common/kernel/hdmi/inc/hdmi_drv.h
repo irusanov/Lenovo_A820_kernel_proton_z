@@ -7,7 +7,7 @@
 #include "mt8193edid.h"
 #include "mt8193cec.h"
 
-#define AVD_TMR_ISR_TICKS   5
+#define AVD_TMR_ISR_TICKS   10
 #define MDI_BOUCING_TIMING  50//20 //20ms
 
 typedef enum

@@ -1,2 +1,2 @@
 //building time information
-#define BUILD_TIME "Thu Feb 7 22:00:21 CST 2013"
+#define BUILD_TIME "Sat Apr 13 15:00:37 CST 2013"

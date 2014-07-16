@@ -990,13 +990,7 @@ static fm_s32 rds_retrieve_g0_af(fm_u16 *block_data, fm_u8 SubType, rds_t *pstRD
         if (valid == fm_false) {
             WCN_DBG(FM_WAR | RDSC, "Group0 BlockC crc err\n");
             return -FM_ECRC;
-        }
-        else if(block_data[5] != 0)
-	{
-            WCN_DBG(FM_WAR | RDSC, "Group0 BlockC CBC != 0\n");
-            return -FM_ECRC;
-        } 
-       else {
+        } else {
             AF_H = (block_data[2] & 0xFF00) >> 8;
             AF_L = block_data[2] & 0x00FF;
 

@@ -1,108 +1,3 @@
-
-/* Copyright Statement:
- *
- * This software/firmware and related documentation ("MediaTek Software") are
- * protected under relevant copyright laws. The information contained herein
- * is confidential and proprietary to MediaTek Inc. and/or its licensors.
- * Without the prior written permission of MediaTek inc. and/or its licensors,
- * any reproduction, modification, use or disclosure of MediaTek Software,
- * and information contained herein, in whole or in part, shall be strictly prohibited.
- */
-/* MediaTek Inc. (C) 2010. All rights reserved.
- *
- * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
- * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
- * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
- * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
- * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
- * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
- * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
- * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
- * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
- * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
- * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
- * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
- * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
- * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
- * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
- * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
- *
- * The following software/firmware and/or related documentation ("MediaTek Software")
- * have been modified by MediaTek Inc. All revisions are subject to any receiver's
- * applicable license agreements with MediaTek Inc.
- */
-
-/*****************************************************************************
-*  Copyright Statement:
-*  --------------------
-*  This software is protected by Copyright and the information contained
-*  herein is confidential. The software may not be copied and the information
-*  contained herein may not be used or disclosed except with the written
-*  permission of MediaTek Inc. (C) 2008
-*
-*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
-*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
-*  RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
-*  AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
-*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
-*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
-*  NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
-*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
-*  SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
-*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
-*  NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S
-*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
-*
-*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE
-*  LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
-*  AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
-*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
-*  MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
-*
-*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
-*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
-*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
-*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
-*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
-*
-*****************************************************************************//*****************************************************************************
- *
- * Filename:
- * ---------
- *   sensor.c
- *
- * Project:
- * --------
- *   DUMA
- *
- * Description:
- * ------------
- *   Source code of Sensor driver
- *
- *
- * Author:
- * -------
- *   PC Huang (MTK02204)
- *
- *============================================================================
- *             HISTORY
- * Below this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
- *
- * 07 11 2011 jun.pei
- * [ALPS00059464] hi704 sensor check in
- * .
- *
- *
- *------------------------------------------------------------------------------
- * Upper this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *============================================================================
- ****************************************************************************/
 #include <linux/videodev2.h>
 #include <linux/i2c.h>
 #include <linux/platform_device.h>
@@ -618,6 +513,54 @@ const HI704_SENSOR_INIT_INFO HI704_Initial_Setting_Info[] =
 	{0xff, 0xff}    //End of Initial Setting
 
 };
+
+static void HI704_Set_VGA_mode(void)
+{
+    HI704_write_cmos_sensor(0x01, HI704_read_cmos_sensor(0x01)|0x01);   //Sleep: For Write Reg
+
+    HI704_write_cmos_sensor(0x03, 0x00);
+    HI704_write_cmos_sensor(0x10, 0x00);        //VGA Size
+
+    HI704_write_cmos_sensor(0x20, 0x00);
+    HI704_write_cmos_sensor(0x21, 0x04);
+
+    HI704_write_cmos_sensor(0x40, 0x01);        //HBLANK: 0x70 = 112
+    HI704_write_cmos_sensor(0x41, 0x58);
+    HI704_write_cmos_sensor(0x42, 0x00);        //VBLANK: 0x04 = 4
+    HI704_write_cmos_sensor(0x43, 0x13);
+
+    HI704_write_cmos_sensor(0x03, 0x11);
+    HI704_write_cmos_sensor(0x10, 0x25);  
+
+    HI704_write_cmos_sensor(0x03, 0x20);
+
+    HI704_write_cmos_sensor(0x10, HI704_read_cmos_sensor(0x10)&0x7f);   //Close AE
+    HI704_write_cmos_sensor(0x18, HI704_read_cmos_sensor(0x18)|0x08);   //Reset AE
+	
+    HI704_write_cmos_sensor(0x83, 0x00);
+    HI704_write_cmos_sensor(0x84, 0xbe);
+    HI704_write_cmos_sensor(0x85, 0x6e);
+    HI704_write_cmos_sensor(0x86, 0x00);
+    HI704_write_cmos_sensor(0x87, 0xfa);
+
+    HI704_write_cmos_sensor(0x8b, 0x3f);
+    HI704_write_cmos_sensor(0x8c, 0x7a);
+    HI704_write_cmos_sensor(0x8d, 0x34);
+    HI704_write_cmos_sensor(0x8e, 0xbc);
+
+    HI704_write_cmos_sensor(0x9c, 0x0b);
+    HI704_write_cmos_sensor(0x9d, 0xb8);
+    HI704_write_cmos_sensor(0x9e, 0x00);
+    HI704_write_cmos_sensor(0x9f, 0xfa);
+
+    HI704_write_cmos_sensor(0x01, HI704_read_cmos_sensor(0x01)&0xfe);   //Exit Sleep: For Write Reg
+
+    HI704_write_cmos_sensor(0x03, 0x20);
+    HI704_write_cmos_sensor(0x10, HI704_read_cmos_sensor(0x10)|0x80);   //Open AE
+    HI704_write_cmos_sensor(0x18, HI704_read_cmos_sensor(0x18)&0xf7);   //Reset AE
+
+}
+
 static void HI704_Initial_Setting(void)
 {
 	kal_uint32 iEcount;
@@ -625,6 +568,8 @@ static void HI704_Initial_Setting(void)
 	{	
 		HI704_write_cmos_sensor(HI704_Initial_Setting_Info[iEcount].address, HI704_Initial_Setting_Info[iEcount].data);
 	}
+	
+	HI704_Set_VGA_mode();
 }
 
 static void HI704_Init_Parameter(void)
@@ -822,52 +767,7 @@ static void HI704_set_dummy(kal_uint16 dummy_pixels,kal_uint16 dummy_lines)
 #endif
 
 // 640 * 480
-static void HI704_Set_VGA_mode(void)
-{
-    HI704_write_cmos_sensor(0x01, HI704_read_cmos_sensor(0x01)|0x01);   //Sleep: For Write Reg
 
-    HI704_write_cmos_sensor(0x03, 0x00);
-    HI704_write_cmos_sensor(0x10, 0x00);        //VGA Size
-
-    HI704_write_cmos_sensor(0x20, 0x00);
-    HI704_write_cmos_sensor(0x21, 0x04);
-
-    HI704_write_cmos_sensor(0x40, 0x01);        //HBLANK: 0x70 = 112
-    HI704_write_cmos_sensor(0x41, 0x58);
-    HI704_write_cmos_sensor(0x42, 0x00);        //VBLANK: 0x04 = 4
-    HI704_write_cmos_sensor(0x43, 0x13);
-
-    HI704_write_cmos_sensor(0x03, 0x11);
-    HI704_write_cmos_sensor(0x10, 0x25);  
-
-    HI704_write_cmos_sensor(0x03, 0x20);
-
-    HI704_write_cmos_sensor(0x10, HI704_read_cmos_sensor(0x10)&0x7f);   //Close AE
-    HI704_write_cmos_sensor(0x18, HI704_read_cmos_sensor(0x18)|0x08);   //Reset AE
-	
-    HI704_write_cmos_sensor(0x83, 0x00);
-    HI704_write_cmos_sensor(0x84, 0xbe);
-    HI704_write_cmos_sensor(0x85, 0x6e);
-    HI704_write_cmos_sensor(0x86, 0x00);
-    HI704_write_cmos_sensor(0x87, 0xfa);
-
-    HI704_write_cmos_sensor(0x8b, 0x3f);
-    HI704_write_cmos_sensor(0x8c, 0x7a);
-    HI704_write_cmos_sensor(0x8d, 0x34);
-    HI704_write_cmos_sensor(0x8e, 0xbc);
-
-    HI704_write_cmos_sensor(0x9c, 0x0b);
-    HI704_write_cmos_sensor(0x9d, 0xb8);
-    HI704_write_cmos_sensor(0x9e, 0x00);
-    HI704_write_cmos_sensor(0x9f, 0xfa);
-
-    HI704_write_cmos_sensor(0x01, HI704_read_cmos_sensor(0x01)&0xfe);   //Exit Sleep: For Write Reg
-
-    HI704_write_cmos_sensor(0x03, 0x20);
-    HI704_write_cmos_sensor(0x10, HI704_read_cmos_sensor(0x10)|0x80);   //Open AE
-    HI704_write_cmos_sensor(0x18, HI704_read_cmos_sensor(0x18)&0xf7);   //Reset AE
-
-}
 
 static void HI704_Cal_Min_Frame_Rate(kal_uint16 min_framerate)
 {
@@ -907,10 +807,13 @@ static void HI704_Cal_Min_Frame_Rate(kal_uint16 min_framerate)
         HI704_expbanding = (HI704_sensor.pv_pclk/HI704_sensor.pv_line_length/120)*HI704_sensor.pv_line_length/8;
         HI704_expmax = HI704_expbanding*120*10/min_framerate ;
     }
-    else
+    else//default 5oHZ
     {
-        SENSORDB("[HI704][Error] Wrong Banding Setting!!!...");
-    }
+        //SENSORDB("[HI704][Error] Wrong Banding Setting!!!...");
+        HI704_expbanding = (HI704_sensor.pv_pclk/HI704_sensor.pv_line_length/100)*HI704_sensor.pv_line_length/8;
+        HI704_expmax = HI704_expbanding*100*10/min_framerate ;
+
+	}
         
     HI704_write_cmos_sensor(0x03, 0x20);
     HI704_write_cmos_sensor(0x88, (HI704_expmax>>16)&0xff);
@@ -975,27 +878,54 @@ static void HI704_Fix_Video_Frame_Rate(kal_uint16 fix_framerate)
     if(HI704_sensor.banding == AE_FLICKER_MODE_50HZ)
     {
         HI704_expbanding = ((HI704_read_cmos_sensor(0x8b)<<8)|HI704_read_cmos_sensor(0x8c));
+		
+		HI704_expmax = ((HI704_expfix_temp-HI704_expbanding)/HI704_expbanding)*HI704_expbanding;	
+		
+		HI704_write_cmos_sensor(0x03, 0x20);
+		HI704_write_cmos_sensor(0x88, (HI704_expmax>>16)&0xff);
+		HI704_write_cmos_sensor(0x89, (HI704_expmax>>8)&0xff);
+		HI704_write_cmos_sensor(0x8a, (HI704_expmax>>0)&0xff);
+		
+		HI704_write_cmos_sensor(0x01, HI704_read_cmos_sensor(0x01)&0xfe);	//Exit Sleep: For Write Reg
+		
+		HI704_write_cmos_sensor(0x03, 0x20);
+		HI704_write_cmos_sensor(0x10, HI704_read_cmos_sensor(0x10)|0x80);	//Open AE
+		HI704_write_cmos_sensor(0x18, HI704_read_cmos_sensor(0x18)&0xf7);	//Reset AE
     }
     else if(HI704_sensor.banding == AE_FLICKER_MODE_60HZ)
     {
         HI704_expbanding = ((HI704_read_cmos_sensor(0x8d)<<8)|HI704_read_cmos_sensor(0x8e));
+		
+		HI704_expmax = ((HI704_expfix_temp-HI704_expbanding)/HI704_expbanding)*HI704_expbanding;	
+		
+		HI704_write_cmos_sensor(0x03, 0x20);
+		HI704_write_cmos_sensor(0x88, (HI704_expmax>>16)&0xff);
+		HI704_write_cmos_sensor(0x89, (HI704_expmax>>8)&0xff);
+		HI704_write_cmos_sensor(0x8a, (HI704_expmax>>0)&0xff);
+		
+		HI704_write_cmos_sensor(0x01, HI704_read_cmos_sensor(0x01)&0xfe);	//Exit Sleep: For Write Reg
+		
+		HI704_write_cmos_sensor(0x03, 0x20);
+		HI704_write_cmos_sensor(0x10, HI704_read_cmos_sensor(0x10)|0x80);	//Open AE
+		HI704_write_cmos_sensor(0x18, HI704_read_cmos_sensor(0x18)&0xf7);	//Reset AE
     }
-    else
+    else//default 50HZ
     {
-        SENSORDB("[HI704]Wrong Banding Setting!!!...");
+        HI704_expbanding = ((HI704_read_cmos_sensor(0x8b)<<8)|HI704_read_cmos_sensor(0x8c));
+		
+		HI704_expmax = ((HI704_expfix_temp-HI704_expbanding)/HI704_expbanding)*HI704_expbanding;	
+		
+		HI704_write_cmos_sensor(0x03, 0x20);
+		HI704_write_cmos_sensor(0x88, (HI704_expmax>>16)&0xff);
+		HI704_write_cmos_sensor(0x89, (HI704_expmax>>8)&0xff);
+		HI704_write_cmos_sensor(0x8a, (HI704_expmax>>0)&0xff);
+		
+		HI704_write_cmos_sensor(0x01, HI704_read_cmos_sensor(0x01)&0xfe);	//Exit Sleep: For Write Reg
+		
+		HI704_write_cmos_sensor(0x03, 0x20);
+		HI704_write_cmos_sensor(0x10, HI704_read_cmos_sensor(0x10)|0x80);	//Open AE
+		HI704_write_cmos_sensor(0x18, HI704_read_cmos_sensor(0x18)&0xf7);	//Reset AE
     }
-    HI704_expmax = ((HI704_expfix_temp-HI704_expbanding)/HI704_expbanding)*HI704_expbanding;    
-
-    HI704_write_cmos_sensor(0x03, 0x20);
-    HI704_write_cmos_sensor(0x88, (HI704_expmax>>16)&0xff);
-    HI704_write_cmos_sensor(0x89, (HI704_expmax>>8)&0xff);
-    HI704_write_cmos_sensor(0x8a, (HI704_expmax>>0)&0xff);
-
-    HI704_write_cmos_sensor(0x01, HI704_read_cmos_sensor(0x01)&0xfe);   //Exit Sleep: For Write Reg
-
-    HI704_write_cmos_sensor(0x03, 0x20);
-    HI704_write_cmos_sensor(0x10, HI704_read_cmos_sensor(0x10)|0x80);   //Open AE
-    HI704_write_cmos_sensor(0x18, HI704_read_cmos_sensor(0x18)&0xf7);   //Reset AE
 }
 
 #if 0
@@ -1048,7 +978,6 @@ static void HI704_Set_QVGA_mode(void)
 #endif
 void HI704_night_mode(kal_bool enable)
 {
-    SENSORDB("[Enter]HI704 night mode func:enable = %d\n",enable);
     SENSORDB("HI704_sensor.video_mode = %d\n",HI704_sensor.MPEG4_Video_mode); 
     SENSORDB("HI704_sensor.night_mode = %d\n",HI704_sensor.night_mode);
     spin_lock(&hi704_yuv_drv_lock);
@@ -1100,7 +1029,6 @@ static UINT32 HI704Preview(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
     }
     spin_unlock(&hi704_yuv_drv_lock);
 
-    SENSORDB("[Enter]:HI704 preview func:");		
     SENSORDB("HI704_sensor.video_mode = %d\n",HI704_sensor.MPEG4_Video_mode); 
 
     spin_lock(&hi704_yuv_drv_lock);
@@ -1108,14 +1036,17 @@ static UINT32 HI704Preview(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
     HI704_sensor.pv_mode = KAL_TRUE;		
     spin_unlock(&hi704_yuv_drv_lock);
 
-    {   
-        SENSORDB("[HI704]preview set_VGA_mode\n");
-        HI704_Set_VGA_mode();
-    }
+   // {   
+      //  SENSORDB("[HI704]preview set_VGA_mode\n");
+	//
+  //  }
 
-    HI704_Set_Mirror_Flip(sensor_config_data->SensorImageMirror);
+   // HI704_Set_Mirror_Flip(sensor_config_data->SensorImageMirror);
+   // HI704_Set_Mirror_Flip(IMAGE_V_MIRROR);
 
     SENSORDB("[Exit]:HI704 preview func\n");
+   
+    HI704_night_mode(HI704_sensor.night_mode);
     return TRUE; 
 }	/* HI704_Preview */
 
@@ -1123,10 +1054,12 @@ static UINT32 HI704Preview(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 UINT32 HI704Capture(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 					  MSDK_SENSOR_CONFIG_STRUCT *sensor_config_data)
 {
-    SENSORDB("[HI704][Enter]HI704_capture_func\n");
     spin_lock(&hi704_yuv_drv_lock);
     HI704_sensor.pv_mode = KAL_FALSE;	
     spin_unlock(&hi704_yuv_drv_lock);
+ //   sensor_config_data->SensorImageMirror = IMAGE_V_MIRROR; 
+//	HI704_Set_VGA_mode();
+//    HI704_Set_Mirror_Flip(IMAGE_V_MIRROR);
 
     return ERROR_NONE;
 }	/* HM3451Capture() */
@@ -1136,18 +1069,18 @@ UINT32 HI704GetResolution(MSDK_SENSOR_RESOLUTION_INFO_STRUCT *pSensorResolution)
 {
     SENSORDB("[Enter]:HI704 get Resolution func\n");
 
-    pSensorResolution->SensorFullWidth=HI704_IMAGE_SENSOR_FULL_WIDTH - 10;  
-    pSensorResolution->SensorFullHeight=HI704_IMAGE_SENSOR_FULL_HEIGHT - 10-10;
-    pSensorResolution->SensorPreviewWidth=HI704_IMAGE_SENSOR_PV_WIDTH - 16;
-    pSensorResolution->SensorPreviewHeight=HI704_IMAGE_SENSOR_PV_HEIGHT - 12-10;
-    pSensorResolution->SensorVideoWidth=HI704_IMAGE_SENSOR_PV_WIDTH - 16;
-    pSensorResolution->SensorVideoHeight=HI704_IMAGE_SENSOR_PV_HEIGHT - 12-10;
-    pSensorResolution->Sensor3DFullWidth=HI704_IMAGE_SENSOR_FULL_WIDTH - 10;  
-    pSensorResolution->Sensor3DFullHeight=HI704_IMAGE_SENSOR_FULL_HEIGHT - 10-10;
-    pSensorResolution->Sensor3DPreviewWidth=HI704_IMAGE_SENSOR_PV_WIDTH - 16;
-    pSensorResolution->Sensor3DPreviewHeight=HI704_IMAGE_SENSOR_PV_HEIGHT - 12-10;
-    pSensorResolution->Sensor3DVideoWidth=HI704_IMAGE_SENSOR_PV_WIDTH - 16;
-    pSensorResolution->Sensor3DVideoHeight=HI704_IMAGE_SENSOR_PV_HEIGHT - 12-10;
+    pSensorResolution->SensorFullWidth=HI704_IMAGE_SENSOR_FULL_WIDTH ;  
+    pSensorResolution->SensorFullHeight=HI704_IMAGE_SENSOR_FULL_HEIGHT ;
+    pSensorResolution->SensorPreviewWidth=HI704_IMAGE_SENSOR_PV_WIDTH ;
+    pSensorResolution->SensorPreviewHeight=HI704_IMAGE_SENSOR_PV_HEIGHT ;
+    pSensorResolution->SensorVideoWidth=HI704_IMAGE_SENSOR_PV_WIDTH ;
+    pSensorResolution->SensorVideoHeight=HI704_IMAGE_SENSOR_PV_HEIGHT ;
+    pSensorResolution->Sensor3DFullWidth=HI704_IMAGE_SENSOR_FULL_WIDTH ;  
+    pSensorResolution->Sensor3DFullHeight=HI704_IMAGE_SENSOR_FULL_HEIGHT ;
+    pSensorResolution->Sensor3DPreviewWidth=HI704_IMAGE_SENSOR_PV_WIDTH ;
+    pSensorResolution->Sensor3DPreviewHeight=HI704_IMAGE_SENSOR_PV_HEIGHT ;
+    pSensorResolution->Sensor3DVideoWidth=HI704_IMAGE_SENSOR_PV_WIDTH ;
+    pSensorResolution->Sensor3DVideoHeight=HI704_IMAGE_SENSOR_PV_HEIGHT ;
 
     SENSORDB("[Exit]:HI704 get Resolution func\n");	
     return ERROR_NONE;
@@ -1157,12 +1090,61 @@ UINT32 HI704GetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
 					  MSDK_SENSOR_INFO_STRUCT *pSensorInfo,
 					  MSDK_SENSOR_CONFIG_STRUCT *pSensorConfigData)
 {
+
+	switch(ScenarioId)
+		{
+		 
+			case MSDK_SCENARIO_ID_CAMERA_ZSD:
+				 pSensorInfo->SensorPreviewResolutionX=HI704_IMAGE_SENSOR_PV_WIDTH;
+				 pSensorInfo->SensorPreviewResolutionY=HI704_IMAGE_SENSOR_PV_HEIGHT;
+				 pSensorInfo->SensorFullResolutionX=HI704_IMAGE_SENSOR_FULL_WIDTH;
+				 pSensorInfo->SensorFullResolutionY=HI704_IMAGE_SENSOR_FULL_HEIGHT;			 
+				 pSensorInfo->SensorCameraPreviewFrameRate=15;
+				 break;
+	
+			case MSDK_SCENARIO_ID_CAMERA_PREVIEW:
+			case MSDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG:
+				 pSensorInfo->SensorPreviewResolutionX=HI704_IMAGE_SENSOR_PV_WIDTH;
+				 pSensorInfo->SensorPreviewResolutionY=HI704_IMAGE_SENSOR_PV_HEIGHT;
+				 pSensorInfo->SensorFullResolutionX=HI704_IMAGE_SENSOR_FULL_WIDTH;
+				 pSensorInfo->SensorFullResolutionY=HI704_IMAGE_SENSOR_FULL_HEIGHT;				 
+				 pSensorInfo->SensorCameraPreviewFrameRate=30;
+				 break;
+			case MSDK_SCENARIO_ID_VIDEO_PREVIEW:
+				 pSensorInfo->SensorPreviewResolutionX=HI704_IMAGE_SENSOR_PV_WIDTH;
+				 pSensorInfo->SensorPreviewResolutionY=HI704_IMAGE_SENSOR_PV_HEIGHT;
+				 pSensorInfo->SensorFullResolutionX=HI704_IMAGE_SENSOR_FULL_WIDTH;
+				 pSensorInfo->SensorFullResolutionY=HI704_IMAGE_SENSOR_FULL_HEIGHT;				 
+				 pSensorInfo->SensorCameraPreviewFrameRate=30;			
+				break;
+			case MSDK_SCENARIO_ID_CAMERA_3D_PREVIEW: //added
+			case MSDK_SCENARIO_ID_CAMERA_3D_VIDEO:
+			case MSDK_SCENARIO_ID_CAMERA_3D_CAPTURE: //added   
+				 pSensorInfo->SensorPreviewResolutionX=HI704_IMAGE_SENSOR_PV_WIDTH;
+				 pSensorInfo->SensorPreviewResolutionY=HI704_IMAGE_SENSOR_PV_HEIGHT;
+				 pSensorInfo->SensorFullResolutionX=HI704_IMAGE_SENSOR_FULL_WIDTH;
+				 pSensorInfo->SensorFullResolutionY=HI704_IMAGE_SENSOR_FULL_HEIGHT; 			 
+				 pSensorInfo->SensorCameraPreviewFrameRate=30;			
+				break;
+			default:
+	
+				 pSensorInfo->SensorPreviewResolutionX=HI704_IMAGE_SENSOR_PV_WIDTH;
+				 pSensorInfo->SensorPreviewResolutionY=HI704_IMAGE_SENSOR_PV_HEIGHT;
+				 pSensorInfo->SensorFullResolutionX=HI704_IMAGE_SENSOR_FULL_WIDTH;
+				 pSensorInfo->SensorFullResolutionY=HI704_IMAGE_SENSOR_FULL_HEIGHT;				 
+				 pSensorInfo->SensorCameraPreviewFrameRate=30;
+				 break;
+				 
+			}
+	
+
+
     SENSORDB("[Enter]:HI704 getInfo func:ScenarioId = %d\n",ScenarioId);
 
-    pSensorInfo->SensorPreviewResolutionX=HI704_IMAGE_SENSOR_PV_WIDTH;
-    pSensorInfo->SensorPreviewResolutionY=HI704_IMAGE_SENSOR_PV_HEIGHT;
-    pSensorInfo->SensorFullResolutionX=HI704_IMAGE_SENSOR_FULL_WIDTH;
-    pSensorInfo->SensorFullResolutionY=HI704_IMAGE_SENSOR_FULL_HEIGHT;
+  //  pSensorInfo->SensorPreviewResolutionX=HI704_IMAGE_SENSOR_PV_WIDTH;
+  //  pSensorInfo->SensorPreviewResolutionY=HI704_IMAGE_SENSOR_PV_HEIGHT;
+ //   pSensorInfo->SensorFullResolutionX=HI704_IMAGE_SENSOR_FULL_WIDTH;
+ //   pSensorInfo->SensorFullResolutionY=HI704_IMAGE_SENSOR_FULL_HEIGHT;
 
     pSensorInfo->SensorCameraPreviewFrameRate=30;
     pSensorInfo->SensorVideoFrameRate=30;
@@ -1179,8 +1161,8 @@ UINT32 HI704GetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
     pSensorInfo->SensroInterfaceType=SENSOR_INTERFACE_TYPE_PARALLEL;
 
 
-    pSensorInfo->CaptureDelayFrame = 4; 
-    pSensorInfo->PreviewDelayFrame = 4;//10; 
+    pSensorInfo->CaptureDelayFrame = 0; 
+    pSensorInfo->PreviewDelayFrame = 0;//10; 
     pSensorInfo->VideoDelayFrame = 0; 
     pSensorInfo->SensorMasterClockSwitch = 0; 
     pSensorInfo->SensorDrivingCurrent = ISP_DRIVING_8MA;   	
@@ -1197,8 +1179,8 @@ UINT32 HI704GetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
         pSensorInfo->SensorClockFallingCount= 2;
         pSensorInfo->SensorPixelClockCount= 3;
         pSensorInfo->SensorDataLatchCount= 2;
-        pSensorInfo->SensorGrabStartX = 1; 
-        pSensorInfo->SensorGrabStartY = 10;  	
+        pSensorInfo->SensorGrabStartX = 4; 
+        pSensorInfo->SensorGrabStartY = 2;  	
         break;
     case MSDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG:
     case MSDK_SCENARIO_ID_CAMERA_3D_CAPTURE:
@@ -1208,8 +1190,8 @@ UINT32 HI704GetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
         pSensorInfo->SensorClockFallingCount= 2;
         pSensorInfo->SensorPixelClockCount= 3;
         pSensorInfo->SensorDataLatchCount= 2;
-        pSensorInfo->SensorGrabStartX = 1; 
-        pSensorInfo->SensorGrabStartY = 10;//1;     			
+        pSensorInfo->SensorGrabStartX = 4; 
+        pSensorInfo->SensorGrabStartY = 2;//4;     			
         break;
     default:
         pSensorInfo->SensorClockFreq=26;
@@ -1218,8 +1200,8 @@ UINT32 HI704GetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
         pSensorInfo->SensorClockFallingCount=2;
         pSensorInfo->SensorPixelClockCount=3;
         pSensorInfo->SensorDataLatchCount=2;
-        pSensorInfo->SensorGrabStartX = 1; 
-        pSensorInfo->SensorGrabStartY = 10;//1;     			
+        pSensorInfo->SensorGrabStartX = 4; 
+        pSensorInfo->SensorGrabStartY = 2;//4;     			
         break;
     }
     //	HI704_PixelClockDivider=pSensorInfo->SensorPixelClockCount;
@@ -1233,7 +1215,7 @@ UINT32 HI704GetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
 UINT32 HI704Control(MSDK_SCENARIO_ID_ENUM ScenarioId, MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *pImageWindow,
 					  MSDK_SENSOR_CONFIG_STRUCT *pSensorConfigData)
 {
-    SENSORDB("[Enter]:HI704 Control func:ScenarioId = %d\n",ScenarioId);
+    SENSORDB(" [Enter]:HI704 Control func:ScenarioId = %d\n",ScenarioId);
 
     switch (ScenarioId)
     {
@@ -1665,20 +1647,25 @@ UINT32 HI704YUVSetVideoMode(UINT16 u2FrameRate)
     SENSORDB("[Enter]HI704 Set Video Mode:FrameRate= %d\n",u2FrameRate);
     SENSORDB("HI704_sensor.video_mode = %d\n",HI704_sensor.MPEG4_Video_mode);
 
-    if(u2FrameRate == 30) u2FrameRate = 20;
+    if(u2FrameRate >= 30)
+		u2FrameRate = 20;
+	else if(u2FrameRate>0)
+		u2FrameRate = 15;
+	else 
+    {
+        SENSORDB("Wrong Frame Rate"); 
+		
+		return FALSE;
+    }
+		
    
     spin_lock(&hi704_yuv_drv_lock);
     HI704_sensor.fix_framerate = u2FrameRate * 10;
     spin_unlock(&hi704_yuv_drv_lock);
-    
-    if(HI704_sensor.fix_framerate <= 300 )
-    {
+   
         HI704_Fix_Video_Frame_Rate(HI704_sensor.fix_framerate); 
-    }
-    else 
-    {
-        SENSORDB("Wrong Frame Rate"); 
-    }
+ 
+    
         
     return TRUE;
 }
@@ -1716,6 +1703,7 @@ UINT32 HI704FeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
     UINT32 *pFeatureData32=(UINT32 *) pFeaturePara;
     MSDK_SENSOR_CONFIG_STRUCT *pSensorConfigData=(MSDK_SENSOR_CONFIG_STRUCT *) pFeaturePara;
     MSDK_SENSOR_REG_INFO_STRUCT *pSensorRegData=(MSDK_SENSOR_REG_INFO_STRUCT *) pFeaturePara;
+    SENSORDB(" [Enter]:HI704 Feature Control func:FeatureId = %d\n",FeatureId);
 
     switch (FeatureId)
     {

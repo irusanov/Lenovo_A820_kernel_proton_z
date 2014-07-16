@@ -566,6 +566,21 @@ qmInit(
     prAdapter->rWifiVar.fgSupportULPSMP = FALSE;
 #endif
 
+#if CFG_SUPPORT_RX_SGI
+    prAdapter->rWifiVar.u8SupportRxSgi20 = 0;
+    prAdapter->rWifiVar.u8SupportRxSgi40 = 0;
+#else
+    prAdapter->rWifiVar.u8SupportRxSgi20 = 2;
+    prAdapter->rWifiVar.u8SupportRxSgi40 = 2;
+#endif
+
+#if CFG_SUPPORT_RX_HT_GF
+    prAdapter->rWifiVar.u8SupportRxGf = 0;
+#else
+    prAdapter->rWifiVar.u8SupportRxGf = 2;
+#endif
+
+
     //4 <2> Initialize other TX queues (queues not in STA_RECs)
     for(u4QueArrayIdx = 0; u4QueArrayIdx < NUM_OF_PER_TYPE_TX_QUEUES; u4QueArrayIdx++){
         QUEUE_INITIALIZE(&(prQM->arTxQueue[u4QueArrayIdx]));

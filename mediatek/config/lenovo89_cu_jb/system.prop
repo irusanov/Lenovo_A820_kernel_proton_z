@@ -29,8 +29,8 @@ wifi.tethering.interface=ap0
 ro.opengles.version=131072
 
 wifi.direct.interface=p2p0
-dalvik.vm.heapgrowthlimit=96m
-dalvik.vm.heapsize=128m
+dalvik.vm.heapgrowthlimit=128m
+dalvik.vm.heapsize=256m
 
 # USB MTP WHQL
 ro.sys.usb.mtp.whql.enable=0

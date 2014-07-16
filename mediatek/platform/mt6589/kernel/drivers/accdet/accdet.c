@@ -1,38 +1,3 @@
-/* Copyright Statement:
- *
- * This software/firmware and related documentation ("MediaTek Software") are
- * protected under relevant copyright laws. The information contained herein
- * is confidential and proprietary to MediaTek Inc. and/or its licensors.
- * Without the prior written permission of MediaTek inc. and/or its licensors,
- * any reproduction, modification, use or disclosure of MediaTek Software,
- * and information contained herein, in whole or in part, shall be strictly prohibited.
- *
- * MediaTek Inc. (C) 2012. All rights reserved.
- *
- * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
- * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
- * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
- * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
- * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
- * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
- * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
- * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
- * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
- * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
- * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
- * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
- * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
- * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
- * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
- * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
- *
- * The following software/firmware and/or related documentation ("MediaTek Software")
- * have been modified by MediaTek Inc. All revisions are subject to any receiver's
- * applicable license agreements with MediaTek Inc.
- */
-
 #include "accdet.h"
 #include <mach/mt_boot.h>
 #include <cust_eint.h>
@@ -281,9 +246,9 @@ void inline disable_accdet(void)
 	
 	//disable accdet irq
 	pmic_pwrap_write(INT_CON_ACCDET_CLR, RG_ACCDET_IRQ_CLR);
-	mutex_lock(&accdet_eint_irq_sync_mutex);
 	clear_accdet_interrupt();
 	udelay(200);
+	mutex_lock(&accdet_eint_irq_sync_mutex);
 	while(pmic_pwrap_read(ACCDET_IRQ_STS) & IRQ_STATUS_BIT)
 	{
 		ACCDET_DEBUG("[Accdet]check_cable_type: Clear interrupt on-going....\n");
@@ -368,53 +333,8 @@ static void disable_micbias_callback(struct work_struct *work)
 		}
 	#endif
 }
-#if defined(SUPPORT_CALLINGLIGHT) 
-#include <linux/hrtimer.h>
-
-static struct hrtimer accdet_timer;
-static int accdet_eint_status = 0;      /*0 = plug out               1 = plug  in*/
-static struct work_struct accdet_calllight_work;
-static struct workqueue_struct * accdet_calllight_workqueue = NULL;
 
 
-static enum hrtimer_restart calling_light_decate(struct hrtimer *timer)
-{
-	int ret;
-	ret=queue_work(accdet_calllight_workqueue, &accdet_calllight_work); 
-	if(!ret)
-      {
-  	    ACCDET_DEBUG("[Accdet]calling_light_decate: return:%d!\n", ret);  		
-      }
-	return HRTIMER_NORESTART;
-}
-
-void calling_light_callback(struct work_struct *work)
-{
-	//int current_status1 = 0;
-	int current_status2 = 0;
-	
-	//current_status1 = INREG32(ACCDET_CURR_IN) & 0x3; //A=bit1; B=bit0
-	//ACCDET_DEBUG("[Accdet] current_status1 = %d\n",current_status1);
-
-	current_status2 = ((pmic_pwrap_read(ACCDET_STATE_RG) & 0xc0)>>6); //A=bit1; B=bit0
-	ACCDET_DEBUG("[Accdet] tengdeqcurrent_status2 = %d\n",current_status2);
-	//ACCDET_DEBUG("[Accdet] tengdeq controlcurrent_status2 = %d\n",pmic_pwrap_read(ACCDET_STATE_RG) );
-
-	if(current_status2==3 )
-	{
-		accdet_eint_status = 1;    /*calling light plug in*/
-		//mt65xx_eint_registration(CUST_EINT_ACCDET_NUM, CUST_EINT_ACCDET_DEBOUNCE_EN, 1, accdet_eint_func, 0);
-		//mt65xx_eint_unmask(CUST_EINT_ACCDET_NUM);
-		switch_set_state((struct switch_dev *)&accdet_data, CALLING_LIGHT_PLUG_IN);
-		ACCDET_DEBUG("[Accdet] Calling Light  PLUG IN  \n");
-	}
-	else
-	{
-		//hrtimer_start(&accdet_timer, ktime_set(0, 2000000000), HRTIMER_MODE_REL); //check again after 1000ms
-	}
-
-}
-#endif
 
 
 void accdet_eint_work_callback(struct work_struct *work)
@@ -457,9 +377,6 @@ void accdet_eint_work_callback(struct work_struct *work)
 		#endif  
 		//enable ACCDET unit
 			enable_accdet(ACCDET_SWCTRL_EN); 
-		#if defined(SUPPORT_CALLINGLIGHT)
-			hrtimer_start(&accdet_timer, ktime_set(2, 0), HRTIMER_MODE_REL); //check again after 1000ms
-		#endif
     } else {
 //EINT_PIN_PLUG_OUT
 			//Disable ACCDET
@@ -488,19 +405,7 @@ void accdet_eint_work_callback(struct work_struct *work)
 		 pmic_pwrap_write(0x0732, 0x00);
 		 ACCDET_DEBUG("ACCDET diable switch in 2.8v mode \n");
 		#endif
-			disable_accdet();	
-		#if defined(SUPPORT_CALLINGLIGHT)		   
-		if ((accdet_eint_status==1)||(accdet_eint_status==2))
-		{
-			hrtimer_cancel(&accdet_timer);
-			accdet_eint_status=0;
-			accdet_status = PLUG_OUT;
-			cable_type = CALLING_LIGHT_PLUG_OUT;
-			switch_set_state((struct switch_dev *)&accdet_data, CALLING_LIGHT_PLUG_OUT);
-			//disable_accdet();
-		}
-		else
-		#endif
+			disable_accdet();			   
 			headset_plug_out();
 		  
     }
@@ -664,15 +569,10 @@ static DEFINE_MUTEX(accdet_multikey_mutex);
 0V<=MD< 0.09V<= UP<0.24V<=DW <0.5V
 
 */
-#if defined(SIMCOM_FOR1T)//call light erjiguan fenya
-#define DW_KEY_HIGH_THR	 (620) //0.62v=620000uv
-#define DW_KEY_THR		 (360) //0.36v=360000uv
-#define UP_KEY_THR       (210) //0.21v=210000uv
-#else
+
 #define DW_KEY_HIGH_THR	 (500) //0.50v=500000uv
 #define DW_KEY_THR		 (240) //0.24v=240000uv
 #define UP_KEY_THR       (90) //0.09v=90000uv
-#endif
 #define MD_KEY_THR		 (0)
 
 static int key_check(int b)
@@ -874,14 +774,10 @@ static int sendKeyEvent(void *unuse)
             if(ACC_MEDIA_STOP == accdet_key_event)
             {
                                 ACCDET_DEBUG("[Accdet] STOP !\n");
-						    #if defined(ACER_C11)
-							
-						    #else
                                 input_report_key(kpd_accdet_dev, KEY_STOPCD, 1);
                                 input_report_key(kpd_accdet_dev, KEY_STOPCD, 0);
                                 input_sync(kpd_accdet_dev);
-						    #endif		
-            }   
+            }
 // next, previous, volumeup, volumedown send key in multi_key_detection()
             if(ACC_MEDIA_NEXT == accdet_key_event)
             {
@@ -939,16 +835,7 @@ static inline void check_cable_type(void)
     current_status = ((pmic_pwrap_read(ACCDET_STATE_RG) & 0xc0)>>6); //A=bit1; B=bit0
     ACCDET_DEBUG("[Accdet]accdet interrupt happen:[%s]current AB = %d\n", 
 		accdet_status_string[accdet_status], current_status);
-
-#if defined(SUPPORT_CALLINGLIGHT)
-		hrtimer_cancel(&accdet_timer);
-		if(accdet_eint_status == 1)
-		{
-			accdet_eint_status=2;
-			switch_set_state((struct switch_dev *)&accdet_data, CALLING_LIGHT_PLUG_OUT);
-		}
-		//mt65xx_eint_registration(CUST_EINT_ACCDET_NUM, CUST_EINT_ACCDET_DEBOUNCE_EN, 0, accdet_eint_func, 0);
-#endif
+	    	
     button_status = 0;
     pre_status = accdet_status;
 
@@ -1210,16 +1097,6 @@ static inline void check_cable_type(void)
                  	}
                 }
 			#endif//#ifdef SW_WORK_AROUND_ACCDET_REMOTE_BUTTON_ISSUE
-			
-			#if 0//defined(ACER_C11) //LK@add for CIT test
-            if(call_status == 0)
-            {
-	                 ACCDET_DEBUG("[Accdet] press headset hook button!\n");
-			   input_report_key(kpd_accdet_dev, KEY_HEADSETHOOK, 1); 
-			   input_report_key(kpd_accdet_dev, KEY_HEADSETHOOK, 0);
-			   input_sync(kpd_accdet_dev);	
-            }
-            #endif
 	     }
 }
           else if(current_status == 1)
@@ -1520,12 +1397,7 @@ static inline void accdet_init(void)
 
 	ACCDET_DEBUG("ACCDET reset function test: reset finished!! \n\r");
 	pmic_pwrap_write(TOP_RST_ACCDET_CLR, ACCDET_RESET_CLR);
-
-	//accdet IRQ enable,  PMIC driver has done this for accdet driver!!(pmic_mt6320.c)
-	pmic_pwrap_write(INT_CON_ACCDET_SET, RG_ACCDET_IRQ_SET);
-	ACCDET_DEBUG("[Accdet]accdet IRQ enable INT_CON_ACCDET=0x%x!\n", pmic_pwrap_read(INT_CON_ACCDET));	
-
-	
+		
 	//init  pwm frequency and duty
     pmic_pwrap_write(ACCDET_PWM_WIDTH, REGISTER_VALUE(cust_headset_settings.pwm_width));
     pmic_pwrap_write(ACCDET_PWM_THRESH, REGISTER_VALUE(cust_headset_settings.pwm_thresh));
@@ -1547,7 +1419,10 @@ static inline void accdet_init(void)
     pmic_pwrap_write(ACCDET_DEBOUNCE1, cust_headset_settings.debounce1);
     pmic_pwrap_write(ACCDET_DEBOUNCE3, cust_headset_settings.debounce3);	
    #endif
-    
+    pmic_pwrap_write(ACCDET_IRQ_STS, pmic_pwrap_read(ACCDET_IRQ_STS)&(~IRQ_CLR_BIT));
+	ACCDET_DEBUG("[Accdet]init:IRQ Clear bit:[0x%x]!\n", pmic_pwrap_read(ACCDET_IRQ_STS));
+	pmic_pwrap_write(INT_CON_ACCDET_SET, RG_ACCDET_IRQ_SET);
+	ACCDET_DEBUG("[Accdet]accdet IRQ enable INT_CON_ACCDET=0x%x!\n", pmic_pwrap_read(INT_CON_ACCDET));
     #ifdef ACCDET_EINT
     // disable ACCDET unit
 	pre_state_swctrl = pmic_pwrap_read(ACCDET_STATE_SWCTRL);
@@ -1813,22 +1688,6 @@ static DRIVER_ATTR(set_headset_mode,      S_IWUSR | S_IRUGO, NULL,         store
 
 static DRIVER_ATTR(start_debug,      S_IWUSR | S_IRUGO, NULL,         store_accdet_start_debug_thread);
 
-#if defined(SUPPORT_CALLINGLIGHT)
-static ssize_t CallingLight_decate_show(struct device_driver *ddri, const char *buf, size_t count)
-{
-	int len=0;
-	len  = snprintf(buf, PAGE_SIZE, "%d\n", accdet_eint_status);     
-	ACCDET_DEBUG("[Accdet]calling light is alive  =%d \n",accdet_eint_status);
-	return len;
-}
-static ssize_t CallingLight_decate_store(struct device_driver *ddri, const char *buf, size_t count)
-{
-	printk("%s, do nothing \n",__FUNCTION__);
-	return 0;
-}
-static DRIVER_ATTR(calling_light,      S_IWUSR | S_IRUGO, CallingLight_decate_show, CallingLight_decate_store);
-#endif
-
 /*----------------------------------------------------------------------------*/
 static struct driver_attribute *accdet_attr_list[] = {
 	&driver_attr_start_debug,        
@@ -1838,9 +1697,6 @@ static struct driver_attribute *accdet_attr_list[] = {
 	//#ifdef ACCDET_PIN_RECOGNIZATION
 	&driver_attr_accdet_pin_recognition,
 	//#endif
-#if defined(SUPPORT_CALLINGLIGHT)
-	&driver_attr_calling_light,
-#endif
 };
 
 static int accdet_create_attr(struct device_driver *driver) 
@@ -1931,9 +1787,6 @@ static int accdet_probe(struct platform_device *dev)
     __set_bit(KEY_STOPCD, kpd_accdet_dev->keybit);
 	__set_bit(KEY_VOLUMEDOWN, kpd_accdet_dev->keybit);
     __set_bit(KEY_VOLUMEUP, kpd_accdet_dev->keybit);
-#if 0//defined(ACER_C11)//LK@add for CIT test
-	__set_bit(KEY_HEADSETHOOK, kpd_accdet_dev->keybit);
-#endif	
 	
 	kpd_accdet_dev->id.bustype = BUS_HOST;
 	kpd_accdet_dev->name = "ACCDET";
@@ -1960,13 +1813,6 @@ static int accdet_probe(struct platform_device *dev)
     accdet_check_workqueue = create_singlethread_workqueue("accdet_check");
 	INIT_WORK(&accdet_check_work, accdet_check_work_callback);
 
-#endif
-#if defined(SUPPORT_CALLINGLIGHT)
-	hrtimer_init(&accdet_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	accdet_timer.function = calling_light_decate;
-
-	accdet_calllight_workqueue = create_singlethread_workqueue("accdet_calllight");
-	INIT_WORK(&accdet_calllight_work, calling_light_callback);
 #endif
     //------------------------------------------------------------------
 	//							wake lock
@@ -2057,7 +1903,7 @@ static int accdet_remove(struct platform_device *dev)
 	return 0;
 }
 
-static int accdet_suspend(struct platform_device *dev, pm_message_t state)  // only one suspend mode
+static int accdet_suspend(struct device *device)  // only one suspend mode
 {
 	
 //#ifdef ACCDET_PIN_SWAP
@@ -2147,7 +1993,7 @@ static int accdet_suspend(struct platform_device *dev, pm_message_t state)  // o
 	return 0;
 }
 
-static int accdet_resume(struct platform_device *dev) // wake up
+static int accdet_resume(struct device *device) // wake up
 {
 //#ifdef ACCDET_PIN_SWAP
 //		pmic_pwrap_write(0x0400, 0x1000); 
@@ -2198,14 +2044,67 @@ static int accdet_resume(struct platform_device *dev) // wake up
 
     return 0;
 }
+/**********************************************************************
+//add for IPO-H need update headset state when resume
+
+***********************************************************************/
+#ifdef CONFIG_PM
+static int accdet_pm_restore_noirq(struct device *device)
+{
+	int current_status_restore = 0;
+    printk("[Accdet]accdet_pm_restore_noirq start!\n");
+	//enable accdet
+	pmic_pwrap_write(TOP_CKPDN_CLR, RG_ACCDET_CLK_CLR); 
+    pmic_pwrap_write(ACCDET_STATE_SWCTRL, pmic_pwrap_read(ACCDET_STATE_SWCTRL)|pre_state_swctrl);
+    pmic_pwrap_write(ACCDET_CTRL, ACCDET_ENABLE);
+	eint_accdet_sync_flag = 1;
+	current_status_restore = ((pmic_pwrap_read(ACCDET_STATE_RG) & 0xc0)>>6); //AB
+		
+	switch (current_status_restore) {
+		case 0:     //AB=0
+			cable_type = HEADSET_NO_MIC;
+			accdet_status = HOOK_SWITCH;
+			break;
+		case 1:     //AB=1
+			cable_type = HEADSET_MIC;
+			accdet_status = MIC_BIAS;
+			break;
+		case 3:     //AB=3
+			cable_type = NO_DEVICE;
+			accdet_status = PLUG_OUT;
+			break;
+		default:
+			printk("[Accdet]accdet_pm_restore_noirq: accdet current status error!\n");
+			break;
+	}
+	switch_set_state((struct switch_dev *)&accdet_data, cable_type);
+	if (cable_type == NO_DEVICE) {
+		eint_accdet_sync_flag = 0;
+		//disable accdet
+		pre_state_swctrl = pmic_pwrap_read(ACCDET_STATE_SWCTRL);  
+    	pmic_pwrap_write(ACCDET_CTRL, ACCDET_DISABLE);
+    	pmic_pwrap_write(ACCDET_STATE_SWCTRL, 0);
+    	pmic_pwrap_write(TOP_CKPDN_SET, RG_ACCDET_CLK_SET);
+	}
+	return 0;
+}
+static struct dev_pm_ops accdet_pm_ops = {
+	.suspend = accdet_suspend,
+    .resume = accdet_resume,
+	.restore_noirq = accdet_pm_restore_noirq,
+};
+#endif
 
 static struct platform_driver accdet_driver = {
 	.probe		= accdet_probe,	
-	.suspend	= accdet_suspend,
-	.resume		= accdet_resume,
+	//.suspend	= accdet_suspend,
+	//.resume		= accdet_resume,
 	.remove   = accdet_remove,
 	.driver     = {
 	.name       = "Accdet_Driver",
+#ifdef CONFIG_PM
+	.pm         = &accdet_pm_ops,
+#endif
 	},
 };
 

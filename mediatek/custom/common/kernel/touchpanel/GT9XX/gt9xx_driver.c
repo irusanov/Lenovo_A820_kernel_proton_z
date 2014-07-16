@@ -1,38 +1,3 @@
-/* Copyright Statement:
- *
- * This software/firmware and related documentation ("MediaTek Software") are
- * protected under relevant copyright laws. The information contained herein
- * is confidential and proprietary to MediaTek Inc. and/or its licensors.
- * Without the prior written permission of MediaTek inc. and/or its licensors,
- * any reproduction, modification, use or disclosure of MediaTek Software,
- * and information contained herein, in whole or in part, shall be strictly prohibited.
- *
- * MediaTek Inc. (C) 2012. All rights reserved.
- *
- * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
- * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
- * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
- * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
- * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
- * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
- * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
- * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
- * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
- * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
- * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
- * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
- * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
- * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
- * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
- * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
- *
- * The following software/firmware and/or related documentation ("MediaTek Software")
- * have been modified by MediaTek Inc. All revisions are subject to any receiver's
- * applicable license agreements with MediaTek Inc.
- */
-
 #include "tpd.h"
 #include "tpd_custom_gt9xx.h"
 
@@ -64,13 +29,13 @@ static int tpd_keys_dim_local[TPD_KEY_COUNT][4] = TPD_KEYS_DIM;
 
 #if GTP_HAVE_TOUCH_KEY
 const u16 touch_key_array[] = TPD_KEYS;
-#define GTP_MAX_KEY_NUM ( sizeof( touch_key_array )/sizeof( touch_key_array[0] ) )
+//#define GTP_MAX_KEY_NUM ( sizeof( touch_key_array )/sizeof( touch_key_array[0] ) )
 struct touch_vitual_key_map_t
 {
     int point_x;
     int point_y;
 };
-//static struct touch_vitual_key_map_t touch_key_point_maping_array[] = GTP_KEY_MAP_ARRAY;
+static struct touch_vitual_key_map_t touch_key_point_maping_array[] = GTP_KEY_MAP_ARRAY;
 #endif
 
 #if (defined(TPD_WARP_START) && defined(TPD_WARP_END))
@@ -114,7 +79,7 @@ static u8 gtp_charger_mode = 0;
 #endif
 
 #if GTP_ESD_PROTECT
-#define TPD_ESD_CHECK_CIRCLE        200
+#define TPD_ESD_CHECK_CIRCLE        2000
 static struct delayed_work gtp_esd_check_work;
 static struct workqueue_struct *gtp_esd_check_workqueue = NULL;
 static void gtp_esd_check_func(struct work_struct *);
@@ -693,7 +658,7 @@ static s32 gtp_init_panel(struct i2c_client *client)
             goto out;
         }
 
-        rd_cfg_buf[GTP_ADDR_LENGTH] &= 0x07;
+        rd_cfg_buf[GTP_ADDR_LENGTH] &= 0x03;
     }
 
     GTP_INFO("SENSOR ID:%d", rd_cfg_buf[GTP_ADDR_LENGTH]);
@@ -916,7 +881,7 @@ static s32 tpd_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
     s32 ret = 0;
 
     //u16 version_info;
-#if GTP_HAVE_TOUCH_KEY
+#if 0 //GTP_HAVE_TOUCH_KEY
     s32 idx = 0;
 #endif
 #ifdef TPD_PROXIMITY
@@ -942,16 +907,6 @@ static s32 tpd_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
     }
 
 #endif
-
-#if defined(ACER_C11)
-
-    ret = gup_get_ic_vid_pid();
-
-    if (ret < 0)
-    {
-        printk(" mtk_tpd.c Read version failed.");
-    }
-#endif	
 
 #ifdef VELOCITY_CUSTOM
 	tpd_v_magnify_x = TPD_VELOCITY_CUSTOM_X;
@@ -1003,9 +958,9 @@ static s32 tpd_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
         goto out;
     }
 
-#if GTP_HAVE_TOUCH_KEY
+#if 0//GTP_HAVE_TOUCH_KEY
 
-    for (idx = 0; idx < GTP_MAX_KEY_NUM; idx++)
+    for (idx = 0; idx < TPD_KEY_COUNT; idx++)
     {
         input_set_capability(tpd->dev, EV_KEY, touch_key_array[idx]);
     }
@@ -1094,7 +1049,7 @@ static int tpd_i2c_remove(struct i2c_client *client)
     destroy_workqueue(gtp_esd_check_workqueue);
 #endif
 
-#if GTP_CHARGER_DETECT
+#if GTP_ESD_PROTECT
     destroy_workqueue(gtp_charger_check_workqueue);
 #endif
 
@@ -1382,14 +1337,6 @@ static int touch_event_handler(void *unused)
 
         if (key_value || pre_key)
         {
-        #if GTP_HAVE_TOUCH_KEY
-            for (i = 0; i < GTP_MAX_KEY_NUM; i++)
-            {
-                printk("gt9xx i=%d value=%d",i,key_value & (0x01 << i));
-                input_report_key(tpd->dev, touch_key_array[i], key_value & (0x01 << i));
-				
-            }
-		#else
             for (i = 0; i < TPD_KEY_COUNT; i++)
             {
                 //input_report_key(tpd->dev, touch_key_array[i], key_value & (0x01 << i));
@@ -1407,7 +1354,7 @@ static int touch_event_handler(void *unused)
             {
                 tpd_up(0, 0, 0);
             }
-       #endif
+
             touch_num = 0;
             pre_touch = 0;
         }
@@ -1689,6 +1636,8 @@ static void tpd_resume(struct early_suspend *h)
     }
 
     GTP_INFO("GTP wakeup sleep.");
+    tpd_up(0,0,0);
+    input_sync(tpd->dev);
     mt65xx_eint_unmask(CUST_EINT_TOUCH_PANEL_NUM);
     tpd_halt = 0;
 

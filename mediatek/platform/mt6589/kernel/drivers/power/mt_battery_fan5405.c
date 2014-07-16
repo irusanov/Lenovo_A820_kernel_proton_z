@@ -3400,10 +3400,9 @@ int bat_thread_kthread(void *x)
 				BAT_thread_fan5405();
 			}
 #else
-            if(g_FG_init == 0)
+            if(g_FG_init == 1)
             {
-                g_FG_init=1;
-                fgauge_initialization();
+                g_FG_init=2;
                 FGADC_thread_kthread();
                 //sync FG timer
                 FGADC_thread_kthread();
@@ -4323,14 +4322,20 @@ static struct hrtimer battery_kthread_timer;
 static struct task_struct *battery_kthread_hrtimer_task = NULL;
 static int battery_kthread_flag = 0;
 static DECLARE_WAIT_QUEUE_HEAD(battery_kthread_waiter);
-
+static u8 g_bat_thread_count = 0;
 int battery_kthread_handler(void *unused)
 {
     ktime_t ktime;
 
     do
     {
-        ktime = ktime_set(10, 0);	// 10s, 10* 1000 ms
+        if(g_bat_thread_count < 3) {
+        	xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "g_bat_thread_count : done\n", g_bat_thread_count);
+					g_bat_thread_count += 1;
+					ktime = ktime_set(5, 0);	// 5s, 5* 1000 ms
+				}else {
+		    	ktime = ktime_set(10, 0);	// 10s, 10* 1000 ms
+		    }
     
         wait_event_interruptible(battery_kthread_waiter, battery_kthread_flag != 0);
     
@@ -4355,7 +4360,8 @@ void battery_kthread_hrtimer_init(void)
 {
     ktime_t ktime;
 
-    ktime = ktime_set(10, 0);	// 10s, 10* 1000 ms
+		ktime = ktime_set(5, 0);	// 5s, 5* 1000 ms
+	
     hrtimer_init(&battery_kthread_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
     battery_kthread_timer.function = battery_kthread_hrtimer_func;    
     hrtimer_start(&battery_kthread_timer, ktime, HRTIMER_MODE_REL);
@@ -4491,7 +4497,11 @@ static int mt6320_battery_probe(struct platform_device *dev)
     BMT_status.POSTFULL_charging_time = 0;
 
     BMT_status.bat_charging_state = CHR_PRE;
-
+		if(g_FG_init == 0)
+		{
+		  g_FG_init=1;
+		  fgauge_initialization();
+		}
     //baton initial setting
     //ret=pmic_config_interface(CHR_CON7, 0x01, PMIC_BATON_TDET_EN_MASK, PMIC_BATON_TDET_EN_SHIFT); //BATON_TDET_EN=1
     //ret=pmic_config_interface(AUXADC_CON0, 0x01, PMIC_RG_BUF_PWD_B_MASK, PMIC_RG_BUF_PWD_B_SHIFT); //RG_BUF_PWD_B=1

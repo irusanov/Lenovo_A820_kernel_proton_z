@@ -84,6 +84,12 @@ typedef enum{
     PMIC_PWM_2 = 2
 } MT65XX_PMIC_PWM_NUMBER;
 #endif
+/*lenovo-sw zhouwl, 2013-01-29, add for breath led*/
+#if defined(LENOVO_PROJECT_S820) || defined(LENOVO_PROJECT_S820_ROW)
+unsigned int breath_style = 0;
+unsigned int breath_color = 0;
+#endif
+/*lenovo-sw zhouwl, 2013-01-29, add for breath led*/
 
 /*****************PWM *************************************************/
 int time_array[PWM_DIV_NUM]={256,512,1024,2048,4096,8192,16384,32768};
@@ -946,8 +952,18 @@ static int brightness_set_pmic(enum mt65xx_led_pmic pmic_type, u32 level, u32 di
 			{
 
 				upmu_set_isinks_ch0_mode(PMIC_PWM_0);
+/*[Athena]Begin lenovo-sw wengjun1 add for led modify. 2013-1-16*/ 				
+#ifdef LENOVO_PROJECT_A830				
+				upmu_set_isinks_ch0_step(0x1);//5mA
+				upmu_set_isink_dim0_duty(19);
+#elif defined(LENOVO_PROJECT_SEINE)//lenovo jixu add
+				upmu_set_isinks_ch0_step(0x1);//8mA
+				upmu_set_isink_dim0_duty(31);
+#else
 				upmu_set_isinks_ch0_step(0x0);//4mA
 				upmu_set_isink_dim0_duty(1);
+#endif
+/*[Athena]End lenovo-sw wengjun1 add for led modify. 2013-1-16*/ 
 				upmu_set_isink_dim0_fsel(1);//6320 1.5KHz
 				//hwBacklightISINKTuning(MT65XX_LED_PMIC_NLED_ISINK5, PMIC_PWM_2, 0x0, 0);
 				upmu_set_isinks_ch1_mode(PMIC_PWM_0);
@@ -1187,6 +1203,8 @@ static int brightness_set_gpio(int gpio_num, enum led_brightness level)
 	return 0;
 }
 #endif
+//lenovo jixu add this extern for fix lcd blurred screen when power on and system resume;
+extern BOOL is_early_suspended;
 
 #if defined CONFIG_ARCH_MT6589
 static int mt65xx_led_set_cust(struct cust_mt65xx_led *cust, int level)
@@ -1256,7 +1274,28 @@ static int mt65xx_led_set_cust(struct cust_mt65xx_led *cust, int level)
               
 		case MT65XX_LED_MODE_PMIC:
 			return brightness_set_pmic(cust->data, level, bl_div);
-            
+			
+			/*lenovo-sw jixu 2013.01.17 begin*/
+		#if defined(LENOVO_PROJECT_SEINE)||defined(LENOVO_PROJECT_PRADA) || defined(LENOVO_PROJECT_PRADA_ROW)
+		case MT65XX_LED_MODE_CUST:
+			 if(strcmp(cust->name,"greenled") == 0) {
+			  return ((cust_brightness_set)(cust->data))(level, 0); 
+			 }
+			 if(strcmp(cust->name,"greenled-flash") == 0) {
+			  return ((cust_brightness_set)(cust->data))(level, 0); 
+			 }
+		#endif
+		/*lenovo-sw jixu 2013.01.17 end*/
+
+		/*lenovo-sw zhouwl, 2013-01-29, add for breath led*/
+		#if defined(LENOVO_PROJECT_S820) || defined(LENOVO_PROJECT_S820_ROW)
+		case MT65XX_LED_MODE_CUST:
+                 if(strcmp(cust->name,"breath") == 0) {
+		       return ((cust_breath_set)(cust->data))(level);
+                 }
+		#endif
+		/*lenovo-sw zhouwl, 2013-01-29, add for breath led*/
+
 		case MT65XX_LED_MODE_CUST_LCM:
             if(strcmp(cust->name,"lcd-backlight") == 0)
 			{
@@ -1303,6 +1342,10 @@ static int mt65xx_led_set_cust(struct cust_mt65xx_led *cust, int level)
 			#endif
 					//printk("brightness_set_cust:backlight control by BLS_PWM!!\n");
 			//#if !defined (MTK_AAL_SUPPORT)
+			//lenovo jixu add this if for fix lcd blurred screen when power on and system resume;
+			if(is_early_suspended)
+				return 0;
+				
 			return ((cust_set_brightness)(cust->data))(level);
 			printk("brightness_set_cust:backlight control by BLS_PWM done!!\n");
 			//#endif
@@ -1430,6 +1473,15 @@ static void mt65xx_led_set(struct led_classdev *led_cdev, enum led_brightness le
 	struct mt65xx_led_data *led_data =
 		container_of(led_cdev, struct mt65xx_led_data, cdev);
 
+        /*lenovo-sw zhouwl, 2013-01-29, add for breath led*/
+	#if defined(LENOVO_PROJECT_S820) || defined(LENOVO_PROJECT_S820_ROW)
+        if(strcmp(led_data->cust.name,"breath") == 0) {
+            led_data->level = level;
+            printk("mt65xx_led_set breath level=%d\n", level);
+            schedule_work(&led_data->work);
+	} else
+	#endif
+	/*lenovo-sw zhouwl, 2013-01-29, add for breath led*/
 	// do something only when level is changed
 	if (led_data->level != level) {
 		led_data->level = level;
@@ -1587,8 +1639,27 @@ int mt65xx_leds_brightness_set(enum mt65xx_led_type type, enum led_brightness le
 }
 
 EXPORT_SYMBOL(mt65xx_leds_brightness_set);
+//begin lenovo jixu add this function for fix lcd blurred screen when power on and system resume;
+int mt65xx_leds_brightness_set_custom(int type, int level)
+{
+	struct cust_mt65xx_led *cust_led_list = get_cust_led_list();
 
+	LEDS_DEBUG("[LED]#%d:%d\n", type, level);
 
+	if (type < 0 || type >= MT65XX_LED_TYPE_TOTAL)
+		return -1;
+
+	if (level > LED_FULL)
+		level = LED_FULL;
+	else if (level < 0)
+		level = 0;
+
+	return mt65xx_led_set_cust(&cust_led_list[type], level);
+
+}
+
+EXPORT_SYMBOL(mt65xx_leds_brightness_set_custom);
+//end lenovo jixu add this function for fix lcd blurred screen when power on and system resume;
 static ssize_t show_duty(struct device *dev,struct device_attribute *attr, char *buf)
 {
 	LEDS_DEBUG("[LED]get backlight duty value is:%d \n",bl_duty);
@@ -1752,7 +1823,65 @@ static ssize_t show_pwm_register(struct device *dev,struct device_attribute *att
 
 static DEVICE_ATTR(pwm_register, 0664, show_pwm_register, store_pwm_register);
 
+/*lenovo-sw zhouwl, 2013-01-29, add for breath led*/
+#if defined(LENOVO_PROJECT_S820) || defined(LENOVO_PROJECT_S820_ROW)
+static ssize_t show_breath_style(struct device *dev, 
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", breath_style);
+}
 
+static ssize_t store_breath_style(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	ssize_t ret = -EINVAL;
+	char *after;
+	unsigned long style = simple_strtoul(buf, &after, 10);
+	size_t count = after - buf;
+
+	if (isspace(*after))
+		count++;
+
+	if (count == size) {
+		ret = count;
+                breath_style = style;
+                LEDS_DEBUG("store_breath_style style=%ul\n", style);
+	}
+
+	return ret;
+}
+
+static DEVICE_ATTR(style, 0664, show_breath_style, store_breath_style);
+
+static ssize_t show_breath_color(struct device *dev, 
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", breath_color);
+}
+
+static ssize_t store_breath_color(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	ssize_t ret = -EINVAL;
+	char *after;
+	unsigned long style = simple_strtoul(buf, &after, 10);
+	size_t count = after - buf;
+
+	if (isspace(*after))
+		count++;
+
+	if (count == size) {
+		ret = count;
+                breath_color = style;
+                LEDS_DEBUG("store_breath_color color=%ul\n", style);
+	}
+
+	return ret;
+}
+
+static DEVICE_ATTR(color, 0664, show_breath_color, store_breath_color);
+#endif
+/*lenovo-sw zhouwl, 2013-01-29, add for breath led*/
 /****************************************************************************
  * driver functions
  ***************************************************************************/
@@ -1788,6 +1917,22 @@ static int __init mt65xx_leds_probe(struct platform_device *pdev)
 		INIT_WORK(&g_leds_data[i]->work, mt65xx_led_work);
 
 		ret = led_classdev_register(&pdev->dev, &g_leds_data[i]->cdev);
+
+		/*lenovo-sw, zhouwl, 2012-08-06*/
+              #if defined(LENOVO_PROJECT_S820) || defined(LENOVO_PROJECT_S820_ROW)
+              if(strcmp(g_leds_data[i]->cdev.name,"breath") == 0) {
+                    rc = device_create_file(g_leds_data[i]->cdev.dev, &dev_attr_style);
+                    if(rc) {
+                        LEDS_DEBUG("[LED]device_create_style duty fail!\n");
+                    }
+            
+                    rc = device_create_file(g_leds_data[i]->cdev.dev, &dev_attr_color);
+                    if(rc) {
+                        LEDS_DEBUG("[LED]device_create_color duty fail!\n");
+                    }
+              }
+              #endif
+		/*lenovo-sw, zhouwl, 2012-08-06*/
         
 		if(strcmp(g_leds_data[i]->cdev.name,"lcd-backlight") == 0)
 		{
@@ -1902,6 +2047,34 @@ static void mt65xx_leds_shutdown(struct platform_device *pdev)
 		    case MT65XX_LED_MODE_PMIC:
 			    brightness_set_pmic(g_leds_data[i]->cust.data, 0, 0);
                 break;
+
+			/*lenovo-sw jixu 2013.01.17 begin*/
+			#if defined(LENOVO_PROJECT_SEINE)||defined(LENOVO_PROJECT_PRADA) || defined(LENOVO_PROJECT_PRADA_ROW)
+
+			case MT65XX_LED_MODE_CUST:
+				if(strcmp(g_leds_data[i]->cust.name,"greenled") == 0) {				
+			    	((cust_brightness_set)(g_leds_data[i]->cust.data))(0,0);
+				}if(strcmp(g_leds_data[i]->cust.name,"greenled-flash") == 0) {				
+			    	((cust_brightness_set)(g_leds_data[i]->cust.data))(0,0);
+				}
+                break;
+                    #endif
+			/*lenovo-sw jixu 2013.01.17 end*/
+
+		/*lenovo-sw, zhouwl, 2012-08-06*/
+		#if defined(LENOVO_PROJECT_S820) || defined(LENOVO_PROJECT_S820_ROW)
+		    case MT65XX_LED_MODE_CUST:
+			if(strcmp(g_leds_data[i]->cust.name,"breath") == 0) {
+				printk("[LED]backlight control through breath!!1\n");
+                            ((cust_breath_set)(g_leds_data[i]->cust.data))(0);
+                                return 1;
+                            }
+		     break;
+		#endif
+		/*lenovo-sw, zhouwl, 2012-08-06*/
+
+
+				
 		    case MT65XX_LED_MODE_CUST_LCM:
 				printk("[LED]backlight control through LCM!!1\n");
 			    ((cust_brightness_set)(g_leds_data[i]->cust.data))(0, bl_div);

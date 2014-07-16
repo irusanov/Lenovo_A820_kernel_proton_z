@@ -697,6 +697,8 @@ static s32 gtp_init_panel(struct i2c_client *client)
         }
 
         rd_cfg_buf[GTP_ADDR_LENGTH] &= 0x03;
+        //Need to check SENSOR ID when use 2nd solution TP
+        rd_cfg_buf[GTP_ADDR_LENGTH] -= 2;//SENSOR ID=2 => 0(GROUP1); SENSOR ID=3 => 1(GROUP2)
     }
 
     GTP_INFO("SENSOR ID:%d", rd_cfg_buf[GTP_ADDR_LENGTH]);
@@ -1436,6 +1438,12 @@ static s8 gtp_enter_sleep(struct i2c_client *client)
     s8 retry = 0;
     u8 i2c_control_buf[3] = {(u8)(GTP_REG_SLEEP >> 8), (u8)GTP_REG_SLEEP, 5};
 #if GTP_POWER_CTRL_SLEEP
+    GTP_GPIO_OUTPUT(GTP_RST_PORT, 0);
+    msleep(5);
+
+    mt_set_gpio_mode(GPIO118, GPIO_MODE_00);
+    mt_set_gpio_mode(GPIO119, GPIO_MODE_00);
+    
     //MT6589 power down
     hwPowerDown(MT65XX_POWER_LDO_VGP5, "TP");
     //hwPowerDown(MT65XX_POWER_LDO_VGP, "TP");
@@ -1482,6 +1490,9 @@ static s8 gtp_wakeup_sleep(struct i2c_client *client)
     GTP_INFO("GTP wakeup begin.");
 #if GTP_POWER_CTRL_SLEEP
 
+    mt_set_gpio_mode(GPIO118, GPIO_MODE_01);
+    mt_set_gpio_mode(GPIO119, GPIO_MODE_01);
+    
     while (retry++ < 5)
     {
         ret = tpd_power_on(client);

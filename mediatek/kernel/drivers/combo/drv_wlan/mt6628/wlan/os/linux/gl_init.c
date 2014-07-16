@@ -827,7 +827,7 @@ static const UINT_32 mtk_cipher_suites[] = {
     WLAN_CIPHER_SUITE_WEP104,
     WLAN_CIPHER_SUITE_TKIP,
     WLAN_CIPHER_SUITE_CCMP,
-
+    
     /* keep last -- depends on hw flags! */
     WLAN_CIPHER_SUITE_AES_CMAC
 };
@@ -1935,7 +1935,7 @@ wlanUpdateChannelTable(
                 }
             }
             break;
-
+            
         case BAND_5G:
             for(j = 0 ; j < ARRAY_SIZE(mtk_5ghz_channels) ; j++) {
                 if(mtk_5ghz_channels[j].hw_value == aucChannelList[i].ucChannelNum) {
@@ -1944,7 +1944,7 @@ wlanUpdateChannelTable(
                 }
             }
             break;
-
+            
         default:
             break;
         }
@@ -2141,7 +2141,7 @@ wlanNetCreate(
     }
 
     //4 <3> Initial Glue structure
-    //4 <3.1> create net device
+    //4 <3.1> create net device 
     prGlueInfo->prDevHandler = alloc_netdev_mq(sizeof(P_GLUE_INFO_T), NIC_INF_NAME, ether_setup, CFG_MAX_TXQ_NUM);
 
     DBGLOG(INIT, INFO, ("net_device prDev(0x%p) allocated\n", prGlueInfo->prDevHandler));
@@ -2170,7 +2170,7 @@ wlanNetCreate(
     //4 <3.1.3> co-relate net device & prDev
     SET_NETDEV_DEV(prGlueInfo->prDevHandler, wiphy_dev(prWdev->wiphy));
 
-    //4 <3.2> initiali glue variables
+    //4 <3.2> initiali glue variables 
     prGlueInfo->eParamMediaStateIndicated = PARAM_MEDIA_STATE_DISCONNECTED;
     prGlueInfo->ePowerState = ParamDeviceStateD0;
     prGlueInfo->fgIsMacAddrOverride = FALSE;

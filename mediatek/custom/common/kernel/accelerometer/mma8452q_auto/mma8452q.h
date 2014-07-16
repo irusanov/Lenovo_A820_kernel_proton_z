@@ -27,7 +27,7 @@
 extern struct acc_hw* mma8452q_get_cust_acc_hw(void); 
 
 	 
-#define MMA8452Q_I2C_SLAVE_ADDR		0x1C //0x3A<->SA0=1 ;0x38<->SA0=0
+#define MMA8452Q_I2C_SLAVE_ADDR		0x3A //0x3A<->SA0=1 ;0x38<->SA0=0
 	 
 	 /* MMA8452Q Register Map  (Please refer to MMA8452Q Specifications) */
 

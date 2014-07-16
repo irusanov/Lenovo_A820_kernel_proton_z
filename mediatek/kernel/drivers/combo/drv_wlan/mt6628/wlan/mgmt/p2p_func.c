@@ -1491,7 +1491,10 @@ p2pFuncValidateAuth (
             /* GROUP limit full. */
             /* P2P 3.2.8 */
             DBGLOG(P2P, WARN, ("Group Limit Full. (%d)\n", (INT_16)prP2pBssInfo->rStaRecOfClientList.u4NumElem));
-            cnmStaRecFree(prAdapter, prStaRec, FALSE);
+
+			bssRemoveStaRecFromClientList(prAdapter, prP2pBssInfo, prStaRec);
+			
+			cnmStaRecFree(prAdapter, prStaRec, FALSE);
             break;
         }
         else {

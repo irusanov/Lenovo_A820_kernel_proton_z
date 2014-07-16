@@ -13,10 +13,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
  *
- * Version:1.0
- *      V1.0:2012/08/27,first release.
- *      V1.2:2012/10/15,modify gt9110p pid map
- *
+ * Version:1.2
+ *      V1.0:2012/08/31,first release.
+ *      V1.2:2012/10/15,add force update,GT9110P pid map
  */
 #include "tpd.h"
 #include <linux/interrupt.h>
@@ -39,16 +38,20 @@
 #define GUP_REG_FW_MSG              0x41E4
 #define GUP_REG_PID_VID             0x8140
 
-#define GUP_SEARCH_FILE_TIMES       200
-#define UPDATE_FILE_PATH_1          "/data/_goodix_update_.bin"
-#define UPDATE_FILE_PATH_2          "/sdcard/goodix/_goodix_update_.bin"
+#define GUP_SEARCH_FILE_TIMES       50
+#define UPDATE_FILE_PATH_2          "/data/goodix/_goodix_update_.bin"
+#define UPDATE_FILE_PATH_1          "/storage/sdcard1/goodix/_goodix_update_.bin"
+
+#define CONFIG_FILE_PATH_2          "/data/goodix/_goodix_config_.cfg"
+#define CONFIG_FILE_PATH_1          "/storage/sdcard1/goodix/_goodix_config_.cfg"
 
 #define FW_HEAD_LENGTH               14
-#define FW_DOWNLOAD_LENGTH           0x4000
 #define FW_SECTION_LENGTH            0x2000
 #define FW_DSP_ISP_LENGTH            0x1000
 #define FW_DSP_LENGTH                0x1000
 #define FW_BOOT_LENGTH               0x800
+#define FW_DOWNLOAD_LENGTH           0x4000
+#define FW_LENGTH                    (4*FW_SECTION_LENGTH+FW_DSP_ISP_LENGTH+FW_DSP_LENGTH+FW_BOOT_LENGTH)
 
 #define PACK_SIZE                    256
 #define MAX_FRAME_CHECK_TIME         5
@@ -80,6 +83,7 @@ typedef struct
     u8 force_update;
     u8 fw_flag;
     struct file *file;
+    struct file *cfg_file;
     st_fw_head  ic_fw_msg;
     mm_segment_t old_fs;
 } st_update_msg;
@@ -88,6 +92,12 @@ st_update_msg update_msg;
 struct i2c_client *guitar_client = NULL;
 u16 show_len;
 u16 total_len;
+u8 *fw_buf;
+
+extern s32  gtp_i2c_read(struct i2c_client *client, uint8_t *buf, s32 len);
+extern s32  gtp_i2c_write(struct i2c_client *client, uint8_t *data, s32 len);
+extern void gtp_reset_guitar(struct i2c_client *client, s32 ms);
+extern s32  gtp_send_cfg(struct i2c_client *client);
 
 static u8 gup_get_ic_msg(struct i2c_client *client, u16 addr, u8 *msg, s32 len)
 {
@@ -162,8 +172,8 @@ static u8 gup_get_ic_fw_msg(struct i2c_client *client)
         update_msg.ic_fw_msg.hw_info[i] = buf[GTP_ADDR_LENGTH + 3 - i];
     }
 
-    GTP_INFO("IC Hardware info:%02x%02x%02x%02x", update_msg.ic_fw_msg.hw_info[0], update_msg.ic_fw_msg.hw_info[1],
-             update_msg.ic_fw_msg.hw_info[2], update_msg.ic_fw_msg.hw_info[3]);
+    GTP_DEBUG("IC Hardware info:%02x%02x%02x%02x", update_msg.ic_fw_msg.hw_info[0], update_msg.ic_fw_msg.hw_info[1],
+              update_msg.ic_fw_msg.hw_info[2], update_msg.ic_fw_msg.hw_info[3]);
 
     //step2:get firmware message
     for (retry = 0; retry < 2; retry++)
@@ -188,7 +198,7 @@ static u8 gup_get_ic_fw_msg(struct i2c_client *client)
         break;
     }
 
-    GTP_INFO("IC force update flag:0x%x", update_msg.force_update);
+    GTP_DEBUG("IC force update flag:0x%x", update_msg.force_update);
 
     //step3:get pid & vid
     ret = gup_get_ic_msg(client, GUP_REG_PID_VID, buf, 6);
@@ -201,7 +211,7 @@ static u8 gup_get_ic_fw_msg(struct i2c_client *client)
 
     memset(update_msg.ic_fw_msg.pid, 0, sizeof(update_msg.ic_fw_msg.pid));
     memcpy(update_msg.ic_fw_msg.pid, &buf[GTP_ADDR_LENGTH], 4);
-
+    GTP_DEBUG("IC Product id:%s", update_msg.ic_fw_msg.pid);
 
     //GT9XX PID MAPPING
     /*|-----FLASH-----RAM-----|
@@ -213,16 +223,18 @@ static u8 gup_get_ic_fw_msg(struct i2c_client *client)
       |------927P-----927P----|
       |------9110-----9110----|
       |------9110P----9111----|*/
-    if(update_msg.ic_fw_msg.pid[0] != 0)
+    if (update_msg.ic_fw_msg.pid[0] != 0)
     {
         if (!memcmp(update_msg.ic_fw_msg.pid, "9111", 4))
         {
-            GTP_INFO("IC Mapping Product id:%s", update_msg.ic_fw_msg.pid);
+            GTP_DEBUG("IC Mapping Product id:%s", update_msg.ic_fw_msg.pid);
             memcpy(update_msg.ic_fw_msg.pid, "9110P", 5);
         }
     }
 
     update_msg.ic_fw_msg.vid = buf[GTP_ADDR_LENGTH + 4] + (buf[GTP_ADDR_LENGTH + 5] << 8);
+    GTP_DEBUG("IC version id:%04x", update_msg.ic_fw_msg.vid);
+
     return SUCCESS;
 }
 
@@ -250,7 +262,7 @@ s32 gup_enter_update_mode(struct i2c_client *client)
 void gup_leave_update_mode(void)
 {
     GTP_GPIO_AS_INT(GTP_INT_PORT);
-    
+
     GTP_DEBUG("[leave_update_mode]reset chip.");
     gtp_reset_guitar(guitar_client, 20);
 }
@@ -259,22 +271,22 @@ static u8 gup_enter_upadte_judge(st_fw_head *fw_head)
 {
     u16 u16_tmp;
 
-
     u16_tmp = fw_head->vid;
     fw_head->vid = (u16)(u16_tmp >> 8) + (u16)(u16_tmp << 8);
 
-    GTP_INFO("FILE HARDWARE INFO:%02x%02x%02x%02x", fw_head->hw_info[0], fw_head->hw_info[1], fw_head->hw_info[2], fw_head->hw_info[3]);
-    GTP_INFO("FILE PID:%s", fw_head->pid);
-    GTP_INFO("FILE VID:%04x", fw_head->vid);
-    GTP_INFO("IC HARDWARE INFO:%02x%02x%02x%02x", update_msg.ic_fw_msg.hw_info[0], update_msg.ic_fw_msg.hw_info[1],
-             update_msg.ic_fw_msg.hw_info[2], update_msg.ic_fw_msg.hw_info[3]);
-    GTP_INFO("IC PID:%s", update_msg.ic_fw_msg.pid);
-    GTP_INFO("IC VID:%04x", update_msg.ic_fw_msg.vid);
+    GTP_DEBUG("FILE HARDWARE INFO:%02x%02x%02x%02x", fw_head->hw_info[0], fw_head->hw_info[1], fw_head->hw_info[2], fw_head->hw_info[3]);
+    GTP_DEBUG("FILE PID:%s", fw_head->pid);
+    GTP_DEBUG("FILE VID:%04x", fw_head->vid);
+
+    GTP_DEBUG("IC HARDWARE INFO:%02x%02x%02x%02x", update_msg.ic_fw_msg.hw_info[0], update_msg.ic_fw_msg.hw_info[1],
+              update_msg.ic_fw_msg.hw_info[2], update_msg.ic_fw_msg.hw_info[3]);
+    GTP_DEBUG("IC PID:%s", update_msg.ic_fw_msg.pid);
+    GTP_DEBUG("IC VID:%04x", update_msg.ic_fw_msg.vid);
 
     //First two conditions
     if (!memcmp(fw_head->hw_info, update_msg.ic_fw_msg.hw_info, sizeof(update_msg.ic_fw_msg.hw_info)))
     {
-        GTP_INFO("Get the same hardware info.");
+        GTP_DEBUG("Get the same hardware info.");
 
         if (update_msg.force_update != 0xBE)
         {
@@ -283,10 +295,10 @@ static u8 gup_enter_upadte_judge(st_fw_head *fw_head)
         }
 
         if ((!memcmp(fw_head->pid, update_msg.ic_fw_msg.pid, strlen(fw_head->pid))) ||
-                (!memcmp(update_msg.ic_fw_msg.pid, "91XX", 4))||
+                (!memcmp(update_msg.ic_fw_msg.pid, "91XX", 4)) ||
                 (!memcmp(fw_head->pid, "91XX", 4)))
         {
-            if(!memcmp(fw_head->pid, "91XX", 4))
+            if (!memcmp(fw_head->pid, "91XX", 4))
             {
                 GTP_DEBUG("Force none same pid update mode.");
             }
@@ -303,59 +315,199 @@ static u8 gup_enter_upadte_judge(st_fw_head *fw_head)
                 return SUCCESS;
             }
 
-            GTP_INFO("Don't meet the third condition.");
+            GTP_ERROR("Don't meet the third condition.");
         }
     }
 
     return FAIL;
 }
 
-static u8 gup_check_fs_mounted(char *path_name)
+static u8 ascii2hex(u8 a)
 {
-    struct path root_path;
-    struct path path;
-    int err;
-    err = kern_path("/", LOOKUP_FOLLOW, &root_path);
+    s8 value = 0;
 
-    if (err)
-        return FAIL;
-
-    err = kern_path(path_name, LOOKUP_FOLLOW, &path);
-
-    if (err)
-        return FAIL;
-
-    if (path.mnt->mnt_sb == root_path.mnt->mnt_sb)
+    if (a >= '0' && a <= '9')
     {
-        //-- not mounted
-        return FAIL;
+        value = a - '0';
+    }
+    else if (a >= 'A' && a <= 'F')
+    {
+        value = a - 'A' + 0x0A;
+    }
+    else if (a >= 'a' && a <= 'f')
+    {
+        value = a - 'a' + 0x0A;
     }
     else
     {
-        return SUCCESS;
+        value = 0xff;
     }
 
+    return value;
+}
+
+static s8 gup_update_config(struct i2c_client *client)
+{
+    s32 file_len = 0;
+    s32 ret = 0;
+    s32 i = 0;
+    s32 file_cfg_len = 0;
+    s32 chip_cfg_len = 0;
+    s32 count = 0;
+    u8 *buf;
+    u8 *pre_buf;
+    u8 *file_config;
+    u8 checksum = 0;
+
+    if (IS_ERR(update_msg.cfg_file))
+    {
+        GTP_ERROR("[update_cfg]No need to upgrade config!");
+        return FAIL;
+    }
+
+    file_len = update_msg.cfg_file->f_op->llseek(update_msg.cfg_file, 0, SEEK_END);
+
+    chip_cfg_len = 186;
+
+    if (!memcmp(update_msg.ic_fw_msg.pid, "968", 3))
+    {
+        chip_cfg_len = 228;
+    }
+
+    GTP_DEBUG("[update_cfg]config file len:%d", file_len);
+    GTP_DEBUG("[update_cfg]need config len:%d", chip_cfg_len);
+
+    if ((file_len + 5) < chip_cfg_len * 5)
+    {
+        GTP_ERROR("Config length error");
+        return -1;
+    }
+
+    buf = (u8 *)kzalloc(file_len, GFP_KERNEL);
+    pre_buf = (u8 *)kzalloc(file_len, GFP_KERNEL);
+    file_config = (u8 *)kzalloc(chip_cfg_len + GTP_ADDR_LENGTH, GFP_KERNEL);
+    update_msg.cfg_file->f_op->llseek(update_msg.cfg_file, 0, SEEK_SET);
+
+    GTP_DEBUG("[update_cfg]Read config from file.");
+    ret = update_msg.cfg_file->f_op->read(update_msg.cfg_file, (char *)pre_buf, file_len, &update_msg.cfg_file->f_pos);
+
+    if (ret < 0)
+    {
+        GTP_ERROR("[update_cfg]Read config file failed.");
+        goto update_cfg_file_failed;
+    }
+
+    GTP_DEBUG("[update_cfg]Delete illgal charactor.");
+
+    for (i = 0, count = 0; i < file_len; i++)
+    {
+        if (pre_buf[i] == ' ' || pre_buf[i] == '\r' || pre_buf[i] == '\n')
+        {
+            continue;
+        }
+
+        buf[count++] = pre_buf[i];
+    }
+
+    GTP_DEBUG("[update_cfg]Ascii to hex.");
+    file_config[0] = GTP_REG_CONFIG_DATA >> 8;
+    file_config[1] = GTP_REG_CONFIG_DATA & 0xff;
+
+    for (i = 0, file_cfg_len = GTP_ADDR_LENGTH; i < count; i += 5)
+    {
+        if ((buf[i] == '0') && ((buf[i + 1] == 'x') || (buf[i + 1] == 'X')))
+        {
+            u8 high, low;
+            high = ascii2hex(buf[i + 2]);
+            low = ascii2hex(buf[i + 3]);
+
+            if ((high == 0xFF) || (low == 0xFF))
+            {
+                ret = 0;
+                GTP_ERROR("[update_cfg]Illegal config file.");
+                goto update_cfg_file_failed;
+            }
+
+            file_config[file_cfg_len++] = (high << 4) + low;
+        }
+        else
+        {
+            ret = 0;
+            GTP_ERROR("[update_cfg]Illegal config file.");
+            goto update_cfg_file_failed;
+        }
+    }
+
+    GTP_DEBUG("config:");
+    GTP_DEBUG_ARRAY(file_config, file_cfg_len);
+
+    //cal checksum
+#if 0
+
+    for (i = GTP_ADDR_LENGTH; i < chip_cfg_len; i++)
+    {
+        checksum += file_config[i];
+    }
+
+    file_config[chip_cfg_len] = (~checksum) + 1;
+#endif
+
+    i = 0;
+
+    while (i++ < 5)
+    {
+        ret = gtp_i2c_write(client, file_config, file_cfg_len);
+
+        if (ret > 0)
+        {
+            GTP_INFO("[update_cfg]Send config SUCCESS.");
+            break;
+        }
+
+        GTP_ERROR("[update_cfg]Send config i2c error.");
+    }
+
+update_cfg_file_failed:
+    kfree(pre_buf);
+    kfree(buf);
+    kfree(file_config);
+    return ret;
+}
+
+static u8 gup_load_update_file(st_fw_head *fw_head)
+{
+    s32 ret = 0;
+    update_msg.file->f_op->llseek(update_msg.file, 0, SEEK_SET);
+    //update_msg.file->f_pos = 0;
+    ret = update_msg.file->f_op->read(update_msg.file, (char *)fw_head, FW_HEAD_LENGTH, &update_msg.file->f_pos);
+
+    if (ret < 0)
+    {
+        GTP_ERROR("Read firmware head in update file error.");
+
+        return FAIL;
+    }
+
+    //memcpy(fw_head, buf, FW_HEAD_LENGTH);
+    update_msg.file->f_pos = FW_HEAD_LENGTH + 0;
+    ret = update_msg.file->f_op->read(update_msg.file, (char *)fw_buf, FW_LENGTH, &update_msg.file->f_pos);
+
+    if (ret < 0)
+    {
+        GTP_ERROR("Read firmware file fail.");
+
+        return FAIL;
+    }
+
+    return SUCCESS;
 }
 
 static u8 gup_check_update_file(struct i2c_client *client, st_fw_head *fw_head, u8 *path)
 {
-    int ret = 0;
-    int i = 0;
+    s32 ret = 0;
+    s32 i = 0;
+    s32 fw_checksum = 0;
     u8 buf[FW_HEAD_LENGTH];
-    int file_ready = 0;
-
-    for (i = 0; i < GUP_SEARCH_FILE_TIMES; i++)
-    {
-        msleep(500);
-        GTP_DEBUG("Wati for FS %d", i);
-
-        if (gup_check_fs_mounted("/data") == SUCCESS)
-        {
-            GTP_DEBUG("/data mounted ~!!!!");
-            break;
-        }
-    }
-
 
 
     if (path)
@@ -368,78 +520,134 @@ static u8 gup_check_update_file(struct i2c_client *client, st_fw_head *fw_head, 
             GTP_ERROR("Open update file(%s) error!", path);
             return FAIL;
         }
-        file_ready = 1;
     }
+
+#ifdef GTP_BOOT_FW_CONFIG_SD_UPDATE
     else
     {
-        //Begin to search update file
+
+        //Begin to search update file,the config file & firmware file must be in the same path,single or double.
         for (i = 0; i < GUP_SEARCH_FILE_TIMES; i++)
         {
-            update_msg.file = filp_open(UPDATE_FILE_PATH_1, O_RDWR | O_CREAT, 0666);
-
+            update_msg.file = filp_open(UPDATE_FILE_PATH_1, O_RDWR, 0444);
 
             if (IS_ERR(update_msg.file))
             {
+                update_msg.file = filp_open(UPDATE_FILE_PATH_2, O_RDWR, 0666);
 
-                msleep(300);
-                continue;
-            }
-            else
-            {
-                GTP_DEBUG("FILE_PATH_1 opened, size: %d bytes!",(int) update_msg.file->f_dentry->d_inode->i_size);
-
-                if (update_msg.file->f_dentry->d_inode->i_size == 0)
+                if (IS_ERR(update_msg.file))
                 {
-                    filp_close(update_msg.file, NULL);
-                    update_msg.file = filp_open(UPDATE_FILE_PATH_2, O_RDWR, 0666);
-
-                    if (!IS_ERR(update_msg.file))
-                    {
-                        if (update_msg.file->f_dentry->d_inode->i_size == 0)
-                        {
-                            filp_close(update_msg.file, NULL);
-                        }
-                        else
-                        {
-                            GTP_DEBUG("FILE_PATH_2 ready!");
-                            file_ready = 1;
-                        }
-                    }
+                    GTP_DEBUG("%3d:Searching file...", i);
+                    msleep(1000);
+                    continue;
                 }
                 else
                 {
-                    GTP_DEBUG("FILE_PATH_1 ready!");
-                    file_ready = 1;
+                    GTP_DEBUG("Find UPDATE_FILE_PATH_2");
+                    break;
                 }
+            }
+            else
+            {
+                GTP_DEBUG("Find UPDATE_FILE_PATH_1");
 
+                i = GUP_SEARCH_FILE_TIMES;
                 break;
             }
+        }
 
+        // make sure check config file at least once
+        if (i == GUP_SEARCH_FILE_TIMES)
+        {
+            i--;
+        }
+
+        for (; i < GUP_SEARCH_FILE_TIMES; i++)
+        {
+            update_msg.cfg_file = filp_open(CONFIG_FILE_PATH_1, O_RDWR, 0444);
+
+            if (IS_ERR(update_msg.cfg_file))
+            {
+                update_msg.cfg_file = filp_open(CONFIG_FILE_PATH_2, O_RDWR, 0666);
+
+                if (IS_ERR(update_msg.cfg_file))
+                {
+                    GTP_DEBUG("%3d:Searching file...", i);
+                    msleep(1000);
+                    continue;
+                }
+                else
+                {
+                    GTP_DEBUG("Find CONFIG_FILE_PATH_2");
+                    break;
+                }
+            }
+            else
+            {
+                GTP_DEBUG("Find CONFIG_FILE_PATH_1");
+                break;
+            }
+        }
+
+
+        if (!IS_ERR(update_msg.cfg_file))
+        {
+            GTP_DEBUG("Got the update config file.");
+            ret = gup_update_config(client);
+
+            if (ret <= 0)
+            {
+                GTP_ERROR("Update config failed.");
+            }
+
+            filp_close(update_msg.cfg_file, NULL);
         }
     }
 
-    update_msg.old_fs = get_fs();
-    set_fs(KERNEL_DS);
 
-    if (file_ready == 0)
+
+    if (!IS_ERR(update_msg.file))
     {
-        GTP_DEBUG("FW not ready, restore default FW!");
-        update_msg.file = filp_open(UPDATE_FILE_PATH_1, O_RDWR , 0666);
-        update_msg.file->f_op->llseek(update_msg.file, 0, SEEK_SET);
-        update_msg.file->f_op->write(update_msg.file, (char *)gtp_default_FW, sizeof(gtp_default_FW), &update_msg.file->f_pos);
+        ret = gup_load_update_file(fw_head);
         filp_close(update_msg.file, NULL);
-        update_msg.file = filp_open(UPDATE_FILE_PATH_1, O_RDWR , 0444);
+
+        if (ret == FAIL)
+        {
+            return FAIL;
+        }
+    }
+    else //default FW
+    {
+        GTP_DEBUG("Load Default FW.");
+        memcpy(fw_head, gtp_default_FW, FW_HEAD_LENGTH);
+        memcpy(fw_buf, gtp_default_FW + FW_HEAD_LENGTH, FW_LENGTH);
     }
 
-    update_msg.file->f_op->llseek(update_msg.file, 0, SEEK_SET);
-    //update_msg.file->f_pos = 0;
+#endif //end BOOT_FW_CONFIG_SD_UPDATE
 
-    ret = update_msg.file->f_op->read(update_msg.file, (char *)buf, FW_HEAD_LENGTH, &update_msg.file->f_pos);
+    //check firmware legality
+    fw_checksum = 0;
+    u8 empty_test = 0;
 
-    if (ret < 0)
+    for (i = 0; i < FW_SECTION_LENGTH * 4 + FW_DSP_ISP_LENGTH + FW_DSP_LENGTH + FW_BOOT_LENGTH; i += 2)
     {
-        GTP_ERROR("Read firmware head in update file error.");
-        goto load_failed;
+        u16 temp;
+        //GTP_DEBUG("BUF[0]:%x", buf[0]);
+        empty_test |= fw_buf[i];
+        empty_test |= fw_buf[i + 1];
+        temp = (fw_buf[i] << 8) + fw_buf[i + 1];
+        fw_checksum += temp;
+    }
+
+    GTP_DEBUG("firmware checksum:%x empty_test:%x", (fw_checksum & 0xFFFF), empty_test);
+
+    if ((fw_checksum & 0xFFFF) || (empty_test == 0))
+    {
+        GTP_ERROR("Illegal or empty firmware file.");
+        GTP_ERROR("Load Default FW.");
+        memcpy(fw_head, gtp_default_FW, FW_HEAD_LENGTH);
+        memcpy(fw_buf, gtp_default_FW + FW_HEAD_LENGTH, FW_LENGTH);
+
     }
 
     //Get the correct nvram data
@@ -448,7 +656,6 @@ static u8 gup_check_update_file(struct i2c_client *client, st_fw_head *fw_head, 
     //2. the product id is the same
     //3. the firmware version in update file is greater than the firmware version in ic
     //or the check sum in ic is wrong
-    memcpy(fw_head, buf, FW_HEAD_LENGTH);
 
     ret = gup_enter_upadte_judge(fw_head);
 
@@ -457,36 +664,13 @@ static u8 gup_check_update_file(struct i2c_client *client, st_fw_head *fw_head, 
         GTP_INFO("Check *.bin file success.");
         return SUCCESS;
     }
-
-load_failed:
-    set_fs(update_msg.old_fs);
-    filp_close(update_msg.file, NULL);
-    return FAIL;
-}
-
-#if 0
-static u8 gup_check_update_header(struct i2c_client *client, st_fw_head *fw_head)
-{
-    const u8 *pos;
-    int i = 0;
-    u8 mask_num = 0;
-    s32 ret = 0;
-
-    pos = HEADER_UPDATE_DATA;
-
-    memcpy(fw_head, pos, FW_HEAD_LENGTH);
-    pos += FW_HEAD_LENGTH;
-
-    ret = gup_enter_upadte_judge(fw_head);
-
-    if (SUCCESS == ret)
+    else
     {
-        return SUCCESS;
+        GTP_INFO("Check *.bin file fail.");
+        return FAIL;
     }
-
-    return FAIL;
 }
-#endif
+
 
 static u8 gup_burn_proc(struct i2c_client *client, u8 *burn_buf, u16 start_addr, u16 total_length)
 {
@@ -544,7 +728,7 @@ static u8 gup_burn_proc(struct i2c_client *client, u8 *burn_buf, u16 start_addr,
             }
         }
 
-        if (retry > MAX_FRAME_CHECK_TIME)
+        if (retry >= MAX_FRAME_CHECK_TIME)
         {
             GTP_ERROR("Burn frame data time out,exit.");
             return FAIL;
@@ -559,24 +743,8 @@ static u8 gup_burn_proc(struct i2c_client *client, u8 *burn_buf, u16 start_addr,
 
 static u8 gup_load_section_file(u8 *buf, u16 offset, u16 length)
 {
-    s32 ret = 0;
 
-    if (update_msg.file == NULL)
-    {
-        GTP_ERROR("cannot find update file,load section file fail.");
-        return FAIL;
-    }
-
-    update_msg.file->f_pos = FW_HEAD_LENGTH + offset;
-
-    ret = update_msg.file->f_op->read(update_msg.file, (char *)buf, length, &update_msg.file->f_pos);
-
-    if (ret < 0)
-    {
-        GTP_ERROR("Read update file fail.");
-        return FAIL;
-    }
-
+    memcpy(buf, fw_buf + offset, length);
     return SUCCESS;
 }
 
@@ -751,7 +919,7 @@ static u8 gup_burn_dsp_isp(struct i2c_client *client)
     u8 *fw_dsp_isp = NULL;
     u8  retry = 0;
 
-    GTP_INFO("[burn_dsp_isp]Begin burn dsp isp---->>");
+    GTP_DEBUG("[burn_dsp_isp]Begin burn dsp isp---->>");
 
     //step1:alloc memory
     GTP_DEBUG("[burn_dsp_isp]step1:alloc memory");
@@ -896,7 +1064,7 @@ static u8 gup_burn_fw_ss51(struct i2c_client *client)
     u8  retry = 0;
     s32 ret = 0;
 
-    GTP_INFO("[burn_fw_ss51]Begin burn ss51 firmware---->>");
+    GTP_DEBUG("[burn_fw_ss51]Begin burn ss51 firmware---->>");
 
     //step1:alloc memory
     GTP_DEBUG("[burn_fw_ss51]step1:alloc memory");
@@ -1027,7 +1195,7 @@ static u8 gup_burn_fw_dsp(struct i2c_client *client)
     u8  retry = 0;
     u8  rd_buf[5];
 
-    GTP_INFO("[burn_fw_dsp]Begin burn dsp firmware---->>");
+    GTP_DEBUG("[burn_fw_dsp]Begin burn dsp firmware---->>");
     //step1:alloc memory
     GTP_DEBUG("[burn_fw_dsp]step1:alloc memory");
 
@@ -1170,7 +1338,7 @@ static u8 gup_burn_fw_boot(struct i2c_client *client)
     u8  retry = 0;
     u8  rd_buf[5];
 
-    GTP_INFO("[burn_fw_boot]Begin burn bootloader firmware---->>");
+    GTP_DEBUG("[burn_fw_boot]Begin burn bootloader firmware---->>");
 
     //step1:Alloc memory
     GTP_DEBUG("[burn_fw_boot]step1:Alloc memory");
@@ -1324,16 +1492,16 @@ s32 gup_update_proc(void *dir)
     u8  retry = 0;
     st_fw_head fw_head;
 
+    GTP_DEBUG("[update_proc]Begin update ......");
 
-
-    GTP_INFO("[update_proc]Begin update ......");
+    fw_buf = (u8 *)kzalloc(FW_LENGTH, GFP_KERNEL);
 
     show_len = 1;
     total_len = 100;
 
     if (dir == NULL)
     {
-        msleep(2000);                               //wait main thread to be completed
+        msleep(3000);                               //wait main thread to be completed
     }
 
     gtp_reset_guitar(guitar_client, 20);
@@ -1345,7 +1513,10 @@ s32 gup_update_proc(void *dir)
         goto update_fail;
     }
 
+    update_msg.old_fs = get_fs();
+    set_fs(KERNEL_DS);
     ret = gup_check_update_file(guitar_client, &fw_head, (u8 *)dir);
+    set_fs(update_msg.old_fs);
 
     if (FAIL == ret)
     {
@@ -1411,10 +1582,10 @@ s32 gup_update_proc(void *dir)
         goto update_fail;
     }
 
-    
+    GTP_DEBUG("[update_proc]leave update mode.");
+    gup_leave_update_mode();
 
-    GTP_DEBUG("[update_proc]reset chip.");
-    gtp_reset_guitar(guitar_client, 20);
+
     msleep(100);
     GTP_DEBUG("[update_proc]send config.");
     ret = gtp_send_cfg(guitar_client);
@@ -1426,15 +1597,12 @@ s32 gup_update_proc(void *dir)
 
     show_len = 100;
     total_len = 100;
-    
-    GTP_DEBUG("[update_proc]leave update mode.");
-    gup_leave_update_mode();
+    kfree(fw_buf);
     return SUCCESS;
 update_fail:
     show_len = 200;
     total_len = 100;
-    
-
+    kfree(fw_buf);
     return FAIL;
 }
 
@@ -1694,6 +1862,7 @@ s32 gup_fw_download_proc(void *dir)
     st_fw_head fw_head;
 
     GTP_INFO("[fw_download_proc]Begin fw download ......");
+    fw_buf = (u8 *)kzalloc(FW_LENGTH, GFP_KERNEL);
 
     if (dir == NULL)
     {
@@ -1709,7 +1878,10 @@ download:
         goto download_fail;
     }
 
+    update_msg.old_fs = get_fs();
+    set_fs(KERNEL_DS);
     ret = gup_check_update_file(guitar_client, &fw_head, (u8 *)dir);
+    set_fs(update_msg.old_fs);
 
     if (FAIL == ret)
     {
@@ -1790,11 +1962,7 @@ download:
         goto download;
     }
 
-    if (ret < 0)
-    {
-        GTP_ERROR("[fw_download_proc]send config fail.");
-    }
-
+#if 0
     GTP_DEBUG("[fw_download_proc]send config.");
     ret = gtp_send_cfg(guitar_client);
 
@@ -1803,11 +1971,14 @@ download:
         GTP_ERROR("[fw_download_proc]send config fail.");
     }
 
-    
+#endif
+
     gtp_int_sync();
-    
+
+    kfree(fw_buf);
     return SUCCESS;
 download_fail:
+    kfree(fw_buf);
     return FAIL;
 }
 

@@ -187,7 +187,6 @@
 #define OV9726_SENSOR_ID                          0x9726
 #define A5141MIPI_SENSOR_ID                     0x4800
 #define A5142MIPI_SENSOR_ID                     0x4800
-#define GC2035_SENSOR_ID                        0x2035
 
 /* CAMERA DRIVER NAME */
 #define CAMERA_HW_DEVNAME            "kd_camera_hw"
@@ -244,7 +243,6 @@
 #define SENSOR_DRVNAME_A5142_MIPI_RAW   "a5142mipiraw"
 #define SENSOR_DRVNAME_S5K8AAYX_MIPI_YUV     "s5k8aayxmipiyuv"
 #define SENSOR_DRVNAME_S5K3H7Y_MIPI_RAW   "s5k3h7ymipiraw"
-#define SENSOR_DRVNAME_GC2035_YUV    	"gc2035yuv"
 #define SENSOR_DRVNAME_OV8825_MIPI_RAW   "ov8825mipiraw"
 #define SENSOR_DRVNAME_OV12830_MIPI_RAW   "ov12830mipiraw"
 

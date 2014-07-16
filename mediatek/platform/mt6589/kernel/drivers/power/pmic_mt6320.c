@@ -842,7 +842,7 @@ void cust_pmic_interrupt_en_setting(void)
     upmu_set_rg_int_en_vproc(0);
     upmu_set_rg_int_en_rtc(1);
     upmu_set_rg_int_en_audio(0);
-    upmu_set_rg_int_en_accdet(1);
+    //upmu_set_rg_int_en_accdet(1);
     upmu_set_rg_int_en_homekey(1);
     upmu_set_rg_int_en_ldo(0);    
 }

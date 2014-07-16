@@ -73,20 +73,6 @@
 #define AKMFUNC(func)
 #endif
 
-#ifdef MTK_AUTO_DETECT_MAGNETOMETER
-/* Add for auto detect feature */
-extern struct mag_hw* akm8963_get_cust_mag_hw(void); 
-static int  akm8963_local_init(void);
-static int akm_remove(void);
-static int akm8963_init_flag =0;
-static struct sensor_init_info akm8963_init_info = {		
-	.name = "akm8963",		
-	.init = akm8963_local_init,		
-	.uninit = akm_remove,	
-};
-#endif
-
-
 static struct i2c_client *this_client = NULL;
 
 /* Addresses to scan -- protected by sense_data_mutex */
@@ -109,32 +95,18 @@ static int factory_mode=0;
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 static const struct i2c_device_id akm8963_i2c_id[] = {{AKM8963_DEV_NAME,0},{}};
-#if defined(ACER_C11)
-#ifdef MTK_AUTO_DETECT_MAGNETOMETER
-static struct i2c_board_info __initdata i2c_akm8963={ I2C_BOARD_INFO("akm8963", (0x1A>>1))};//18->1A
-#else
 static struct i2c_board_info __initdata i2c_akm8963={ I2C_BOARD_INFO("akm8963", (0x18>>1))};
-#endif
-#else
-static struct i2c_board_info __initdata i2c_akm8963={ I2C_BOARD_INFO("akm8963", (0x18>>1))};
-#endif
-#ifdef MTK_AUTO_DETECT_MAGNETOMETER
-#define	AKM8963_I2C_7BIT_ADDRESS  (AKM8963_I2C_ADDRESS>>1)
 /*the adapter id will be available in customization*/
-//static unsigned short akm8963_force[] = {0x00, (AKM8963_I2C_ADDRESS>>1), I2C_CLIENT_END, I2C_CLIENT_END};
-static const unsigned short normal_i2c[] = { 0x0c, I2C_CLIENT_END };
-static unsigned short akm8963_force[] = {(AKM8963_I2C_ADDRESS>>1), I2C_CLIENT_END, I2C_CLIENT_END};
-static const unsigned short *const akm8963_forces[] = { akm8963_force, NULL };
+//static unsigned short akm8963_force[] = {0x00, AKM8963_I2C_ADDRESS, I2C_CLIENT_END, I2C_CLIENT_END};
+//static const unsigned short *const akm8963_forces[] = { akm8963_force, NULL };
 //static struct i2c_client_address_data akm8963_addr_data = { .forces = akm8963_forces,};
-#endif
 /*----------------------------------------------------------------------------*/
 static int akm8963_i2c_probe(struct i2c_client *client, const struct i2c_device_id *id); 
 static int akm8963_i2c_remove(struct i2c_client *client);
 static int akm8963_i2c_detect(struct i2c_client *client, struct i2c_board_info *info);
-#ifndef MTK_AUTO_DETECT_MAGNETOMETER
 static int akm_probe(struct platform_device *pdev);
 static int akm_remove(struct platform_device *pdev);
-#endif
+
 
 /*----------------------------------------------------------------------------*/
 typedef enum {
@@ -160,9 +132,7 @@ struct akm8963_i2c_data {
 /*----------------------------------------------------------------------------*/
 static struct i2c_driver akm8963_i2c_driver = {
     .driver = {
-#ifdef MTK_AUTO_DETECT_MAGNETOMETER
-        .owner = THIS_MODULE, 
-#endif
+//        .owner = THIS_MODULE, 
         .name  = AKM8963_DEV_NAME,
     },
 	.probe      = akm8963_i2c_probe,
@@ -177,7 +147,6 @@ static struct i2c_driver akm8963_i2c_driver = {
 };
 
 /*----------------------------------------------------------------------------*/
-#ifndef MTK_AUTO_DETECT_MAGNETOMETER
 static struct platform_driver akm_sensor_driver = {
 	.probe      = akm_probe,
 	.remove     = akm_remove,    
@@ -186,7 +155,6 @@ static struct platform_driver akm_sensor_driver = {
 		.owner = THIS_MODULE,
 	}
 };
-#endif
 
 
 /*----------------------------------------------------------------------------*/
@@ -1784,11 +1752,7 @@ static int akm8963_i2c_probe(struct i2c_client *client, const struct i2c_device_
 		goto exit;
 	}
 	memset(data, 0, sizeof(struct akm8963_i2c_data));
-#ifdef MTK_AUTO_DETECT_MAGNETOMETER
-	data->hw = akm8963_get_cust_mag_hw();	
-#else
 	data->hw = get_cust_mag_hw();	
-#endif
 	
 	atomic_set(&data->layout, data->hw->direction);
 	atomic_set(&data->trace, 0);
@@ -1799,9 +1763,6 @@ static int akm8963_i2c_probe(struct i2c_client *client, const struct i2c_device_
 	init_waitqueue_head(&data_ready_wq);
 	init_waitqueue_head(&open_wq);
 
-#ifdef MTK_AUTO_DETECT_MAGNETOMETER
-	client->addr = (client->addr&0xff00)|AKM8963_I2C_7BIT_ADDRESS;  
-#endif
 	data->client = client;
 	new_client = data->client;
 	i2c_set_clientdata(new_client, data);
@@ -1819,11 +1780,7 @@ static int akm8963_i2c_probe(struct i2c_client *client, const struct i2c_device_
 	
 
 	/* Register sysfs attribute */
-#ifdef MTK_AUTO_DETECT_MAGNETOMETER
-	if(err = akm8963_create_attr(&akm8963_init_info.platform_diver_addr->driver))
-#else
 	if((err = akm8963_create_attr(&akm_sensor_driver.driver)))
-#endif
 	{
 		printk(KERN_ERR "create attribute err = %d\n", err);
 		goto exit_sysfs_create_group_failed;
@@ -1861,7 +1818,6 @@ static int akm8963_i2c_probe(struct i2c_client *client, const struct i2c_device_
 #endif
 
 	AKMDBG("%s: OK\n", __func__);
-	akm8963_init_flag =0;
 	return 0;
 
 	exit_sysfs_create_group_failed:   
@@ -1871,7 +1827,6 @@ static int akm8963_i2c_probe(struct i2c_client *client, const struct i2c_device_
 	kfree(data);
 	exit:
 	printk(KERN_ERR "%s: err = %d\n", __func__, err);
-	akm8963_init_flag =-1;
 	return err;
 }
 /*----------------------------------------------------------------------------*/
@@ -1879,11 +1834,7 @@ static int akm8963_i2c_remove(struct i2c_client *client)
 {
 	int err;	
 	
-#ifdef MTK_AUTO_DETECT_MAGNETOMETER
-	if(err = akm8963_delete_attr(&akm8963_init_info.platform_diver_addr->driver))
-#else
 	if((err = akm8963_delete_attr(&akm_sensor_driver.driver)))
-#endif
 	{
 		printk(KERN_ERR "akm8963_delete_attr fail: %d\n", err);
 	}
@@ -1895,41 +1846,6 @@ static int akm8963_i2c_remove(struct i2c_client *client)
 	return 0;
 }
 /*----------------------------------------------------------------------------*/
-#ifdef MTK_AUTO_DETECT_MAGNETOMETER
-/*----------------------------------------------------------------------------*/
-static int akm8963_local_init(void) 
-{
-	struct mag_hw *hw = akm8963_get_cust_mag_hw();
-	AKMFUNC("akm8963_local_init\n");
-	printk("akm8963_local_init -2 \n");
-	akm8963_power(hw, 1);
-	//akm8963_force[0] = hw->i2c_num;
-#if 1
-	if(i2c_add_driver(&akm8963_i2c_driver))
-	{
-		printk("add driver error\n");
-		return -1;
-	}
-#endif
-	printk("akm8963_local_init -3 \n");
-	if(-1 == akm8963_init_flag)	
-	{	   
-		return -1;	
-	}
-	printk("akm8963_local_init -24\n");
-	return 0;
-}
-
-static int akm_remove(void)
-{
-	struct mag_hw *hw = akm8963_get_cust_mag_hw();
- 
-	akm8963_power(hw, 0);    
-	atomic_set(&dev_open_count, 0);  
-	i2c_del_driver(&akm8963_i2c_driver);
-	return 0;
-}
-#else
 static int akm_probe(struct platform_device *pdev) 
 {
 	struct mag_hw *hw = get_cust_mag_hw();
@@ -1956,39 +1872,23 @@ static int akm_remove(struct platform_device *pdev)
 	i2c_del_driver(&akm8963_i2c_driver);
 	return 0;
 }
-#endif
 /*----------------------------------------------------------------------------*/
 static int __init akm8963_init(void)
 {
-#ifdef MTK_AUTO_DETECT_MAGNETOMETER
-    	struct mag_hw *hw = akm8963_get_cust_mag_hw();
-#else
     	struct mag_hw *hw = get_cust_mag_hw();
-#endif
-	printk("akm8963_init\n"); 
+	printk("akm8963: i2c_number=%d\n",hw->i2c_num); 
 	i2c_register_board_info(hw->i2c_num, &i2c_akm8963, 1);
-#ifdef MTK_AUTO_DETECT_MAGNETOMETER
-	hwmsen_msensor_add(&akm8963_init_info);
-/*	if(i2c_add_driver(&akm8963_i2c_driver))
-	{
-		printk("akm8963_init -2, add i2c driver error\n");
-		return -1;
-	}*/
-#else
 	if(platform_driver_register(&akm_sensor_driver))
 	{
 		printk(KERN_ERR "failed to register driver");
 		return -ENODEV;
 	}
-#endif
 	return 0;    
 }
 /*----------------------------------------------------------------------------*/
 static void __exit akm8963_exit(void)
 {	
-#ifndef MTK_AUTO_DETECT_MAGNETOMETER
 	platform_driver_unregister(&akm_sensor_driver);
-#endif
 }
 /*----------------------------------------------------------------------------*/
 module_init(akm8963_init);

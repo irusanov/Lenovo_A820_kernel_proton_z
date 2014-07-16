@@ -2224,9 +2224,9 @@ void fgauge_Normal_Mode_Work(void)
     int i=0;
    
 //1. Get Raw Data  
-    gFG_current = fgauge_read_current();
-
+    
     gFG_voltage = fgauge_read_voltage();
+		gFG_current = fgauge_read_current();
     gFG_voltage_init = gFG_voltage;
     gFG_voltage = gFG_voltage + fgauge_compensate_battery_voltage_recursion(gFG_voltage,5); //mV  
     gFG_voltage = gFG_voltage + OCV_BOARD_COMPESATE;
@@ -2303,6 +2303,7 @@ void fgauge_Normal_Mode_Work(void)
 
 	if(gFG_booting_counter_I_FLAG == 1) { 
 		gFG_capacity_by_v_init = gFG_capacity_by_v;
+		xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[FGADC] after gFG_voltage=%d\n", gFG_voltage);
 	}
 //3. Calculate battery capacity by Coulomb Counter
     gFG_capacity_by_c = fgauge_read_capacity(1);
@@ -2316,14 +2317,15 @@ void fgauge_Normal_Mode_Work(void)
         //use get_hw_ocv-----------------------------------------------------------------
         gFG_voltage = get_hw_ocv();        
         gFG_capacity_by_v = fgauge_read_capacity_by_v();
-		xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[FGADC] get_hw_ocv=%d, HW_SOC=%d, SW_SOC = %d\n", 
-			gFG_voltage, gFG_capacity_by_v, gFG_capacity_by_v_init);
-		if (upmu_is_chr_det() == KAL_TRUE) {
-			// compare with hw_ocv & sw_ocv, check if less than or equal to 5% tolerance 
-			if (abs(gFG_capacity_by_v_init - gFG_capacity_by_v) > 5) {
-				gFG_capacity_by_v = gFG_capacity_by_v_init;
-			}
-		}
+				xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[FGADC] get_hw_ocv=%d, HW_SOC=%d, SW_SOC = %d\n", 
+				gFG_voltage, gFG_capacity_by_v, gFG_capacity_by_v_init);
+				// compare with hw_ocv & sw_ocv, check if less than or equal to 25mV tolerance 
+				if (abs(gFG_voltageVBAT - gFG_voltage) > 25) {
+						gFG_capacity_by_v = gFG_capacity_by_v_init;
+				}
+				
+				xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[FGADC] SW_VBAT=%d, HW_VBAT=%d, gFG_capacity_by_v = %d\n", 
+				gFG_voltageVBAT, gFG_voltage, gFG_capacity_by_v);
         //-------------------------------------------------------------------------------
         g_rtc_fg_soc = get_rtc_spare_fg_value();
         if(g_rtc_fg_soc >= gFG_capacity_by_v)
@@ -2352,7 +2354,8 @@ void fgauge_Normal_Mode_Work(void)
 	xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[FGADC] g_rtc_fg_soc=%d, gFG_capacity_by_v=%d\n", 
                 g_rtc_fg_soc, gFG_capacity_by_v);
         
-	if (gFG_capacity_by_v == 0 && upmu_is_chr_det() == KAL_TRUE) {
+	if ((gFG_capacity_by_v == 0 && upmu_is_chr_det() == KAL_TRUE) || 
+			(g_boot_mode == LOW_POWER_OFF_CHARGING_BOOT && gFG_capacity_by_v_init <= 1)) {
 		gFG_capacity_by_v = 1;
 		xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[FGADC] gFG_capacity_by_v=%d\n", 
 			gFG_capacity_by_v);

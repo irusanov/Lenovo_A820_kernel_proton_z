@@ -1458,6 +1458,12 @@ musb_init_controller(struct device *dev,void __iomem *ctrl)
 //	INIT_WORK(&musb->id_pin_work, musb_id_pin_work);
 
 #endif
+
+/*lenovo-sw weiweij added 20130401*/
+/*initial done, turn off usb*/
+musb_platform_disable(musb); 
+/*lenovo-sw weiweij added 20130401 end*/
+
 	if (status < 0)
 		goto fail1;
 	status = musb_init_debugfs(musb);

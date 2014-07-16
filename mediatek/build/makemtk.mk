@@ -1,38 +1,3 @@
-# Copyright Statement:
-#
-# This software/firmware and related documentation ("MediaTek Software") are
-# protected under relevant copyright laws. The information contained herein
-# is confidential and proprietary to MediaTek Inc. and/or its licensors.
-# Without the prior written permission of MediaTek inc. and/or its licensors,
-# any reproduction, modification, use or disclosure of MediaTek Software,
-# and information contained herein, in whole or in part, shall be strictly prohibited.
-#
-# MediaTek Inc. (C) 2010. All rights reserved.
-#
-# BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
-# THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
-# RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
-# AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
-# NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
-# SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
-# SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
-# THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
-# THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
-# CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
-# SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
-# STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
-# CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
-# AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
-# OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
-# MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
-#
-# The following software/firmware and/or related documentation ("MediaTek Software")
-# have been modified by MediaTek Inc. All revisions are subject to any receiver's
-# applicable license agreements with MediaTek Inc.
-
-
 # *************************************************************************
 # Set shell align with Android build system
 # *************************************************************************
@@ -173,7 +138,6 @@ ifeq ($(ENABLE_TEE), TRUE)
   DEAL_STDOUT_EMIGEN := 2>&1 | tee -a $(LOG)emigen.log
   DEAL_STDOUT_NANDGEN := 2>&1 | tee -a $(LOG)nandgen.log
   DEAL_STDOUT_JAVAOPTGEN := 2>&1 | tee -a $(LOG)javaoptgen.log
-  DEAL_STDOUT_SIMCOMJAVAOPTGEN := 2>&1 | tee -a $(LOG)simcomjavaoptgen.log
   DEAL_STDOUT_IMEJAVAOPTGEN := 2>&1 | tee -a $(LOG)imejavaoptgen.log
   DEAL_STDOUT_SIGN_IMAGE := 2>&1 | tee -a $(LOG)sign-image.log
   DEAL_STDOUT_ENCRYPT_IMAGE := 2>&1 | tee -a $(LOG)encrypt-image.log
@@ -196,7 +160,6 @@ else
   DEAL_STDOUT_EMIGEN := > $(LOG)emigen.log 2>&1
   DEAL_STDOUT_NANDGEN := > $(LOG)nandgen.log 2>&1
   DEAL_STDOUT_JAVAOPTGEN := > $(LOG)javaoptgen.log 2>&1
-  DEAL_STDOUT_SIMCOMJAVAOPTGEN := > $(LOG)simcomjavaoptgen.log 2>&1
   DEAL_STDOUT_IMEJAVAOPTGEN := > $(LOG)imejavaoptgen.log 2>&1
   DEAL_STDOUT_SIGN_IMAGE := > $(LOG)sign-image.log 2>&1
   DEAL_STDOUT_ENCRYPT_IMAGE := > $(LOG)encrypt-image.log 2>&1
@@ -241,9 +204,9 @@ ALL_MODULES += android
 -include mediatek/build/tools/preprocess/preprocess.mk
 
 ifneq ($(MTK_PTGEN_SUPPORT),no)
-newall: cleanall emigen nandgen ptgen custgen codegen update-api remakeall
+newall: cleanall emigen nandgen ptgen custgen codegen remakeall
 else
-newall: cleanall emigen nandgen custgen codegen update-api remakeall
+newall: cleanall emigen nandgen custgen codegen remakeall
 endif
 
 check-dep: custgen
@@ -436,22 +399,13 @@ $(JAVAOPTFILE): mediatek/build/tools/javaoptgen.pl $(PRJ_MF) $(OPTR_MF) mediatek
 	$(hide) echo -e \\t\\t\\t\\b\\b\\b\\bLOG: $(S_LOG)javaoptgen.log
 	$(hide) perl mediatek/build/tools/javaoptgen.pl $(PRJ_MF) $(OPTR_MF) $(DEAL_STDOUT_JAVAOPTGEN)
 
-# add by zhangjin
-SIMCOMJAVAOPTFILE := $(JAVAOPTFILEPATH)/SimcomFeatureOption.java
-
-$(SIMCOMJAVAOPTFILE): mediatek/build/tools/simcomjavaoptgen.pl $(PRJ_MF) $(OPTR_MF) mediatek/build/tools/simcomjavaoption.pm
-	$(hide) echo $(SHOWTIME) gen $@ ...
-	$(hide) echo -e \\t\\t\\t\\b\\b\\b\\bLOG: $(S_LOG)simcomjavaoptgen.log
-	$(hide) perl mediatek/build/tools/simcomjavaoptgen.pl $(PRJ_MF) $(OPTR_MF) $(DEAL_STDOUT_SIMCOMJAVAOPTGEN) $(PROJECT)
-
 JAVAIMEOPTFILE := $(JAVAOPTFILEPATH)/IMEFeatureOption.java
 $(JAVAIMEOPTFILE): mediatek/build/tools/gen_java_ime_definition.pl $(PRJ_MF)
 	$(hide) echo $(SHOWTIME) gen $@ ...
 	$(hide) echo -e \\t\\t\\t\\b\\b\\b\\bLOG: $(S_LOG)imejavaoptgen.log
 	$(hide) perl mediatek/build/tools/gen_java_ime_definition.pl $(PRJ_MF) $(DEAL_STDOUT_IMEJAVAOPTGEN)
 
-ALLJAVAOPTFILES := $(JAVAIMEOPTFILE) $(JAVAOPTFILE) $(SIMCOMJAVAOPTFILE)
-#ALLJAVAOPTFILES := $(JAVAIMEOPTFILE) $(JAVAOPTFILE)
+ALLJAVAOPTFILES := $(JAVAIMEOPTFILE) $(JAVAOPTFILE)
 clean-javaoptgen:
 	$(hide) echo $(SHOWTIME) $@ing ...
 	$(hide) echo clean $(ALLJAVAOPTFILES)

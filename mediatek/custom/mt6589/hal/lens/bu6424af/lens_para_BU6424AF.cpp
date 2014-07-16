@@ -1,63 +1,3 @@
-/* Copyright Statement:
- *
- * This software/firmware and related documentation ("MediaTek Software") are
- * protected under relevant copyright laws. The information contained herein
- * is confidential and proprietary to MediaTek Inc. and/or its licensors.
- * Without the prior written permission of MediaTek inc. and/or its licensors,
- * any reproduction, modification, use or disclosure of MediaTek Software,
- * and information contained herein, in whole or in part, shall be strictly prohibited.
- */
-/* MediaTek Inc. (C) 2010. All rights reserved.
- *
- * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
- * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
- * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
- * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
- * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
- * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
- * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
- * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
- * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
- * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
- * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
- * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
- * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
- * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
- * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
- * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
- *
- * The following software/firmware and/or related documentation ("MediaTek Software")
- * have been modified by MediaTek Inc. All revisions are subject to any receiver's
- * applicable license agreements with MediaTek Inc.
- */
-
-/********************************************************************************************
- *     LEGAL DISCLAIMER
- *
- *     (Header of MediaTek Software/Firmware Release or Documentation)
- *
- *     BY OPENING OR USING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
- *     THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE") RECEIVED
- *     FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON AN "AS-IS" BASIS
- *     ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES, EXPRESS OR IMPLIED,
- *     INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR
- *     A PARTICULAR PURPOSE OR NONINFRINGEMENT. NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY
- *     WHATSOEVER WITH RESPECT TO THE SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY,
- *     INCORPORATED IN, OR SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK
- *     ONLY TO SUCH THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
- *     NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S SPECIFICATION
- *     OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
- *
- *     BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE LIABILITY WITH
- *     RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE, AT MEDIATEK'S OPTION,
- *     TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE, OR REFUND ANY SOFTWARE LICENSE
- *     FEES OR SERVICE CHARGE PAID BY BUYER TO MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
- *
- *     THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE WITH THE LAWS
- *     OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF LAWS PRINCIPLES.
- ************************************************************************************************/
 #include <utils/Log.h>
 #include <fcntl.h>
 #include <math.h>
@@ -78,15 +18,21 @@ const NVRAM_LENS_PARA_STRUCT BU6424AF_LENS_PARA_DEFAULT_VALUE =
     // AF NVRAM
     {
         // -------- AF ------------
-        {100, // i4Offset
-          10, // i4NormalNum
-          15, // i4MacroNum
+        {190, // i4Offset
+          12, // i4NormalNum
+          12, // i4MacroNum
            0, // i4InfIdxOffset
            0, //i4MacroIdxOffset          
     	{
-                 0,  25,  55,  90, 130, 175, 225, 280, 335, 390,
-               455, 520, 585, 650, 715,   0,   0,   0,   0,   0,
+
+           0,   8,   38,   55,  85,   114, 145, 197, 242, 293,
+           374, 477, 0,    0,   0,    0,   0,   0,   0,   0,
              0,   0,   0,   0,   0,   0,   0,   0,   0,   0
+
+           /*  0,   25,  55,  90,  130, 175, 225, 280, 335, 390,
+               455, 520, 585, 650, 715, 0,   0,   0,   0,   0,
+               0,   0,   0,   0,   0,   0,   0,   0,   0,   0*/
+             
             },
           15, // i4THRES_MAIN;
           10, // i4THRES_SUB;            
@@ -116,15 +62,20 @@ const NVRAM_LENS_PARA_STRUCT BU6424AF_LENS_PARA_DEFAULT_VALUE =
          },
          
          // -------- ZSD AF ------------
-         {100, // i4Offset
-           10, // i4NormalNum
-           15, // i4MacroNum
+         {190, // i4Offset
+           12, // i4NormalNum
+           12, // i4MacroNum
             0, // i4InfIdxOffset
             0, //i4MacroIdxOffset           
            {
-               0,  25,  55,  90, 130, 175, 225, 280, 335, 390,
-             455, 520, 585, 650, 715,   0,   0,   0,   0,   0,
+           0,   8,   38,   55,  85,   114, 145, 197, 242, 293,
+           374, 477, 0,    0,   0,    0,   0,   0,   0,   0,
                    0,   0,   0,   0,   0,   0,   0,   0,   0,   0
+
+           /*  0,   25,  55,  90,  130, 175, 225, 280, 335, 390,
+               455, 520, 585, 650, 715, 0,   0,   0,   0,   0,
+               0,   0,   0,   0,   0,   0,   0,   0,   0,   0*/
+
            },
            15, // i4THRES_MAIN;
            10, // i4THRES_SUB;            
@@ -137,32 +88,37 @@ const NVRAM_LENS_PARA_STRUCT BU6424AF_LENS_PARA_DEFAULT_VALUE =
            66,  // i4FRAME_TIME                                  
            5,  // i4FIRST_FV_WAIT;
                      
-           30,  // i4FV_CHANGE_THRES;
-           10000,  // i4FV_CHANGE_OFFSET;        
-           3,  // i4FV_CHANGE_CNT;
+           40,  // i4FV_CHANGE_THRES;
+           20000,  // i4FV_CHANGE_OFFSET;        
+           12,  // i4FV_CHANGE_CNT;
            0,  // i4GS_CHANGE_THRES;    
-           15,  // i4GS_CHANGE_OFFSET;    
-           5,  // i4GS_CHANGE_CNT;            
+           20,  // i4GS_CHANGE_OFFSET;    
+           12,  // i4GS_CHANGE_CNT;            
            10,  // i4FV_STABLE_THRES;         // percentage -> 0 more stable  
            10000,  // i4FV_STABLE_OFFSET;        // value -> 0 more stable
-           5,  // i4FV_STABLE_NUM;           // max = 9 (more stable), reset = 0
-           5,  // i4FV_STABLE_CNT;           // max = 9                                      
-           12,  // i4FV_1ST_STABLE_THRES;        
-           10000,  // i4FV_1ST_STABLE_OFFSET;
-           6,  // i4FV_1ST_STABLE_NUM;                        
-           6  // i4FV_1ST_STABLE_CNT;      
+           8,   // i4FV_STABLE_NUM;           // max = 9 (more stable), reset = 0
+           7,   // i4FV_STABLE_CNT;           // max = 9                                      
+           20,  // i4FV_1ST_STABLE_THRES;        
+           15000,  // i4FV_1ST_STABLE_OFFSET;
+           12,  // i4FV_1ST_STABLE_NUM;                        
+           10  // i4FV_1ST_STABLE_CNT;         
            }, 
            
            // -------- VAFC ------------
-         {100, // i4Offset
+         {190, // i4Offset
            20, // i4NormalNum
            20, // i4MacroNum
             0, // i4InfIdxOffset
             0, //i4MacroIdxOffset           
              {
+
+			   0,   8,   38,   55,  85,   114, 145, 197, 242, 293,
+               374, 477, 0,    0,   0,    0,   0,   0,   0,   0,
+               0,   0,   0,    0,   0,    0,   0,   0,   0,   0
+               /*
                   0,  20,  40,  60,  80, 100, 120, 140, 160, 180,
                 200, 220, 240, 260, 280, 300, 320, 340, 360, 390,
-                  0,   0,   0,   0,   0,   0,   0,   0,   0,   0
+                  0,   0,   0,   0,   0,   0,   0,   0,   0,   0*/
              },
            15, // i4THRES_MAIN;
            10, // i4THRES_SUB;            
@@ -204,12 +160,12 @@ const NVRAM_LENS_PARA_STRUCT BU6424AF_LENS_PARA_DEFAULT_VALUE =
             180,180,180,177,176,179,179,176},        // i4GMR[3][ISO_MAX_NUM];
           
 // ------------------------------------------------------------------------                  
-           {1049,1049,1049,1638,2359,3211,4194,7930,
-            1049,1049,1049,1638,2359,3211,4194,7930,
-            1049,1049,1049,1638,2359,3211,4194,7930,
-            1049,1049,1049,1638,2359,3211,4194,7930,
-            1049,1049,1049,1638,2359,3211,4194,7930,
-            1049,1049,1049,1638,2359,3211,4194,7930},        // i4FV_DC[GMEAN_MAX_NUM][ISO_MAX_NUM];
+           {1638,1638,1638,2359,3211,4194,5308,9437,
+            1638,1638,1638,2359,3211,4194,5308,9437,
+            1638,1638,1638,2359,3211,4194,5308,9437,
+            1638,1638,1638,2359,3211,4194,5308,9437,
+            1638,1638,1638,2359,3211,4194,5308,9437,
+            1638,1638,1638,2359,3211,4194,5308,9437},        // i4FV_DC[GMEAN_MAX_NUM][ISO_MAX_NUM];
            
           {150000,150000,150000,120000,80000,50000,30000,30000,
            150000,150000,150000,120000,80000,50000,30000,30000,
@@ -218,20 +174,20 @@ const NVRAM_LENS_PARA_STRUCT BU6424AF_LENS_PARA_DEFAULT_VALUE =
            150000,150000,150000,120000,80000,50000,30000,30000,
            150000,150000,150000,120000,80000,50000,30000,30000},         // i4MIN_TH[GMEAN_MAX_NUM][ISO_MAX_NUM];        
 
-           {   4,4,4,5,6,7,8,11,
-               4,4,4,5,6,7,8,11,
-               4,4,4,5,6,7,8,11,
-               4,4,4,5,6,7,8,11,
-               4,4,4,5,6,7,8,11,
-               4,4,4,5,6,7,8,11}, // i4HW_TH[GMEAN_MAX_NUM][ISO_MAX_NUM];       
+           {   5,5,5,6,7,8,9,12,
+               5,5,5,6,7,8,9,12,
+               5,5,5,6,7,8,9,12,
+               5,5,5,6,7,8,9,12,
+               5,5,5,6,7,8,9,12,
+               5,5,5,6,7,8,9,12}, // i4HW_TH[GMEAN_MAX_NUM][ISO_MAX_NUM];       
 
 // ------------------------------------------------------------------------
-          {0,0,0,0,0,0,0,0,
-           0,0,0,0,0,0,0,0,
-           0,0,0,0,0,0,0,0,
-           0,0,0,0,0,0,0,0,
-           0,0,0,0,0,0,0,0,
-           0,0,0,0,0,0,0,0},        // i4FV_DC2[GMEAN_MAX_NUM][ISO_MAX_NUM];
+           {16,16,26,31,31,43,74,83,
+            16,16,26,31,31,43,74,83,
+            16,16,26,31,31,43,74,83,
+            16,16,26,31,31,43,74,83,
+            16,16,26,31,31,43,74,83,
+            16,16,26,31,31,43,74,83},         // i4FV_DC2[GMEAN_MAX_NUM][ISO_MAX_NUM];
            
           {0,0,0,0,0,0,0,0,
            0,0,0,0,0,0,0,0,
@@ -240,12 +196,12 @@ const NVRAM_LENS_PARA_STRUCT BU6424AF_LENS_PARA_DEFAULT_VALUE =
            0,0,0,0,0,0,0,0,
            0,0,0,0,0,0,0,0},         // i4MIN_TH2[GMEAN_MAX_NUM][ISO_MAX_NUM];
           
-           {   8,8,8,9,10,11,14,17,
-               8,8,8,9,10,11,14,17,
-               8,8,8,9,10,11,14,17,
-               8,8,8,9,10,11,14,17,
-               8,8,8,9,10,11,14,17,
-               8,8,8,9,10,11,14,17} // i4HW_TH2[GMEAN_MAX_NUM][ISO_MAX_NUM];       
+           {8,8,10,11,11,13,17,18,
+            8,8,10,11,11,13,17,18,
+            8,8,10,11,11,13,17,18,
+            8,8,10,11,11,13,17,18,
+            8,8,10,11,11,13,17,18,
+            8,8,10,11,11,13,17,18} // i4HW_TH2[GMEAN_MAX_NUM][ISO_MAX_NUM];       
 
           
          },
@@ -264,33 +220,33 @@ const NVRAM_LENS_PARA_STRUCT BU6424AF_LENS_PARA_DEFAULT_VALUE =
             180,180,180,177,176,179,179,176},        // i4GMR[3][ISO_MAX_NUM];
            
 // ------------------------------------------------------------------------                   
-           {1049,1049,1049,1638,2359,3211,4194,7930,
-            1049,1049,1049,1638,2359,3211,4194,7930,
-            1049,1049,1049,1638,2359,3211,4194,7930,
-            1049,1049,1049,1638,2359,3211,4194,7930,
-            1049,1049,1049,1638,2359,3211,4194,7930,
-            1049,1049,1049,1638,2359,3211,4194,7930},        // i4FV_DC[GMEAN_MAX_NUM][ISO_MAX_NUM];
+           {1638,1638,1638,2359,3211,4194,5308,9437,
+            1638,1638,1638,2359,3211,4194,5308,9437,
+            1638,1638,1638,2359,3211,4194,5308,9437,
+            1638,1638,1638,2359,3211,4194,5308,9437,
+            1638,1638,1638,2359,3211,4194,5308,9437,
+            1638,1638,1638,2359,3211,4194,5308,9437},        // i4FV_DC[GMEAN_MAX_NUM][ISO_MAX_NUM];
             
-           {150000,150000,150000,120000,80000,50000,30000,30000,
-            150000,150000,150000,120000,80000,50000,30000,30000,
-            150000,150000,150000,120000,80000,50000,30000,30000,
-            150000,150000,150000,120000,80000,50000,30000,30000,
-            150000,150000,150000,120000,80000,50000,30000,30000,
-            150000,150000,150000,120000,80000,50000,30000,30000},         // i4MIN_TH[GMEAN_MAX_NUM][ISO_MAX_NUM];        
+           {70000,70000,70000,60000,50000,40000,30000,20000,
+            70000,70000,70000,60000,50000,40000,30000,20000,
+            70000,70000,70000,60000,50000,40000,30000,20000,
+            70000,70000,70000,60000,50000,40000,30000,20000,
+            70000,70000,70000,60000,50000,40000,30000,20000,
+            70000,70000,70000,60000,50000,40000,30000,20000},         // i4MIN_TH[GMEAN_MAX_NUM][ISO_MAX_NUM];        
            
-           {   4,4,4,5,6,7,8,11,
-               4,4,4,5,6,7,8,11,
-               4,4,4,5,6,7,8,11,
-               4,4,4,5,6,7,8,11,
-               4,4,4,5,6,7,8,11,
-               4,4,4,5,6,7,8,11}, // i4HW_TH[GMEAN_MAX_NUM][ISO_MAX_NUM];       
+           {   5,5,5,6,7,12,16,18,
+               5,5,5,6,7,12,16,18,
+               5,5,5,6,7,12,16,18,
+               5,5,5,6,7,12,16,18,
+               5,5,5,6,7,12,16,18,
+               5,5,5,6,7,12,16,18}, // i4HW_TH[GMEAN_MAX_NUM][ISO_MAX_NUM];       
 
-           {0,0,0,0,0,0,0,0,
-            0,0,0,0,0,0,0,0,
-            0,0,0,0,0,0,0,0,
-            0,0,0,0,0,0,0,0,
-            0,0,0,0,0,0,0,0,
-            0,0,0,0,0,0,0,0},        // i4FV_DC2[GMEAN_MAX_NUM][ISO_MAX_NUM];
+           {16,16,26,31,31,43,74,83,
+            16,16,26,31,31,43,74,83,
+            16,16,26,31,31,43,74,83,
+            16,16,26,31,31,43,74,83,
+            16,16,26,31,31,43,74,83,
+            16,16,26,31,31,43,74,83},        // i4FV_DC2[GMEAN_MAX_NUM][ISO_MAX_NUM];
             
            {0,0,0,0,0,0,0,0,
             0,0,0,0,0,0,0,0,
@@ -299,12 +255,12 @@ const NVRAM_LENS_PARA_STRUCT BU6424AF_LENS_PARA_DEFAULT_VALUE =
             0,0,0,0,0,0,0,0,
             0,0,0,0,0,0,0,0},         // i4MIN_TH2[GMEAN_MAX_NUM][ISO_MAX_NUM];
            
-           {   8,8,8,9,10,11,14,17,
-               8,8,8,9,10,11,14,17,
-               8,8,8,9,10,11,14,17,
-               8,8,8,9,10,11,14,17,
-               8,8,8,9,10,11,14,17,
-               8,8,8,9,10,11,14,17} // i4HW_TH2[GMEAN_MAX_NUM][ISO_MAX_NUM];       
+           {8,8,10,11,11,13,17,18,
+            8,8,10,11,11,13,17,18,
+            8,8,10,11,11,13,17,18,
+            8,8,10,11,11,13,17,18,
+            8,8,10,11,11,13,17,18,
+            8,8,10,11,11,13,17,18} // i4HW_TH2[GMEAN_MAX_NUM][ISO_MAX_NUM];       
            
           },
 
@@ -315,7 +271,7 @@ const NVRAM_LENS_PARA_STRUCT BU6424AF_LENS_PARA_DEFAULT_VALUE =
 
           18, // i4WIN_PERCENT_W;
           24, // i4WIN_PERCENT_H;                
-          100,  // i4InfPos;
+          190,  // i4InfPos;
           20, //i4AFC_STEP_SIZE;
 
           {

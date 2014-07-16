@@ -32,6 +32,7 @@ on init
     symlink /mnt/shell/emulated/0 /storage/emulated/legacy
     symlink /storage/sdcard1 /mnt/sdcard2
     
+
 on post-fs
     # mount shared so changes propagate into child namespaces
     mount rootfs rootfs / shared rec

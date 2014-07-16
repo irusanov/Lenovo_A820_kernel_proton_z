@@ -1747,7 +1747,7 @@ UINT32 OV8825Capture(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 
 	// Full size setting
 	OV8825CaptureSetting();
-    //mDELAY(40);
+    mDELAY(20);
 
 	spin_lock(&ov8825mipiraw_drv_lock);
 	ov8825.sensorMode = SENSOR_MODE_CAPTURE;
@@ -1978,9 +1978,9 @@ UINT32 OV8825SetVideoMode(UINT16 u2FrameRate)
 		if((MIN_Frame_length <=OV8825_VIDEO_PERIOD_LINE_NUMS))
 		{
 			MIN_Frame_length = OV8825_VIDEO_PERIOD_LINE_NUMS;
-			OV8825DB("[OV8825SetVideoMode]current fps = %d\n", (ov8825.pvPclk*10000)  /(OV8825_PV_PERIOD_PIXEL_NUMS)/OV8825_PV_PERIOD_LINE_NUMS);
+			OV8825DB("[OV8825SetVideoMode]current fps = %d\n", (ov8825.videoPclk*10000)  /(OV8825_VIDEO_PERIOD_PIXEL_NUMS)/OV8825_VIDEO_PERIOD_LINE_NUMS);
 		}
-		OV8825DB("[OV8825SetVideoMode]current fps (10 base)= %d\n", (ov8825.pvPclk*10000)*10/(OV8825_PV_PERIOD_PIXEL_NUMS + ov8825.DummyPixels)/MIN_Frame_length);
+		OV8825DB("[OV8825SetVideoMode]current fps (10 base)= %d\n", (ov8825.videoPclk*10000)*10/(OV8825_VIDEO_PERIOD_PIXEL_NUMS + ov8825.DummyPixels)/MIN_Frame_length);
 		extralines = MIN_Frame_length - OV8825_VIDEO_PERIOD_LINE_NUMS;
 		
 		spin_lock(&ov8825mipiraw_drv_lock);

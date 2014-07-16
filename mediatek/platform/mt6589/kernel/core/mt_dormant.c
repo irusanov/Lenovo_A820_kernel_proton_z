@@ -1476,7 +1476,7 @@ static void platform_restore_context(void)
         /* enable L2 invalidate when reset */
         reg_write(CA7_CACHE_CONFIG, reg_read(CA7_CACHE_CONFIG) & ~(1U << 4));
     }
-	
+
 	#ifdef CONFIG_MTK_ETM
 		trace_stop_dormant();
 		trace_start_dormant();

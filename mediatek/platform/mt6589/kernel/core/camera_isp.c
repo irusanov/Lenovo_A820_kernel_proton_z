@@ -33,6 +33,9 @@
 #include <mach/mt_clkmgr.h>     // For clock mgr APIS. enable_clock()/disable_clock().
 #include <mach/sync_write.h>    // For mt65xx_reg_sync_writel().
 #include <mach/mt_spm_idle.h>    // For spm_enable_sodi()/spm_disable_sodi().
+
+#include <mach/m4u.h>
+
 //
 #include "../smi/smi_common.h"
 
@@ -502,7 +505,7 @@ static MINT32 ISP_DumpReg(void)
     //                              #define ISP_ADDR_END    0x15006000
     //
 
-#if 0  //kk test 0:new tile format
+#if 1  //kk test 0:new tile format
     for(i = 0x0; i <= 0x20; i += 4)
     {
         //LOG_DBG("0x%08X %08X ", ISP_ADDR + i, ISP_RD32(ISP_ADDR + i));
@@ -519,12 +522,39 @@ static MINT32 ISP_DumpReg(void)
     LOG_DBG("0x%08X %08X ", ISP_ADDR + 0x40, 0);
     LOG_DBG("0x%08X %08X ", ISP_ADDR + 0x44, 0);
     LOG_DBG("0x%08X %08X ", ISP_ADDR + 0x48, 0);
-    for(i = 0x4C; i <= 0x5048; i += 4)
+    for(i = 0x4C; i <= 0x5E08; i += 4)
     {
         //LOG_DBG("0x%08X %08X ", ISP_ADDR + i, ISP_RD32(ISP_ADDR + i));
         LOG_DBG("0x%08X %08X ", ISP_ADDR + i, ISP_RD32(ISP_ADDR + i));
     }
+
+{
+    int tpipePA = ISP_RD32(ISP_ADDR + 0x204);
+    int ctlStart = ISP_RD32(ISP_ADDR + 0x000);
+    int ctlTcm = ISP_RD32(ISP_ADDR + 0x054);
+    int map_va=0, map_size;
+    int i;
+    int *pMapVa;
+#define TPIPE_DUMP_SIZE    200
+
+    if((ctlStart&0x01)&&(tpipePA)&&(ctlTcm&0x80000000)){ // for pass2
+        map_va = 0;
+        m4u_mva_map_kernel( tpipePA, TPIPE_DUMP_SIZE, 0, &map_va, &map_size);
+        pMapVa = map_va;
+        LOG_DBG("pMapVa(0x%x),map_size(0x%x)",pMapVa,map_size);
+        LOG_DBG("ctlStart(0x%x),tpipePA(0x%x),ctlTcm(0x%x)",ctlStart,tpipePA,ctlTcm);
+        if(pMapVa){
+            for(i=0;i<TPIPE_DUMP_SIZE;i+=10) {
+                LOG_DBG("[idx(%d)]%08X-%08X-%08X-%08X-%08X-%08X-%08X-%08X-%08X-%08X",i,pMapVa[i],pMapVa[i+1],pMapVa[i+2],pMapVa[i+3],
+                    pMapVa[i+4],pMapVa[i+5],pMapVa[i+6],pMapVa[i+7],pMapVa[i+8],pMapVa[i+9]);
+            }
+        }
+        m4u_mva_unmap_kernel(tpipePA, map_size, map_va);
+    }
+}
+
 #else
+
     //
     ////////////// for tpipe main start //////
     LOG_DBG("start MT6589");
@@ -797,6 +827,32 @@ static MINT32 ISP_DumpReg(void)
     {
         LOG_DBG("0x%08X %08X ", ISP_TPIPE_ADDR + i, ISP_RD32(ISP_ADDR + i));
     }
+
+
+{
+    int tpipePA = ISP_RD32(ISP_ADDR + 0x204);
+    int ctlStart = ISP_RD32(ISP_ADDR + 0x000);
+    int ctlTcm = ISP_RD32(ISP_ADDR + 0x054);
+    int map_va=0, map_size;
+    int i;
+    int *pMapVa;
+#define TPIPE_DUMP_SIZE    200
+
+    if((ctlStart&0x01)&&(tpipePA)&&(ctlTcm&0x80000000)){ // for pass2
+        map_va = 0;
+        m4u_mva_map_kernel( tpipePA, TPIPE_DUMP_SIZE, 0, &map_va, &map_size);
+        pMapVa = map_va;
+        LOG_DBG("pMapVa(0x%x),map_size(0x%x)",pMapVa,map_size);
+        LOG_DBG("ctlStart(0x%x),tpipePA(0x%x),ctlTcm(0x%x)",ctlStart,tpipePA,ctlTcm);
+        if(pMapVa){
+            for(i=0;i<TPIPE_DUMP_SIZE;i+=10) {
+                LOG_DBG("[idx(%d)]%08X-%08X-%08X-%08X-%08X-%08X-%08X-%08X-%08X-%08X",i,pMapVa[i],pMapVa[i+1],pMapVa[i+2],pMapVa[i+3],
+                    pMapVa[i+4],pMapVa[i+5],pMapVa[i+6],pMapVa[i+7],pMapVa[i+8],pMapVa[i+9]);
+            }
+        }
+        m4u_mva_unmap_kernel(tpipePA, map_size, map_va);
+    }
+}
 
 
 #if 0
@@ -4333,7 +4389,39 @@ MBOOL ISP_UnregCallback(ISP_CALLBACK_ENUM   Type)
     return MTRUE;
 }
 
+void ISP_MCLK1_EN(MBOOL En)
+{
+    MUINT32 temp=0;
+    temp = ISP_RD32(ISP_ADDR + 0x4300);
+    if(En)
+    {
+        temp |= 0x20000000;
+        ISP_WR32(ISP_ADDR + 0x4300,temp);       
+    }
+    else
+    {
+        temp &= 0xDFFFFFFF;
+        ISP_WR32(ISP_ADDR + 0x4300,temp);
+    }    
 
+}
+
+void ISP_MCLK2_EN(MBOOL En)
+{
+    MUINT32 temp=0;
+    temp = ISP_RD32(ISP_ADDR + 0x43A0);
+    if(En)
+    {
+        temp |= 0x20000000;
+        ISP_WR32(ISP_ADDR + 0x43A0,temp);       
+    }
+    else
+    {
+        temp &= 0xDFFFFFFF;
+        ISP_WR32(ISP_ADDR + 0x43A0,temp);
+    }    
+
+}
 /*******************************************************************************
 *
 ********************************************************************************/
@@ -4344,7 +4432,8 @@ MODULE_AUTHOR("ME3");
 MODULE_LICENSE("GPL");
 EXPORT_SYMBOL(ISP_RegCallback);
 EXPORT_SYMBOL(ISP_UnregCallback);
-
+EXPORT_SYMBOL(ISP_MCLK1_EN);
+EXPORT_SYMBOL(ISP_MCLK2_EN);
 
 
 

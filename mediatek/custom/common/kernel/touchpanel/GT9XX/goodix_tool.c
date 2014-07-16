@@ -185,7 +185,7 @@ s32 init_wr_node(struct i2c_client *client)
 
     register_i2c_func();
 
-    goodix_proc_entry = create_proc_entry(GOODIX_ENTRY_NAME, 0777, NULL);
+    goodix_proc_entry = create_proc_entry(GOODIX_ENTRY_NAME, 0664, NULL);
 
     if (goodix_proc_entry == NULL)
     {

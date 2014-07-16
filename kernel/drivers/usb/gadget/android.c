@@ -32,8 +32,6 @@
 /* Add for HW/SW connect */
 #include <mach/mtk_musb.h>
 /* Add for HW/SW connect */
-/*punk*/
-#include <mach/mt_boot.h>
 
 #include "gadget_chips.h"
 #include "logger.h"
@@ -79,8 +77,24 @@ static const char longname[] = "Gadget Android";
 #define PRODUCT_ID		0x0001
 
 /* Default manufacturer and product string , overridden by userspace */
+/*Lenovo-sw huangxuan modified 2012-11-28 begin*/
+#if defined(LENOVO_PROJECT_A830)
+#define MANUFACTURER_STRING "Lenovo"
+#define PRODUCT_STRING "Lenovo A830"
+#elif defined(LENOVO_PROJECT_PRADA)
+#define MANUFACTURER_STRING "Lenovo"
+#define PRODUCT_STRING "Lenovo P780"
+#elif defined(LENOVO_PROJECT_SEINE)
+#define MANUFACTURER_STRING "Lenovo"
+#define PRODUCT_STRING "Lenovo S920"
+#elif defined(LENOVO_PROJECT_S820)
+#define MANUFACTURER_STRING "Lenovo"
+#define PRODUCT_STRING "Lenovo S820"
+#else
 #define MANUFACTURER_STRING "MediaTek"
 #define PRODUCT_STRING "MT65xx Android Phone"
+#endif
+/*Lenovo-sw huangxuan modified 2012-11-28 end*/
 
 #define USB_LOG "USB"
 
@@ -1932,15 +1946,7 @@ static int android_bind(struct usb_composite_dev *cdev)
 	if (id < 0)
 		return id;
 	strings_dev[STRING_SERIAL_IDX].id = id;
-	/*punk, for factory test*/
-	if(get_boot_mode() == FACTORY_BOOT || get_boot_mode() == META_BOOT || get_boot_mode() == ADVMETA_BOOT )
-	{
-		device_desc.iSerialNumber = 0;
-	}
-	else
-	{
-		device_desc.iSerialNumber = id;
-	}
+	device_desc.iSerialNumber = id;
 
 	gcnum = usb_gadget_controller_number(gadget);
 	if (gcnum >= 0)
@@ -2066,62 +2072,6 @@ static int android_create_device(struct android_dev *dev)
 }
 
 
-static int adbctl_action;
-static char adbctl_sn[256];
-
-static int adbctl_read(char *page, char **start, off_t off,
-			          int count, int *eof, void *data)
-{
-	return scnprintf(page, PAGE_SIZE, "action=%d", adbctl_action);	     
-}
-
-
-static int adbctl_write(struct file *file, const char *buffer, unsigned long count, void *data)
-{
-    char buf[128]; 
-	char actionBuf[20];
-	char paramBuf[108];
-	char* p;
-    int maxlen;
-	int pid;
-	char strSN[256];
-
-    maxlen = (count < (sizeof(buf) - 1)) ? count : (sizeof(buf) - 1);
-
-    if(copy_from_user(buf, buffer, maxlen))
-		return 0;
-	
-    buf[maxlen] = '\0';
-	memset(actionBuf, 0, sizeof(actionBuf));
-	memset(paramBuf, 0, sizeof(paramBuf));
-	p = strchr(buf, ':');
-	if(p == NULL) {
-		strncpy(actionBuf, buf,maxlen);
-	} else {
-		strncpy(actionBuf, buf, (p - buf) +1);
-		strcpy(paramBuf, p+1);
-	}
-
-	sscanf(buf, "action=%d", &adbctl_action);
-
-	if(adbctl_action == 82)
-	{
-		sscanf(paramBuf, "pid=%d", &pid);
-		if(pid != -1)
-			kill_pid(find_get_pid(pid), SIGKILL,1);
-	} else if(adbctl_action == 1){
-		memset(strSN, 0, sizeof(strSN));
-		sscanf(paramBuf, "sn=%s", &strSN);
-		strcpy(adbctl_sn, strSN);
-
-		strings_dev[STRING_SERIAL_IDX].s = adbctl_sn;
-		usb_composite_probe(&android_usb_driver, android_bind);
-		
-	}
-
-    return count;
-}
-
 static int __init init(void)
 {
 	struct android_dev *dev;
@@ -2155,11 +2105,6 @@ static int __init init(void)
 	composite_driver.disconnect = android_disconnect;
 
 	pr_info("android usb init %s\r\n", android_usb_driver.name);
-	struct proc_dir_entry *adbentry = create_proc_entry("adbctl", S_IRWXUGO, NULL);
-	if (adbentry) {
-		adbentry->read_proc = adbctl_read;
-		adbentry->write_proc = adbctl_write;
-	}
 
 	return usb_composite_probe(&android_usb_driver, android_bind);
 }

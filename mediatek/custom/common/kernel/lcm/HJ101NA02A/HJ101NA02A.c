@@ -1,39 +1,3 @@
-/*****************************************************************************
-*  Copyright Statement:
-*  --------------------
-*  This software is protected by Copyright and the information contained
-*  herein is confidential. The software may not be copied and the information
-*  contained herein may not be used or disclosed except with the written
-*  permission of MediaTek Inc. (C) 2008
-*
-*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
-*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
-*  RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
-*  AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
-*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
-*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
-*  NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
-*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
-*  SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
-*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
-*  NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S
-*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
-*
-*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE
-*  LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
-*  AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
-*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
-*  MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
-*
-*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
-*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
-*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
-*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
-*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
-*
-*****************************************************************************/
-
-
 #ifndef BUILD_LK
 #include <linux/string.h>
 #endif
@@ -48,6 +12,7 @@
 #include <linux/xlog.h>
 #include "mt8193_iic.h"
 #include <mach/mt_pm_ldo.h>
+#include <mach/upmu_common.h>
 #endif
 #include "lcm_drv.h"
 #include "mt8193_lvds.h"
@@ -285,7 +250,7 @@ static void lcm_mt8193_ckgen_power_off(void)
 static void lcm_mt8193_set_lvdstx(void)
 {
     MT8193_REG_WRITE(LVDS_CLK_CTRL, (RG_TEST_CK_EN | RG_RX_CK_EN | RG_TX_CK_EN));
-    MT8193_REG_WRITE(LVDS_OUTPUT_CTRL, (RG_LVDSRX_FIFO_EN | RG_OUT_FIFO_EN | RG_LVDS_E));
+    MT8193_REG_WRITE(LVDS_OUTPUT_CTRL, (RG_LVDSRX_FIFO_EN | RG_SYNC_TRIG_MODE | RG_OUT_FIFO_EN | RG_LVDS_E));
 	MT8193_REG_WRITE(LVDS_CH_SWAP, RG_SWAP_SEL);
 }
 
@@ -376,7 +341,7 @@ static void lcm_mt8193_lvds_clk_reset(void)
 	MDELAY(5);
 	MT8193_REG_WRITE(LVDS_CLK_RESET, (RG_CTSCLK_RESET_B | RG_PCLK_RESET_B));
     MT8193_REG_WRITE(LVDS_CLK_CTRL, (RG_TEST_CK_EN | RG_RX_CK_EN | RG_TX_CK_EN));
-	MT8193_REG_WRITE(LVDS_OUTPUT_CTRL, (RG_LVDSRX_FIFO_EN | RG_OUT_FIFO_EN | RG_LVDS_E));
+	MT8193_REG_WRITE(LVDS_OUTPUT_CTRL, (RG_LVDSRX_FIFO_EN | RG_SYNC_TRIG_MODE | RG_OUT_FIFO_EN | RG_LVDS_E));
 	MDELAY(5);
 }
 
@@ -471,9 +436,9 @@ static void lcm_init(void)
     lcm_mt8193_sw_reset();
 	lcm_mt8193_clear_counter();
     
-    //VGP6 3.3V
-    pmic_config_interface(DIGLDO_CON12, 0x1, PMIC_RG_VGP6_EN_MASK, PMIC_RG_VGP6_EN_SHIFT); 
-    pmic_config_interface(DIGLDO_CON33, 0x07, PMIC_RG_VGP6_VOSEL_MASK, PMIC_RG_VGP6_VOSEL_SHIFT);
+    //hwPowerOn(MT65XX_POWER_LDO_VGP6, VOL_3300, "LCM");
+	upmu_set_rg_vgp6_en(0x1);
+	upmu_set_rg_vgp6_vosel(0x7);
 
     mt_set_gpio_mode(GPIO_SHIFT_EN, GPIO_MODE_00);
     mt_set_gpio_dir(GPIO_SHIFT_EN, GPIO_DIR_OUT);
@@ -547,7 +512,9 @@ static void lcm_suspend(void)
     mt_set_gpio_out(GPIO_SHIFT_EN, GPIO_OUT_ZERO);
     MDELAY(20);     
     
-    hwPowerDown(MT65XX_POWER_LDO_VGP6, "LCM");
+    //hwPowerDown(MT65XX_POWER_LDO_VGP6, "LCM");
+	upmu_set_rg_vgp6_en(0x0);
+	upmu_set_rg_vgp6_vosel(0x0);
 #endif
 
 }
@@ -556,8 +523,13 @@ static void lcm_suspend(void)
 static void lcm_resume(void)
 {
 #ifdef BUILD_LK
+    u32 u4Reg = 0;
+
 	printf("[LK/LCM] lcm_resume() enter\n");
 
+	u4Reg = MT8193_REG_READ(REG_LVDS_PWR_RST_B);
+	if(0 == u4Reg)
+	{
     lcm_mt8193_lvds_power_on();	
 	lcm_mt8193_ckgen_power_on();	
     lcm_mt8193_anaif_clock_enable();	
@@ -587,6 +559,7 @@ static void lcm_resume(void)
     mt_set_gpio_dir(GPIO_LCD_STB_EN, GPIO_DIR_OUT);
     mt_set_gpio_out(GPIO_LCD_STB_EN, GPIO_OUT_ONE);
     MDELAY(20); 
+    }
 #elif (defined BUILD_UBOOT)
 		// do nothing in uboot
 #else
@@ -603,7 +576,9 @@ static void lcm_resume(void)
     lcm_mt8193_sw_reset();	
 	lcm_mt8193_clear_counter();
 
-    hwPowerOn(MT65XX_POWER_LDO_VGP6, VOL_3300, "LCM");
+    //hwPowerOn(MT65XX_POWER_LDO_VGP6, VOL_3300, "LCM");
+	upmu_set_rg_vgp6_en(0x1);
+	upmu_set_rg_vgp6_vosel(0x7);
 
     mt_set_gpio_mode(GPIO_SHIFT_EN, GPIO_MODE_00);
     mt_set_gpio_dir(GPIO_SHIFT_EN, GPIO_DIR_OUT);

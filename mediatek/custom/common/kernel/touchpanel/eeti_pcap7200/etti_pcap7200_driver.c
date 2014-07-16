@@ -219,11 +219,11 @@ static void tpd_down(int raw_x, int raw_y, int x, int y, int p) {
 
 static int tpd_up(int raw_x, int raw_y, int x, int y,int *count) {
     if(*count>0) {
-        input_report_abs(tpd->dev, ABS_PRESSURE, 0);
+        //input_report_abs(tpd->dev, ABS_PRESSURE, 0);
         input_report_key(tpd->dev, BTN_TOUCH, 0);
-        input_report_abs(tpd->dev, ABS_MT_TOUCH_MAJOR, 0);
-        input_report_abs(tpd->dev, ABS_MT_POSITION_X, x);
-        input_report_abs(tpd->dev, ABS_MT_POSITION_Y, y);
+        //input_report_abs(tpd->dev, ABS_MT_TOUCH_MAJOR, 0);
+        //input_report_abs(tpd->dev, ABS_MT_POSITION_X, x);
+        //input_report_abs(tpd->dev, ABS_MT_POSITION_Y, y);
         //printk("U[%4d %4d %4d] ", x, y, 0);
         input_mt_sync(tpd->dev);
         TPD_UP_DEBUG_TRACK(x,y);

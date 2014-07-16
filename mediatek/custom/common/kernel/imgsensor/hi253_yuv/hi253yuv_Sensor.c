@@ -1257,6 +1257,7 @@ void HI253NightMode(kal_bool Enable)
   HI253WriteCmosSensor(0x01, 0xf8); // Sleep OFF  
   spin_lock(&hi253_drv_lock);
   HI253Status.AECTL1 |= 0x80;   
+  HI253Status.NightMode = Enable;
   spin_unlock(&hi253_drv_lock);
   HI253WriteCmosSensor(0x10,HI253Status.AECTL1);// AE ON BIT 7    
   HI253WriteCmosSensor(0x18, 0x30); // AE Reset OFF
@@ -1295,6 +1296,7 @@ UINT32 HI253Open(void)
   if(SensorId != HI253_SENSOR_ID)
   {
     return ERROR_SENSOR_CONNECT_FAIL;
+  //      SensorId = HI253_SENSOR_ID; 
   }
   HI253InitSetting();
   HI253InitPara();
@@ -1335,6 +1337,7 @@ UINT32 HI253GetSensorID(UINT32 *sensorID)
 	{
         *sensorID = 0xFFFFFFFF; 
 	  return ERROR_SENSOR_CONNECT_FAIL;
+    //    *sensorID = HI253_SENSOR_ID; 
 	}
 	return ERROR_NONE;
 }
@@ -1442,9 +1445,10 @@ UINT32 HI253Preview(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
   HI253WriteCmosSensor(0x9d, (HI253_PV_EXPOSURE_LIMITATION>>0)&0xff);  
   HI253WriteCmosSensor(0x9e, (EXPUNIT>>8)&0xff);//EXP Unit
   HI253WriteCmosSensor(0x9f, (EXPUNIT>>0)&0xff);
-  
+
   HI253SetAeMode(KAL_TRUE);
   HI253SetAwbMode(KAL_TRUE);
+  HI253NightMode(HI253Status.NightMode);
   
   return ERROR_NONE;
 }/* HI253Preview() */
@@ -1485,7 +1489,7 @@ UINT32 HI253Capture(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
   /*capture 1600*1200 start x, y*/
   HI253SetPage(0x00);
   HI253WriteCmosSensor(0x20, 0x00); // WINROWH
-  HI253WriteCmosSensor(0x21, 0x0f); // WINROWL
+  HI253WriteCmosSensor(0x21, 0x0f+2); // WINROWL
   HI253WriteCmosSensor(0x22, 0x00); // WINCOLH
   HI253WriteCmosSensor(0x23, 0x19); // WINCOLL
   spin_lock(&hi253_drv_lock);
@@ -1536,6 +1540,7 @@ UINT32 HI253Capture(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
   HI253WriteCmosSensor(0x84, (CapShutter >> 8) & 0xFF);
   HI253WriteCmosSensor(0x85, CapShutter & 0xFF);  
   HI253WriteCmosSensor(0x01, 0xf8); // Sleep OFF  
+  SENSORDB("[HI253]CapShutter: %d \n",CapShutter);
   return ERROR_NONE;
 } /* HI253Capture() */
 
@@ -1545,6 +1550,13 @@ UINT32 HI253GetResolution(MSDK_SENSOR_RESOLUTION_INFO_STRUCT *pSensorResolution)
   pSensorResolution->SensorFullHeight = HI253_FULL_HEIGHT;
   pSensorResolution->SensorPreviewWidth = HI253_PV_WIDTH;
   pSensorResolution->SensorPreviewHeight = HI253_PV_HEIGHT;
+
+
+
+  pSensorResolution->SensorVideoWidth=HI253_PV_WIDTH; 
+  pSensorResolution->SensorVideoHeight=HI253_PV_HEIGHT;
+
+  
   return ERROR_NONE;
 } /* HI253GetResolution() */
 
@@ -1571,7 +1583,7 @@ UINT32 HI253GetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
   pSensorInfo->SensorInterruptDelayLines = 1;
   pSensorInfo->SensroInterfaceType=SENSOR_INTERFACE_TYPE_PARALLEL;
 
-  pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_100_MODE].MaxWidth=CAM_SIZE_5M_WIDTH;
+  /*pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_100_MODE].MaxWidth=CAM_SIZE_5M_WIDTH;
   pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_100_MODE].MaxHeight=CAM_SIZE_5M_HEIGHT;
   pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_100_MODE].ISOSupported=TRUE;
   pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_100_MODE].BinningEnable=FALSE;
@@ -1594,20 +1606,35 @@ UINT32 HI253GetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
   pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_1600_MODE].MaxWidth=CAM_SIZE_1M_WIDTH;
   pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_1600_MODE].MaxHeight=CAM_SIZE_1M_HEIGHT;
   pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_1600_MODE].ISOSupported=TRUE;
-  pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_1600_MODE].BinningEnable=TRUE;
+  pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_1600_MODE].BinningEnable=TRUE;*/
   pSensorInfo->CaptureDelayFrame = 3; 
   pSensorInfo->PreviewDelayFrame = 3; 
   pSensorInfo->VideoDelayFrame = 4; 
   pSensorInfo->SensorMasterClockSwitch = 0; 
-  pSensorInfo->SensorDrivingCurrent = ISP_DRIVING_8MA; 
+  
+  pSensorInfo->YUVAwbDelayFrame = 3; 
+  pSensorInfo->YUVEffectDelayFrame = 2; 
+
+  
+  pSensorInfo->SensorDrivingCurrent = ISP_DRIVING_6MA; 
 
   switch (ScenarioId)
   {
+    case MSDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG:
+      pSensorInfo->SensorClockFreq=26;
+      pSensorInfo->SensorClockDividCount=3;
+      pSensorInfo->SensorClockRisingCount=0;
+      pSensorInfo->SensorClockFallingCount=2;
+      pSensorInfo->SensorPixelClockCount=3;
+      pSensorInfo->SensorDataLatchCount=2;
+      pSensorInfo->SensorGrabStartX = HI253_GRAB_START_X+3; 
+      pSensorInfo->SensorGrabStartY = HI253_GRAB_START_Y;
+      break;
     case MSDK_SCENARIO_ID_CAMERA_PREVIEW:
     case MSDK_SCENARIO_ID_VIDEO_PREVIEW:
-    case MSDK_SCENARIO_ID_VIDEO_CAPTURE_MPEG4:
-    case MSDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG:
-    case MSDK_SCENARIO_ID_CAMERA_CAPTURE_MEM:
+    //case MSDK_SCENARIO_ID_VIDEO_CAPTURE_MPEG4:
+    //case MSDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG:
+    //case MSDK_SCENARIO_ID_CAMERA_CAPTURE_MEM:
     default:
       pSensorInfo->SensorClockFreq=26;
       pSensorInfo->SensorClockDividCount=3;
@@ -1615,8 +1642,8 @@ UINT32 HI253GetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
       pSensorInfo->SensorClockFallingCount=2;
       pSensorInfo->SensorPixelClockCount=3;
       pSensorInfo->SensorDataLatchCount=2;
-      pSensorInfo->SensorGrabStartX = HI253_GRAB_START_X; 
-      pSensorInfo->SensorGrabStartY = HI253_GRAB_START_Y;
+      pSensorInfo->SensorGrabStartX = HI253_GRAB_START_X+3; 
+      pSensorInfo->SensorGrabStartY = HI253_GRAB_START_Y+1;
       break;
   }
   return ERROR_NONE;
@@ -1630,11 +1657,11 @@ UINT32 HI253Control(MSDK_SCENARIO_ID_ENUM ScenarioId, MSDK_SENSOR_EXPOSURE_WINDO
   {
   case MSDK_SCENARIO_ID_CAMERA_PREVIEW:
   case MSDK_SCENARIO_ID_VIDEO_PREVIEW:
-  case MSDK_SCENARIO_ID_VIDEO_CAPTURE_MPEG4:
+  //case MSDK_SCENARIO_ID_VIDEO_CAPTURE_MPEG4:
     HI253Preview(pImageWindow, pSensorConfigData);
     break;
   case MSDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG:
-  case MSDK_SCENARIO_ID_CAMERA_CAPTURE_MEM:
+  //case MSDK_SCENARIO_ID_CAMERA_CAPTURE_MEM:
     HI253Capture(pImageWindow, pSensorConfigData);
     break;
   default:
@@ -1866,6 +1893,8 @@ UINT32 HI253YUVSensorSetting(FEATURE_ID Cmd, UINT32 Para)
 {
   switch (Cmd) {
     case FID_SCENE_MODE:
+		
+  		SENSORDB("[HI253]FID_SCENE_MODE: %d;\n",Para);
       if (Para == SCENE_MODE_OFF)
       {
         HI253NightMode(KAL_FALSE); 

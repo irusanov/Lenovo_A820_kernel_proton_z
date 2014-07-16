@@ -178,6 +178,11 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(usb_hc),
 	POWER_SUPPLY_ATTR(usb_otg),
 	POWER_SUPPLY_ATTR(charge_enabled),
+
+	/*Lenovo-sw begin yexh1 add 2013-04-12,add for bat charging current */       
+        POWER_SUPPLY_ATTR(batt_Icharging),
+        /*Lenovo-sw end yexh1 add 2013-04-12,add for bat charging current */ 
+	
 	/* 20100723 James Lo */
 	POWER_SUPPLY_ATTR(batt_vol),
 	POWER_SUPPLY_ATTR(batt_temp),
@@ -189,9 +194,6 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(BatterySenseVoltage),
 	POWER_SUPPLY_ATTR(ISenseVoltage),
 	POWER_SUPPLY_ATTR(ChargerVoltage),
-  #if defined(ACER_C11)//for run in test    
-    POWER_SUPPLY_ATTR(ChargerTest),
-  #endif	
 	/* Properties of type `const char *' */
 	POWER_SUPPLY_ATTR(model_name),
 	POWER_SUPPLY_ATTR(manufacturer),

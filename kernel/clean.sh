@@ -1,0 +1,1 @@
+TARGET_PRODUCT=lenovo89_cu_jb MTK_ROOT_CUSTOM=../mediatek/custom/ make -j all ARCH=arm CROSS_COMPILE=~/a820/arm-eabi-4.7/bin/ mrproper

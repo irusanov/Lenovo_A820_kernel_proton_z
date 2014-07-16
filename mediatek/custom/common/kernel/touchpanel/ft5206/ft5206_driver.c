@@ -39,13 +39,13 @@ static void tpd_eint_interrupt_handler(void);
 									  kal_bool ACT_Polarity, void (EINT_FUNC_PTR)(void),
 									  kal_bool auto_umask);
 #endif
-#ifdef MT6577
+
 	extern void mt65xx_eint_unmask(unsigned int line);
 	extern void mt65xx_eint_mask(unsigned int line);
 	extern void mt65xx_eint_set_hw_debounce(unsigned int eint_num, unsigned int ms);
 	extern unsigned int mt65xx_eint_set_sens(unsigned int eint_num, unsigned int sens);
 	extern void mt65xx_eint_registration(unsigned int eint_num, unsigned int is_deb_en, unsigned int pol, void (EINT_FUNC_PTR)(void), unsigned int is_auto_umask);
-#endif
+
 
  
 static int __devinit tpd_probe(struct i2c_client *client, const struct i2c_device_id *id);

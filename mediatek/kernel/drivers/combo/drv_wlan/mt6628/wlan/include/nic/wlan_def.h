@@ -457,7 +457,9 @@
 #define AUTH_TYPE_FAST_BSS_TRANSITION               BIT(AUTH_ALGORITHM_NUM_FAST_BSS_TRANSITION)
 
 /* Authentication Retry Limit */
-#define TX_AUTH_ASSOCI_RETRY_LIMIT                  6
+//<2013/4/22-24144-liulanqing, [Pelican][ATS00158469] Change password, failed to connection
+#define TX_AUTH_ASSOCI_RETRY_LIMIT                2  //  6
+//>2013/4/22-24144-liulanqing 
 #define TX_AUTH_ASSOCI_RETRY_LIMIT_FOR_ROAMING      1
 
 /* WMM-2.2.1 WMM Information Element */

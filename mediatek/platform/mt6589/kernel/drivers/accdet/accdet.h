@@ -68,8 +68,6 @@ enum accdet_report_state
     HEADSET_MIC = 1,
     HEADSET_NO_MIC = 2,
     HEADSET_ILEGAL = 3,
-    CALLING_LIGHT_PLUG_IN = 4,
-    CALLING_LIGHT_PLUG_OUT = 5,
     //DOUBLE_CHECK_TV = 4
 };
 

@@ -59,14 +59,15 @@ extern LCM_DRIVER nt35590_hd720_dsi_cmd_cmi_lcm_drv;
 extern LCM_DRIVER nt35516_qhd_dsi_cmd_ipsboe_lcm_drv;
 extern LCM_DRIVER nt35516_qhd_dsi_cmd_ipsboe_wvga_lcm_drv;
 extern LCM_DRIVER bp070ws1_lcm_drv;
+extern LCM_DRIVER bp070ws1_n_lcm_drv;
 extern LCM_DRIVER bp101wx1_lcm_drv;
 extern LCM_DRIVER bp101wx1_n_lcm_drv;
 extern LCM_DRIVER nt35516_qhd_rav4_lcm_drv;
 extern LCM_DRIVER r63311_fhd_dsi_vdo_sharp_lcm_drv;
 extern LCM_DRIVER nt35596_fhd_dsi_vdo_truly_lcm_drv;
-extern LCM_DRIVER otm9608a_qhd_dsi_vdo_yushun_lcm_drv;
-extern LCM_DRIVER otm9605a_qhd_dsi_vdo_tcl_lcm_drv;
-extern LCM_DRIVER nt35516_qhd_dsi_vdo_xinli_lcm_drv;
+extern LCM_DRIVER lgld070wx3_dsi_vdo_lcm_drv;
+extern LCM_DRIVER he080ia_lcm_drv;
+extern LCM_DRIVER auo_b079xat02_dsi_vdo_lcm_drv;
 
 LCM_DRIVER* lcm_driver_list[] = 
 { 
@@ -306,6 +307,10 @@ LCM_DRIVER* lcm_driver_list[] =
   &bp070ws1_lcm_drv,
 #endif
 
+#if defined(BP070WS1_N)
+  &bp070ws1_n_lcm_drv,
+#endif
+
 #if defined(BP101WX1)
   &bp101wx1_lcm_drv,
 #endif
@@ -326,14 +331,16 @@ LCM_DRIVER* lcm_driver_list[] =
 	&nt35596_fhd_dsi_vdo_truly_lcm_drv,
 #endif
 
-#if defined(OTM9608A_QHD_DSI_VDO_YUSHUN)
-	&otm9608a_qhd_dsi_vdo_yushun_lcm_drv,
+#if defined(LGLD070WX3_DSI_VDO)
+    &lgld070wx3_dsi_vdo_lcm_drv,
 #endif
-#if defined(NT35516_QHD_DSI_VDO_XINLI)
-	&nt35516_qhd_dsi_vdo_xinli_lcm_drv,
+
+#if defined(HE080IA)
+	&he080ia_lcm_drv,
 #endif
-#if defined(OTM9605A_QHD_DSI_VDO_TCL)
-	&otm9605a_qhd_dsi_vdo_tcl_lcm_drv,
+
+#if defined(AUO_B079XAT02_DSI_VDO)
+    &auo_b079xat02_dsi_vdo_lcm_drv,
 #endif
 };
 

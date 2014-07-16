@@ -546,6 +546,11 @@ static int toi_init(int restarting)
 {
 	int result, i, j;
 
+    // - MTK jonathan.jmchen
+    if (test_result_state(TOI_ABORTED))
+        return 1;
+    //
+
 	toi_result = 0;
 
 	printk(KERN_INFO "Initiating a hibernation cycle.\n");
@@ -652,11 +657,6 @@ static int do_post_image_write(void)
 	/* If switching images fails, do normal powerdown */
 	if (alt_resume_param[0])
 		do_toi_step(STEP_RESUME_ALT_IMAGE);
-
-#ifdef CONFIG_MTK_HIBERNATION
-    // for lk
-    set_env("hibboot", "1");
-#endif
 
 	toi_power_down();
 
@@ -1247,6 +1247,19 @@ int toi_launch_userspace_program(char *command, int channel_no,
 
 	return retval;
 }
+
+#ifdef CONFIG_MTK_HIBERNATION
+int toi_abort_hibernate(void)
+{
+	if (test_result_state(TOI_ABORTED))
+		return 0;
+
+	set_result_state(TOI_ABORTED);
+
+    return 0;
+}
+EXPORT_SYMBOL_GPL(toi_abort_hibernate);
+#endif
 
 /*
  * This array contains entries that are automatically registered at

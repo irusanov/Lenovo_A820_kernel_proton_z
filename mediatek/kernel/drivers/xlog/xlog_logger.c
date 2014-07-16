@@ -28,7 +28,9 @@
 #include <asm/ioctls.h>
 #include <linux/proc_fs.h>
 #include <linux/xlog.h>
-#include "../../../../../kernel/drivers/staging/android/logger.h"
+//modified by lenovo.xm chensx BEGIN
+#include "../../../../kernel/drivers/staging/android/logger.h"
+//modified by lenovo.xm chensx END
 #include "xlog_internal.h"
 
 /*
