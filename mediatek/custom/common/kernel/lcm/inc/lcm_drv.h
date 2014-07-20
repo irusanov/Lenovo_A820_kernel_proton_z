@@ -1,3 +1,4 @@
+
 #ifndef __LCM_DRV_H__
 #define __LCM_DRV_H__
 
@@ -556,6 +557,10 @@ typedef struct
     void (*suspend)(void);
     void (*resume)(void);
 
+    // for power-on sequence refinement    
+    void (*suspend_power)(void);
+    void (*resume_power)(void);
+
     void (*update)(unsigned int x, unsigned int y,
                    unsigned int width, unsigned int height);
 	unsigned int (*compare_id)(void);
@@ -571,6 +576,13 @@ typedef struct
     unsigned int  (*esd_recover)(void);
 	unsigned int (*check_status)(void);
 /////////////////////////////////////////////////
+
+//<2013/04/12-23797-stevenchen, [Pelican][drv] Fix the adb command of turning on/off LCM.
+//<2013/02/10-21805-stevenchen, Add ADB commands to turn on/off LCM.
+    void (*poweron)(void);
+    void (*poweroff)(void);
+//>2013/02/10-21805-stevenchen
+//>2013/04/12-23797-stevenchen
 
 } LCM_DRIVER;
 
