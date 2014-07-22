@@ -77,24 +77,14 @@ static const char longname[] = "Gadget Android";
 #define PRODUCT_ID		0x0001
 
 /* Default manufacturer and product string , overridden by userspace */
-/*Lenovo-sw huangxuan modified 2012-11-28 begin*/
-#if defined(LENOVO_PROJECT_A830)
+
+#if defined(LENOVO_PROJECT_A820)
 #define MANUFACTURER_STRING "Lenovo"
-#define PRODUCT_STRING "Lenovo A830"
-#elif defined(LENOVO_PROJECT_PRADA)
-#define MANUFACTURER_STRING "Lenovo"
-#define PRODUCT_STRING "Lenovo P780"
-#elif defined(LENOVO_PROJECT_SEINE)
-#define MANUFACTURER_STRING "Lenovo"
-#define PRODUCT_STRING "Lenovo S920"
-#elif defined(LENOVO_PROJECT_S820)
-#define MANUFACTURER_STRING "Lenovo"
-#define PRODUCT_STRING "Lenovo S820"
+#define PRODUCT_STRING "Lenovo A820"
 #else
 #define MANUFACTURER_STRING "MediaTek"
 #define PRODUCT_STRING "MT65xx Android Phone"
 #endif
-/*Lenovo-sw huangxuan modified 2012-11-28 end*/
 
 #define USB_LOG "USB"
 
