@@ -53,7 +53,7 @@ extern void show_free_areas_minimum(void);
 
 static uint32_t lowmem_debug_level = 2;
 #ifdef CONFIG_MT_ENG_BUILD
-static uint32_t lowmem_debug_adj = 0;
+static uint32_t lowmem_debug_adj = 1;
 #endif
 static DEFINE_SPINLOCK(lowmem_shrink_lock);
 static int lowmem_adj[6] = {

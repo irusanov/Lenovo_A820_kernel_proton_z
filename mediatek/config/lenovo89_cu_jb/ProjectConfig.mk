@@ -240,7 +240,8 @@ MTK_2IN1_SPK_SUPPORT=no
 
 # There is requirement to implement UMTS TDD specific features in AP side, while have no such UMTS TDD specific options available.
 MODEM_UMTS_TDD128_MODE=no
-MTK_2SDCARD_SWAP=no
+MTK_2SDCARD_SWAP=yes
+
 
 # yes: enable this feature
 # no: disable this feature
@@ -258,7 +259,7 @@ MTK_API_CHECK=yes
 MTK_APKINSTALLER_APP=yes
 
 # speech enhancement in AP side function  enable Flag
-MTK_AP_SPEECH_ENHANCEMENT=no
+MTK_AP_SPEECH_ENHANCEMENT=yes
 
 # Auto Scene Detection (ASD) project aims at detecting the scene type of the surrounding environment in a fully automatic manner so that the imaging system could take corresponding actions to produce images of better qualities.
 MTK_ASD_SUPPORT=yes
@@ -610,6 +611,9 @@ MTK_GALLERY3D_APP=yes
 
 # Description: Gallery is an application that let user view, share or manipulate images and video on SD card, in other application such as email and so on. Commonly used operations include view/play, share, delete, crop, rotate, set as, view detail. This application has the same usage as Gallery3D and can also be called as Gallery2D to distinguish from Gallery3D.
 MTK_GALLERY_APP=yes
+MTK_GAMELOFT_GLL_APP=no
+MTK_GAMELOFT_LBC_APP=no
+MTK_GAMELOFT_SD_APP=no
 
 # Open or close MOTA(Mediatek Over-The-Air) feature. Online firmware upgrade.
 MTK_GOOGLEOTA_SUPPORT=yes
@@ -632,7 +636,7 @@ MTK_HIGH_QUALITY_THUMBNAIL=yes
 MTK_HWC_SUPPORT=yes
 MTK_HWC_SUPPORT_V0=no
 MTK_HWC_VERSION=1.0
-MTK_HW_ENHANCE=yes
+MTK_HW_ENHANCE=no
 
 # increase the memory limit value for image  support
 MTK_IMAGE_LARGE_MEM_LIMIT=no
@@ -1098,11 +1102,11 @@ MTK_VIDEO_1080P=yes
 
 # Provide an option to enable/disable app widget:video favorites
 MTK_VIDEO_FAVORITES_WIDGET_APP=yes
+MTK_VIDEO_THUMBNAIL_PLAY_SUPPORT=yes
 
 # To enable/disable feature Video Wallpaper on the project. If MTK_VLW_APP = yes MtkVideoLiveWallpaper.apk will be built into bootimage and users can use this feature on their device, vice versa.
 MTK_VLW_APP=yes
-
-MTK_VOICE_UI_SUPPORT=no
+MTK_VOICE_UI_SUPPORT=yes
 MTK_VOICE_UNLOCK_SUPPORT=yes
 
 # This feature option is to define if we need to enable/disable auto answer function when virtual sim is on/off
@@ -1204,7 +1208,7 @@ MTK_FD_FORCE_REL_SUPPORT=yes
 MTK_FD_SUPPORT=yes
 
 # Enable or disable the 3G Switch feature
-MTK_GEMINI_3G_SWITCH=no
+MTK_GEMINI_3G_SWITCH=yes
 
 # For Platform: MT6573, MT6575 If it is equal to "modem_2g", means only support 2g modem. If it is equal to "modem_3g", means  support 2g and 3g modem
 MTK_MODEM_SUPPORT=modem_3g
@@ -1279,7 +1283,7 @@ MTK_ATV_CHIP=
 MTK_MATV_ANALOG_SUPPORT=yes
 
 # if it is set to TRUE: Support WAPI (WLAN Authentication and Privacy Infrastructure) if it is set to FALSE: Does not Support WAPI (WLAN Authentication and Privacy Infrastructure)
-MTK_WAPI_SUPPORT=no
+MTK_WAPI_SUPPORT=yes
 
 # To enable Wi-Fi Tethering in the Wi-Fi Setting UI * valid_value_list = Yes or No (Yes: Enable, No: Disable)  * dependency_relationship need MTK_WLAN_SUPPORT = yes
 MTK_WIFI_HOTSPOT_SUPPORT=yes

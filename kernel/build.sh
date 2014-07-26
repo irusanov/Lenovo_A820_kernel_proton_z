@@ -189,4 +189,4 @@ else
   ${mkimg} ${kernel_zimg} KERNEL > kernel_${MTK_PROJECT}.bin
 fi
 
-copy_to_legacy_download_flash_folder   kernel_${MTK_PROJECT}.bin rootfs_${MTK_PROJECT}.bin
+# copy_to_legacy_download_flash_folder   kernel_${MTK_PROJECT}.bin rootfs_${MTK_PROJECT}.bin

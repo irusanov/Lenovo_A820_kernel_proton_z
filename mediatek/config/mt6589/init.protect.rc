@@ -1,5 +1,6 @@
 #init.protect.rc
-
+on early-init
+mkdir /mnt/usbotg 0000 system system
 on early-init
 #create mount point for protect partition
 
