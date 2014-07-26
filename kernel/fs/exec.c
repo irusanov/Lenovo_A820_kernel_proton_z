@@ -823,12 +823,6 @@ static int exec_mmap(struct mm_struct *mm)
 	/* Notify parent that we're no longer interested in the old VM */
 	tsk = current;
 	old_mm = current->mm;
-        /*
-         * kernel patch
-         * commit: 21017faf87a93117ca7a14aa8f0dd2f315fdeb08
-         * https://android.googlesource.com/kernel/common/+/21017faf87a93117ca7a14aa8f0dd2f315fdeb08%5E!/#F0
-         */
-	//sync_mm_rss(old_mm);
 	mm_release(tsk, old_mm);
 
 	if (old_mm) {
@@ -1404,12 +1398,6 @@ int search_binary_handler(struct linux_binprm *bprm,struct pt_regs *regs)
 				continue;
 			read_unlock(&binfmt_lock);
 			retval = fn(bprm, regs);
-            /* exec mt_debug*/
-            if(-999 == retval){
-                printk("[exec warn] return:%d\n", retval);
-                put_binfmt(fmt);
-                return retval;
-            }
 			/*
 			 * Restore the depth counter to its starting value
 			 * in this call, so we don't have to rely on every
@@ -1477,10 +1465,6 @@ static int do_execve_common(const char *filename,
 	bool clear_in_exec;
 	int retval;
 	const struct cred *cred = current_cred();
-#ifdef CONFIG_MT_ENG_BUILD
-    int *argv_p0;
-    int argv0 = 0;
-#endif
 
 	/*
 	 * We move the actual failure in case of RLIMIT_NPROC excess from
@@ -1553,23 +1537,11 @@ static int do_execve_common(const char *filename,
 	if (retval < 0)
 		goto out;
 
-#ifdef CONFIG_MT_ENG_BUILD
-    argv_p0 = (int *)get_user_arg_ptr(argv, 0);
-    if(argv_p0 != 0)
-        argv0 = *argv_p0;
-#endif
-
 	retval = copy_strings(bprm->argc, argv, bprm);
 	if (retval < 0)
 		goto out;
 
 	retval = search_binary_handler(bprm,regs);
-#ifdef CONFIG_MT_ENG_BUILD
-    if(retval == -999){
-        printk("[exec done] argv[0] = 0x%x\n", argv0);
-        printk("[exec done] argv0_ptr = 0x%x\n", (unsigned int)argv_p0);
-    }
-#endif
 	if (retval < 0)
 		goto out;
 
@@ -1616,14 +1588,7 @@ int do_execve(const char *filename,
 {
 	struct user_arg_ptr argv = { .ptr.native = __argv };
 	struct user_arg_ptr envp = { .ptr.native = __envp };
-    /* exec mt_debug*/
-    int ret;
-    int retry = 3;
-    do{
-        ret = do_execve_common(filename, argv, envp, regs);
-        printk(KERN_DEBUG"[exec] %s(%d)\n", filename, retry);
-    }while( -999 == ret && retry-- > 0);
-	return ret;
+	return do_execve_common(filename, argv, envp, regs);
 }
 
 #ifdef CONFIG_COMPAT

@@ -4,6 +4,9 @@ SUBLEVEL = 5
 EXTRAVERSION =
 NAME = Saber-toothed Squirrel
 
+#Temp hack for mtk modules built with debug by default
+export TARGET_BUILD_VARIANT = user
+
 # *DOCUMENTATION*
 # To see a list of typical targets execute "make help"
 # More info can be located in ./README
@@ -1165,8 +1168,8 @@ _modinst_post: _modinst_
 
 AMODLIB	= $(INSTALL_MOD_PATH)/lib/modules
 export AMODLIB
-AMODSYMLIB = $(INSTALL_MOD_PATH)/../symbols/system/lib/modules
-export AMODSYMLIB
+#AMODSYMLIB = $(INSTALL_MOD_PATH)/../symbols/system/lib/modules
+#export AMODSYMLIB
 
 PHONY += android_modules_install
 android_modules_install: _android_modinst_ 
@@ -1176,8 +1179,8 @@ _android_modinst_:
 	@if [ ! -d $(AMODLIB) ]; then \
 	   mkdir -p $(AMODLIB); \
 	fi
-	@if [ ! -d $(AMODSYMLIB) ]; then \
-	   mkdir -p $(AMODSYMLIB); \
+#	@if [ ! -d $(AMODSYMLIB) ]; then \
+#	   mkdir -p $(AMODSYMLIB); \
 	fi
 	$(Q)$(MAKE) -f $(srctree)/scripts/Makefile.android.modinst
 # MTK, Infinity, 20090730 }

@@ -42,8 +42,6 @@
 #include <linux/sysctl.h>
 #include <linux/oom.h>
 #include <linux/prefetch.h>
-//Google Patch
-//https://android.googlesource.com/kernel/common/+/29b8a347fcba8a7df5478f746f1d2a422e294190%5E%21/#F0
 #include <linux/debugfs.h>
 
 #include <asm/tlbflush.h>
@@ -203,8 +201,7 @@ static unsigned long zone_nr_lru_pages(struct mem_cgroup_zone *mz,
 
 	return zone_page_state(mz->zone, NR_LRU_BASE + lru);
 }
-//Google Patch
-//https://android.googlesource.com/kernel/common/+/29b8a347fcba8a7df5478f746f1d2a422e294190%5E%21/#F0
+
 struct dentry *debug_file;
 
 static int debug_shrinker_show(struct seq_file *s, void *unused)
@@ -239,8 +236,6 @@ static const struct file_operations debug_shrinker_fops = {
         .release = single_release,
 };
 
-
-
 /*
  * Add a shrinker callback to be called from the vm
  */
@@ -252,9 +247,6 @@ void register_shrinker(struct shrinker *shrinker)
 	up_write(&shrinker_rwsem);
 }
 EXPORT_SYMBOL(register_shrinker);
-
-//Google Patch
-//https://android.googlesource.com/kernel/common/+/29b8a347fcba8a7df5478f746f1d2a422e294190%5E%21/#F0
 
 static int __init add_shrinker_debug(void)
 {
@@ -3350,11 +3342,6 @@ int kswapd_run(int nid)
 	return ret;
 }
 
-        /*
-         * kernel patch
-         * commit: 0e343dbe08acb440f7914d989bcc32c1d1576735
-         * https://android.googlesource.com/kernel/common/+/0e343dbe08acb440f7914d989bcc32c1d1576735%5E!/#F0
-         */
 /*
  * Called by memory hotplug when all memory in a node is offlined.  Caller must
  * hold lock_memory_hotplug().
@@ -3363,8 +3350,6 @@ void kswapd_stop(int nid)
 {
 	struct task_struct *kswapd = NODE_DATA(nid)->kswapd;
 
-	//if (kswapd)
-	//	kthread_stop(kswapd);
 	if (kswapd) {
 		kthread_stop(kswapd);
 		NODE_DATA(nid)->kswapd = NULL;

@@ -547,7 +547,6 @@ int call_usermodehelper_exec(struct subprocess_info *sub_info, int wait)
 		goto out;
 
 	if (!khelper_wq || usermodehelper_disabled) {
-        pr_warn("[%s] retval(%d), usermodehelper_disabled(%d)\n", __func__, retval, usermodehelper_disabled);
 		retval = -EBUSY;
 		goto out;
 	}

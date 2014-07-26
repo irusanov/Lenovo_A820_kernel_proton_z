@@ -46,6 +46,7 @@
 #define CFG_STAT_ACTIVE_HIGH			BIT(7)
 #define CFG_PIN					0x06
 #define CFG_PIN_EN_CTRL_MASK			0x60
+#define CFG_PIN_USB_MODE_CTRL			BIT(4)
 #define CFG_PIN_EN_CTRL_ACTIVE_HIGH		0x40
 #define CFG_PIN_EN_CTRL_ACTIVE_LOW		0x60
 #define CFG_PIN_EN_APSD_IRQ			BIT(1)
@@ -85,8 +86,11 @@
 #define CMD_A					0x30
 #define CMD_A_CHG_ENABLED			BIT(1)
 #define CMD_A_SUSPEND_ENABLED			BIT(2)
+#define CMD_A_OTG_ENABLE			BIT(4)
 #define CMD_A_ALLOW_WRITE			BIT(7)
 #define CMD_B					0x31
+#define CMD_B_USB59_MODE			BIT(1)
+#define CMD_B_HC_MODE				BIT(0)
 #define CMD_C					0x33
 
 /* Interrupt Status registers */
@@ -135,6 +139,9 @@ struct smb347_charger {
 	bool			mains_online;
 	bool			usb_online;
 	bool			charging_enabled;
+	unsigned int		mains_current_limit;
+	bool			usb_hc_mode;
+	bool			usb_otg_enabled;
 	struct dentry		*dentry;
 	const struct smb347_charger_platform_data *pdata;
 };
@@ -424,9 +431,9 @@ static int smb347_set_current_limits(struct smb347_charger *smb)
 	if (ret < 0)
 		return ret;
 
-	if (smb->pdata->mains_current_limit) {
+	if (smb->mains_current_limit) {
 		val = current_to_hw(icl_tbl, ARRAY_SIZE(icl_tbl),
-				    smb->pdata->mains_current_limit);
+				    smb->mains_current_limit);
 		if (val < 0)
 			return val;
 
@@ -728,7 +735,7 @@ static int smb347_hw_init(struct smb347_charger *smb)
 	 * command register unless pin control is specified in the platform
 	 * data.
 	 */
-	ret &= ~CFG_PIN_EN_CTRL_MASK;
+	ret &= ~(CFG_PIN_EN_CTRL_MASK | CFG_PIN_USB_MODE_CTRL);
 
 	switch (smb->pdata->enable_control) {
 	case SMB347_CHG_ENABLE_SW:
@@ -741,6 +748,9 @@ static int smb347_hw_init(struct smb347_charger *smb)
 		ret |= CFG_PIN_EN_CTRL_ACTIVE_HIGH;
 		break;
 	}
+
+	if (smb->pdata->usb_mode_pin_ctrl)
+		ret |= CFG_PIN_USB_MODE_CTRL;
 
 	/* Disable Automatic Power Source Detection (APSD) interrupt. */
 	ret &= ~CFG_PIN_EN_APSD_IRQ;
@@ -811,14 +821,15 @@ static irqreturn_t smb347_interrupt(int irq, void *data)
 
 	/*
 	 * If we got an under voltage interrupt it means that AC/USB input
-	 * was connected or disconnected.
+	 * was disconnected.
 	 */
-	if (irqstat_e & (IRQSTAT_E_USBIN_UV_IRQ | IRQSTAT_E_DCIN_UV_IRQ)) {
-		if (smb347_update_status(smb) > 0) {
-			smb347_update_online(smb);
-			power_supply_changed(&smb->mains);
-			power_supply_changed(&smb->usb);
-		}
+	if (irqstat_e & (IRQSTAT_E_USBIN_UV_IRQ | IRQSTAT_E_DCIN_UV_IRQ))
+		ret = IRQ_HANDLED;
+
+	if (smb347_update_status(smb) > 0) {
+		smb347_update_online(smb);
+		power_supply_changed(&smb->mains);
+		power_supply_changed(&smb->usb);
 		ret = IRQ_HANDLED;
 	}
 
@@ -899,8 +910,8 @@ static int smb347_irq_init(struct smb347_charger *smb)
 		goto fail;
 
 	ret = request_threaded_irq(irq, NULL, smb347_interrupt,
-				   IRQF_TRIGGER_FALLING, smb->client->name,
-				   smb);
+				   IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+				   smb->client->name, smb);
 	if (ret < 0)
 		goto fail_gpio;
 
@@ -949,15 +960,57 @@ static int smb347_mains_get_property(struct power_supply *psy,
 	struct smb347_charger *smb =
 		container_of(psy, struct smb347_charger, mains);
 
-	if (prop == POWER_SUPPLY_PROP_ONLINE) {
+	switch (prop) {
+	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = smb->mains_online;
 		return 0;
+
+	case POWER_SUPPLY_PROP_CURRENT_MAX:
+		val->intval = smb->mains_current_limit;
+		return 0;
+
+	default:
+		return -EINVAL;
 	}
 	return -EINVAL;
 }
 
+static int smb347_mains_set_property(struct power_supply *psy,
+				     enum power_supply_property prop,
+				     const union power_supply_propval *val)
+{
+	struct smb347_charger *smb =
+		container_of(psy, struct smb347_charger, mains);
+
+	switch (prop) {
+	case POWER_SUPPLY_PROP_CURRENT_MAX:
+		smb->mains_current_limit = val->intval;
+		smb347_hw_init(smb);
+		return 0;
+
+	default:
+		return -EINVAL;
+	}
+
+	return -EINVAL;
+}
+
+static int smb347_mains_property_is_writeable(struct power_supply *psy,
+					     enum power_supply_property prop)
+{
+	switch (prop) {
+	case POWER_SUPPLY_PROP_CURRENT_MAX:
+		return 1;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
 static enum power_supply_property smb347_mains_properties[] = {
 	POWER_SUPPLY_PROP_ONLINE,
+	POWER_SUPPLY_PROP_CURRENT_MAX,
 };
 
 static int smb347_usb_get_property(struct power_supply *psy,
@@ -967,15 +1020,85 @@ static int smb347_usb_get_property(struct power_supply *psy,
 	struct smb347_charger *smb =
 		container_of(psy, struct smb347_charger, usb);
 
-	if (prop == POWER_SUPPLY_PROP_ONLINE) {
+	switch (prop) {
+	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = smb->usb_online;
 		return 0;
+
+	case POWER_SUPPLY_PROP_USB_HC:
+		val->intval = smb->usb_hc_mode;
+		return 0;
+
+	case POWER_SUPPLY_PROP_USB_OTG:
+		val->intval = smb->usb_otg_enabled;
+		return 0;
+
+	default:
+		break;
 	}
 	return -EINVAL;
 }
 
+static int smb347_usb_set_property(struct power_supply *psy,
+				   enum power_supply_property prop,
+				   const union power_supply_propval *val)
+{
+	int ret = -EINVAL;
+	struct smb347_charger *smb =
+		container_of(psy, struct smb347_charger, usb);
+
+	switch (prop) {
+	case POWER_SUPPLY_PROP_USB_HC:
+		smb347_set_writable(smb, true);
+		ret = smb347_write(smb, CMD_B, val->intval ?
+				   CMD_B_HC_MODE : CMD_B_USB59_MODE);
+		smb347_set_writable(smb, false);
+		smb->usb_hc_mode = val->intval;
+		break;
+
+	case POWER_SUPPLY_PROP_USB_OTG:
+		ret = smb347_read(smb, CMD_A);
+
+		if (ret < 0)
+			return ret;
+
+		if (val->intval)
+			ret |= CMD_A_OTG_ENABLE;
+		else
+			ret &= ~CMD_A_OTG_ENABLE;
+
+		ret = smb347_write(smb, CMD_A, ret);
+
+		if (ret >= 0)
+			smb->usb_otg_enabled = val->intval;
+
+		break;
+
+	default:
+		break;
+	}
+
+	return ret;
+}
+
+static int smb347_usb_property_is_writeable(struct power_supply *psy,
+					    enum power_supply_property prop)
+{
+	switch (prop) {
+	case POWER_SUPPLY_PROP_USB_HC:
+	case POWER_SUPPLY_PROP_USB_OTG:
+		return 1;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
 static enum power_supply_property smb347_usb_properties[] = {
 	POWER_SUPPLY_PROP_ONLINE,
+	POWER_SUPPLY_PROP_USB_HC,
+	POWER_SUPPLY_PROP_USB_OTG,
 };
 
 static int smb347_battery_get_property(struct power_supply *psy,
@@ -990,6 +1113,12 @@ static int smb347_battery_get_property(struct power_supply *psy,
 	ret = smb347_update_status(smb);
 	if (ret < 0)
 		return ret;
+
+	if (ret > 0) {
+		smb347_update_online(smb);
+		power_supply_changed(&smb->mains);
+		power_supply_changed(&smb->usb);
+	}
 
 	switch (prop) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -1181,6 +1310,8 @@ static int smb347_probe(struct i2c_client *client,
 	smb->client = client;
 	smb->pdata = pdata;
 
+	smb->mains_current_limit = smb->pdata->mains_current_limit;
+
 	ret = smb347_hw_init(smb);
 	if (ret < 0)
 		return ret;
@@ -1188,6 +1319,8 @@ static int smb347_probe(struct i2c_client *client,
 	smb->mains.name = "smb347-mains";
 	smb->mains.type = POWER_SUPPLY_TYPE_MAINS;
 	smb->mains.get_property = smb347_mains_get_property;
+	smb->mains.set_property = smb347_mains_set_property;
+	smb->mains.property_is_writeable = smb347_mains_property_is_writeable;
 	smb->mains.properties = smb347_mains_properties;
 	smb->mains.num_properties = ARRAY_SIZE(smb347_mains_properties);
 	smb->mains.supplied_to = battery;
@@ -1196,6 +1329,8 @@ static int smb347_probe(struct i2c_client *client,
 	smb->usb.name = "smb347-usb";
 	smb->usb.type = POWER_SUPPLY_TYPE_USB;
 	smb->usb.get_property = smb347_usb_get_property;
+	smb->usb.set_property = smb347_usb_set_property;
+	smb->usb.property_is_writeable = smb347_usb_property_is_writeable;
 	smb->usb.properties = smb347_usb_properties;
 	smb->usb.num_properties = ARRAY_SIZE(smb347_usb_properties);
 	smb->usb.supplied_to = battery;
@@ -1206,6 +1341,12 @@ static int smb347_probe(struct i2c_client *client,
 	smb->battery.get_property = smb347_battery_get_property;
 	smb->battery.properties = smb347_battery_properties;
 	smb->battery.num_properties = ARRAY_SIZE(smb347_battery_properties);
+
+	if (smb->pdata->supplied_to) {
+		smb->battery.supplied_to = smb->pdata->supplied_to;
+		smb->battery.num_supplicants = smb->pdata->num_supplicants;
+		smb->battery.external_power_changed = power_supply_changed;
+	}
 
 	ret = power_supply_register(dev, &smb->mains);
 	if (ret < 0)

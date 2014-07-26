@@ -158,6 +158,7 @@ static struct dbs_tuners {
     unsigned int cpu_up_avg_times;
     unsigned int cpu_down_avg_times;
     unsigned int cpu_num_limit;
+    unsigned int cpu_num_base;
     unsigned int cpu_hotplug_disable;
 } dbs_tuners_ins = {
     .up_threshold = DEF_FREQUENCY_UP_THRESHOLD,
@@ -170,6 +171,7 @@ static struct dbs_tuners {
     .cpu_up_avg_times = CPU_UP_AVG_TIMES,
     .cpu_down_avg_times = CPU_DOWN_AVG_TIMES,
     .cpu_num_limit = 1,
+    .cpu_num_base = 1,
     .cpu_hotplug_disable = 1,
 };
 
@@ -317,6 +319,7 @@ show_one(cpu_down_differential, cpu_down_differential);
 show_one(cpu_up_avg_times, cpu_up_avg_times);
 show_one(cpu_down_avg_times, cpu_down_avg_times);
 show_one(cpu_num_limit, cpu_num_limit);
+show_one(cpu_num_base, cpu_num_base);
 show_one(cpu_hotplug_disable, cpu_hotplug_disable);
 
 /**
@@ -564,6 +567,17 @@ static ssize_t store_cpu_num_limit(struct kobject *a, struct attribute *b,
 	return count;
 }
 
+static ssize_t store_cpu_num_base(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	dbs_tuners_ins.cpu_num_base = input;
+	return count;
+}
+
 static ssize_t store_cpu_hotplug_disable(struct kobject *a, struct attribute *b,
 				    const char *buf, size_t count)
 {
@@ -587,6 +601,7 @@ define_one_global_rw(cpu_down_differential);
 define_one_global_rw(cpu_up_avg_times);
 define_one_global_rw(cpu_down_avg_times);
 define_one_global_rw(cpu_num_limit);
+define_one_global_rw(cpu_num_base);
 define_one_global_rw(cpu_hotplug_disable);
 
 static struct attribute *dbs_attributes[] = {
@@ -603,6 +618,7 @@ static struct attribute *dbs_attributes[] = {
     &cpu_up_avg_times.attr,
     &cpu_down_avg_times.attr,
     &cpu_num_limit.attr,
+    &cpu_num_base.attr,
     &cpu_hotplug_disable.attr,
     NULL
 };
@@ -645,6 +661,14 @@ void hp_limited_cpu_num(int num)
 	mutex_unlock(&hp_mutex);
 }
 EXPORT_SYMBOL(hp_limited_cpu_num);
+
+void hp_based_cpu_num(int num)
+{
+	mutex_lock(&hp_mutex);
+	dbs_tuners_ins.cpu_num_base = num;
+	mutex_unlock(&hp_mutex);
+}
+EXPORT_SYMBOL(hp_based_cpu_num);
 
 #ifdef CONFIG_SMP
 
@@ -840,7 +864,10 @@ hp_check:
 	mutex_lock(&hp_mutex);
 
 	/* Check CPU loading to power up slave CPU */
-	if (num_online_cpus() < num_possible_cpus() && num_online_cpus() < dbs_tuners_ins.cpu_num_limit) {
+	if (num_online_cpus() < dbs_tuners_ins.cpu_num_base && num_online_cpus() < dbs_tuners_ins.cpu_num_limit) {
+		g_next_hp_action = 1;
+		schedule_delayed_work_on(0, &hp_work, 0);
+	} else if (num_online_cpus() < num_possible_cpus() && num_online_cpus() < dbs_tuners_ins.cpu_num_limit) {
 		g_cpu_up_count++;
 		g_cpu_up_sum_load += cpus_sum_load;
 		if (g_cpu_up_count == dbs_tuners_ins.cpu_up_avg_times) {
@@ -872,13 +899,15 @@ hp_check:
 			g_cpu_down_sum_load /= dbs_tuners_ins.cpu_down_avg_times;
 			if (g_cpu_down_sum_load < 
 				((dbs_tuners_ins.cpu_up_threshold - dbs_tuners_ins.cpu_down_differential) * (num_online_cpus() - 1))) {
-				#ifdef DEBUG_LOG
-				printk("dbs_check_cpu: g_cpu_down_sum_load = %d\n", g_cpu_down_sum_load);
-				#endif
-				dbs_freq_increase(policy, policy->max);
-				printk("dbs_check_cpu: turn off CPU\n");
-				g_next_hp_action = 0;
-				schedule_delayed_work_on(0, &hp_work, 0);
+				if (num_online_cpus() > dbs_tuners_ins.cpu_num_base) {
+					#ifdef DEBUG_LOG
+					printk("dbs_check_cpu: g_cpu_down_sum_load = %d\n", g_cpu_down_sum_load);
+					#endif
+					dbs_freq_increase(policy, policy->max);
+					printk("dbs_check_cpu: turn off CPU\n");
+					g_next_hp_action = 0;
+					schedule_delayed_work_on(0, &hp_work, 0);
+				}
 			}
 			g_cpu_down_count = 0;
 			g_cpu_down_sum_load = 0;
@@ -1106,6 +1135,7 @@ static int __init cpufreq_gov_dbs_init(void)
 	}
 
 	dbs_tuners_ins.cpu_num_limit = num_possible_cpus();
+	dbs_tuners_ins.cpu_num_base = 1;
 
 	if (dbs_tuners_ins.cpu_num_limit > 1)
 		dbs_tuners_ins.cpu_hotplug_disable = 0;
@@ -1123,6 +1153,7 @@ static int __init cpufreq_gov_dbs_init(void)
 	printk("cpufreq_gov_dbs_init: dbs_tuners_ins.cpu_up_avg_times = %d\n", dbs_tuners_ins.cpu_up_avg_times);
 	printk("cpufreq_gov_dbs_init: dbs_tuners_ins.cpu_down_avg_times = %d\n", dbs_tuners_ins.cpu_down_avg_times);
 	printk("cpufreq_gov_dbs_init: dbs_tuners_ins.cpu_num_limit = %d\n", dbs_tuners_ins.cpu_num_limit);
+	printk("cpufreq_gov_dbs_init: dbs_tuners_ins.cpu_num_base = %d\n", dbs_tuners_ins.cpu_num_base);
 	printk("cpufreq_gov_dbs_init: dbs_tuners_ins.cpu_hotplug_disable = %d\n", dbs_tuners_ins.cpu_hotplug_disable);
 	#endif 
 

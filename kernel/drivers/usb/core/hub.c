@@ -30,12 +30,6 @@
 
 #include "usb.h"
 
-#ifdef CONFIG_USB_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
-
 /* if we are in debug mode, always announce new devices */
 #ifdef DEBUG
 #ifndef CONFIG_USB_ANNOUNCE_NEW_DEVICES
@@ -1673,10 +1667,6 @@ void usb_disconnect(struct usb_device **pdev)
 {
 	struct usb_device	*udev = *pdev;
 	int			i;
-
-	//ALPS00445134, add more debug message for CR debugging
-	dev_dbg(&udev->dev, "%s, line %d: \n", __func__, __LINE__);
-	//ALPS00445134, add more debug message for CR debugging
 
 	/* mark the device as inactive, so any further urb submissions for
 	 * this device (and any of its children) will fail immediately.

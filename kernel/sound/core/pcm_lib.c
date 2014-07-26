@@ -1915,7 +1915,7 @@ static snd_pcm_sframes_t snd_pcm_lib_write1(struct snd_pcm_substream *substream,
 		err = -EBADFD;
 		goto _end_unlock;
 	}
-    //printk("+snd_pcm_lib_write1\n");
+
 	runtime->twake = runtime->control->avail_min ? : 1;
 	while (size > 0) {
 		snd_pcm_uframes_t frames, appl_ptr, appl_ofs;
@@ -1936,7 +1936,6 @@ static snd_pcm_sframes_t snd_pcm_lib_write1(struct snd_pcm_substream *substream,
 			if (err < 0)
 				goto _end_unlock;
 		}
-        //snd_printd("!snd_pcm_lib_write1 a(%ld),s(%ld)\n",avail,size);
 		frames = size > avail ? avail : size;
 		cont = runtime->buffer_size - runtime->control->appl_ptr % runtime->buffer_size;
 		if (frames > cont)
@@ -1981,7 +1980,6 @@ static snd_pcm_sframes_t snd_pcm_lib_write1(struct snd_pcm_substream *substream,
 		}
 	}
  _end_unlock:
-    //snd_printd("-snd_pcm_lib_write1\n");
 	runtime->twake = 0;
 	if (xfer > 0 && err >= 0)
 		snd_pcm_update_state(substream, runtime);

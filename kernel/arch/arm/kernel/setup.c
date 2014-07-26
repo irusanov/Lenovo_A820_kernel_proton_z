@@ -55,7 +55,6 @@
 #include <asm/traps.h>
 #include <asm/unwind.h>
 #include <asm/memblock.h>
-#include <mach/mtk_memcfg.h>
 
 #if defined(CONFIG_DEPRECATED_PARAM_STRUCT)
 #include "compat.h"
@@ -82,7 +81,6 @@ __setup("fpe=", fpe_setup);
 extern void paging_init(struct machine_desc *desc);
 extern void sanity_check_meminfo(void);
 extern void reboot_setup(char *str);
-extern unsigned int get_chip_id(void);
 
 unsigned int processor_id;
 EXPORT_SYMBOL(processor_id);
@@ -540,14 +538,6 @@ int __init arm_add_memory(phys_addr_t start, unsigned long size)
 #endif
 
 	bank->size = size & PAGE_MASK;
-
-        if (bank->size) {
-            MTK_MEMCFG_LOG_AND_PRINTK(KERN_ALERT
-                    "[PHY layout]kernel   :   0x%08lx - 0x%08lx  (0x%08lx)\n",
-                    (unsigned long)bank->start, 
-                    (unsigned long)(bank->start + bank->size - 1), 
-                    (unsigned long)bank->size);
-        }
 
 	/*
 	 * Check whether this memory region has non-zero size or
@@ -1110,17 +1100,8 @@ static int c_show(struct seq_file *m, void *v)
 	seq_printf(m, "CPU revision\t: %d\n", read_cpuid_id() & 15);
 
 	seq_puts(m, "\n");
-#if 0 // TO-FIX by Marcos
-	if (get_chip_id() == 0)
-                seq_printf(m, "Hardware\t: %s\n", machine_name);
-        else
-                seq_printf(m, "Hardware\t: MT%X\n", get_chip_id());
-                
-#else
-	seq_printf(m, "Hardware\t: %s\n", machine_name);
-#endif	
 
-	//seq_printf(m, "Hardware\t: %s\n", machine_name);
+	seq_printf(m, "Hardware\t: %s\n", machine_name);
 	seq_printf(m, "Revision\t: %04x\n", system_rev);
 	seq_printf(m, "Serial\t\t: %08x%08x\n",
 		   system_serial_high, system_serial_low);

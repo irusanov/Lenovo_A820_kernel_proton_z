@@ -34,8 +34,8 @@
 //#pragma GCC optimize ("O0")
 #define DEFAULT_PAGE_SIZE 0x1000
 #define PAGE_ORDER 12
-extern int record_ion_info(int from_kernel,ion_sys_record_t *param);
-extern char *get_userString_from_hashTable(char *string_name,unsigned int len);
+//extern int record_ion_info(int from_kernel,ion_sys_record_t *param);
+//extern char *get_userString_from_hashTable(char *string_name,unsigned int len);
 struct ion_device *g_ion_device;
 struct ion_heap *g_ion_heaps[ION_HEAP_IDX_MAX];
 
@@ -165,7 +165,7 @@ static long ion_sys_ioctl(struct ion_client *client, unsigned int cmd, unsigned 
         Param.get_client_param.client = (unsigned int) client;
         break;
     case ION_SYS_RECORD:
-	{
+	{/* (debug was removed from ion)
 	     unsigned int i;
 	     char *tmp_string = NULL;
 	    
@@ -217,7 +217,7 @@ static long ion_sys_ioctl(struct ion_client *client, unsigned int cmd, unsigned 
 		} 
 	     }
 	     record_ion_info(from_kernel,&Param.record_param);
-	     printk("[ION_FUNC%d][ion_sys_ioctl]DONE\n",Param.record_param.action);
+	     printk("[ION_FUNC%d][ion_sys_ioctl]DONE\n",Param.record_param.action); */
 	     break;
 	}
     default:

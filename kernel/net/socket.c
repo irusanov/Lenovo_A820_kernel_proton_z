@@ -1121,9 +1121,6 @@ static int sock_close(struct inode *inode, struct file *filp)
 		printk(KERN_DEBUG "sock_close: NULL inode\n");
 		return 0;
 	}
-
-	printk(KERN_INFO "socket_close[%lu] \n",inode->i_ino); 
-	
 	sock_release(SOCKET_I(inode));
 	
 	return 0;
@@ -1354,12 +1351,6 @@ SYSCALL_DEFINE3(socket, int, family, int, type, int, protocol)
 
 out:
 	/* It may be already another descriptor 8) Not kernel problem. */
-
-	if((retval >= 0)&& sock && SOCK_INODE(sock) )
-	   printk(KERN_INFO "socket_create[%lu]:fd=%d \n",SOCK_INODE(sock)->i_ino,retval);
-	 else
-	   printk(KERN_INFO "socket_create:fd=%d \n",retval); 
-	
 	return retval;
 
 out_release:
@@ -1431,17 +1422,10 @@ SYSCALL_DEFINE4(socketpair, int, family, int, type, int, protocol,
 	if (!err)
 		err = put_user(fd2, &usockvec[1]);
 	if (!err)
-	{
-       if(sock1 && SOCK_INODE(sock1) && sock2&& SOCK_INODE(sock2) )
-	     printk(KERN_INFO "socketpair:fd1[%lu]=%d, fd2[%lu]=%d \n", SOCK_INODE(sock1)->i_ino,fd1,SOCK_INODE(sock2)->i_ino,fd2);
-	  
-      return 0;
-	}
-		
+		return 0;
 
 	sys_close(fd2);
 	sys_close(fd1);
-	printk(KERN_INFO "socketpair fail1: %d \n", err);
 	return err;
 
 out_release_both:
@@ -1449,7 +1433,6 @@ out_release_both:
 out_release_1:
 	sock_release(sock1);
 out:
-    printk(KERN_INFO "socketpair fail2: %d \n", err);
 	return err;
 }
 
@@ -1594,10 +1577,6 @@ SYSCALL_DEFINE4(accept4, int, fd, struct sockaddr __user *, upeer_sockaddr,
 out_put:
 	fput_light(sock->file, fput_needed);
 out:
-      if( (err>=0)&& newsock && SOCK_INODE(newsock) )
-	   printk(KERN_INFO "socket_accept[%lu]:fd=%d \n",SOCK_INODE(newsock)->i_ino,err);
-	  else
-	   printk(KERN_INFO "socket_accept:fd=%d \n",err);
 	return err;
 out_fd:
 	fput(newfile);

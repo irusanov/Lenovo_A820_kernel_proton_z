@@ -419,10 +419,6 @@ struct usb_device *usb_alloc_dev(struct usb_device *parent,
 
 		dev->dev.parent = bus->controller;
 		dev_set_name(&dev->dev, "usb%d", bus->busnum);
-		//ALPS00445134, add more debug message for CR debugging
-		printk(KERN_DEBUG "%s, line %d: sdev->sdev_dev = %s , bus->busnum= %d\n", __func__, __LINE__, dev_name(&dev->dev), bus->busnum);
-		//ALPS00445134, add more debug message for CR debugging
-
 		root_hub = 1;
 	} else {
 		/* match any labeling on the hubs; it's one-based */
@@ -445,9 +441,6 @@ struct usb_device *usb_alloc_dev(struct usb_device *parent,
 
 		dev->dev.parent = &parent->dev;
 		dev_set_name(&dev->dev, "%d-%s", bus->busnum, dev->devpath);
-		//ALPS00445134, add more debug message for CR debugging
-		printk(KERN_DEBUG "%s, line %d: sdev->sdev_dev = %s , bus->busnum= %d, dev->devpath= %s\n", __func__, __LINE__, dev_name(&dev->dev), bus->busnum, dev->devpath);
-		//ALPS00445134, add more debug message for CR debugging
 
 		/* hub driver sets up TT records */
 	}

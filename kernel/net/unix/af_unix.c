@@ -1684,24 +1684,8 @@ static int unix_stream_sendmsg(struct kiocb *kiocb, struct socket *sock,
 
 		if (sock_flag(other, SOCK_DEAD) ||
 		    (other->sk_shutdown & RCV_SHUTDOWN))
-		{
-           if( other->sk_socket )
-                {
-                   if(sk->sk_socket){
-                
-                         printk(KERN_INFO " sockdbg: sendmsg[%lu:%lu]:peer close\n" ,SOCK_INODE(sk->sk_socket)->i_ino,SOCK_INODE(other->sk_socket)->i_ino);
-				   }
-				   else{
-				        printk(KERN_INFO " sockdbg: sendmsg[null:%lu]:peer close\n" ,SOCK_INODE(other->sk_socket)->i_ino);
-				   }        
-
-				 }
-				else	
-				  printk(KERN_INFO " sockdbg: sendmsg:peer close \n" );
-		   		
-          
 			goto pipe_err_free;
-		}
+
 		maybe_add_creds(skb, sock, other);
 		skb_queue_tail(&other->sk_receive_queue, skb);
 		if (max_level > unix_sk(other)->recursion_level)
@@ -1919,7 +1903,6 @@ static int unix_stream_recvmsg(struct kiocb *iocb, struct socket *sock,
 	int err = 0;
 	long timeo;
 	int skip;
-	struct sock * other = unix_peer(sk);
 
 	err = -EINVAL;
 	if (sk->sk_state != TCP_ESTABLISHED)
@@ -1971,22 +1954,8 @@ again:
 			if (err)
 				goto unlock;
 			if (sk->sk_shutdown & RCV_SHUTDOWN)
-			{
-                if(sk && sk->sk_socket )
-                {
-				   if(other && other->sk_socket ){
-				   	
-                     printk(KERN_INFO " sockdbg: recvmsg[%lu:%lu]:exit read due to peer shutdown  \n" ,SOCK_INODE(sk->sk_socket)->i_ino,SOCK_INODE(other->sk_socket)->i_ino);
-				   
-				   }else{				   
-                     printk(KERN_INFO " sockdbg: recvmsg[%lu:null]:exit read due to peer shutdown  \n" ,SOCK_INODE(sk->sk_socket)->i_ino);
-				     }				   
-				 }
-				else{	
-				   printk(KERN_INFO " sockdbg: recvmsg: exit read due to peer shutdown \n" );
-				}
 				goto unlock;
-			}
+
 			unix_state_unlock(sk);
 			err = -EAGAIN;
 			if (!timeo)
@@ -1994,23 +1963,7 @@ again:
 			mutex_unlock(&u->readlock);
 
 			timeo = unix_stream_data_wait(sk, timeo);
-             if (!timeo)
-             {
-                if(sk && sk->sk_socket )
-                {
-                     if(other && other->sk_socket ){
-				   	
-                     printk(KERN_INFO " sockdbg: recvmsg[%lu:%lu]:exit read due to timeout  \n" ,SOCK_INODE(sk->sk_socket)->i_ino,SOCK_INODE(other->sk_socket)->i_ino);
-				   
-				   }else{				   
-                     printk(KERN_INFO " sockdbg: recvmsg[%lu:null]:exit read due to timeout  \n" ,SOCK_INODE(sk->sk_socket)->i_ino);
-				     }			  
-				 }
-				else	
-				  printk(KERN_INFO " sockdbg: recvmsg:exit read due to timeout \n" );
-		   		  
-			 }
-			 
+
 			if (signal_pending(current)
 			    ||  mutex_lock_interruptible(&u->readlock)) {
 				err = sock_intr_errno(timeo);

@@ -132,9 +132,6 @@
 
 #include <trace/events/sock.h>
 
-#include <net/af_unix.h>
-
-
 #ifdef CONFIG_INET
 #include <net/tcp.h>
 #endif
@@ -1591,96 +1588,6 @@ static long sock_wait_for_wmem(struct sock *sk, long timeo)
 }
 
 
-//debug funcion
-
-static int sock_dump_info(struct sock *sk)
-{
-    //dump receiver queue 128 bytes
-    //struct sk_buff *skb;
-    //char skbmsg[128];
-    //dump receiver queue 128 bytes end
-
-		if(sk->sk_family == AF_UNIX)
-		{
-		  struct unix_sock *u = unix_sk(sk);
-		  struct sock *other = NULL;
-		  if( (u->path.dentry !=NULL)&&(u->path.dentry->d_iname!=NULL))
-		  {
-		    printk(KERN_INFO "sockdbg: socket-Name:%s \n",u->path.dentry->d_iname);
-		    
-		  }
-		   else
-		  {
-              printk(KERN_INFO "sockdbg:socket Name (NULL)\n" );
-		   }
-		   
-		   if(sk->sk_socket && SOCK_INODE(sk->sk_socket))
-		  {
-		      printk(KERN_INFO "sockdbg:socket Inode[%lu]\n" ,SOCK_INODE(sk->sk_socket)->i_ino);
-		   }		 
-
-		    other = unix_sk(sk)->peer ;
-			if (!other)
-			{
-		         printk(KERN_INFO "sockdbg:peer is (NULL) \n");
-			 } else{
-			 
-				if ((((struct unix_sock *)other)->path.dentry != NULL)&&(((struct unix_sock *)other)->path.dentry->d_iname != NULL))
-				{
-		           printk(KERN_INFO "sockdbg: Peer Name:%s \n",((struct unix_sock *)other)->path.dentry->d_iname);
-				 }				
-				else
-				{
-                     printk(KERN_INFO "sockdbg: Peer Name (NULL) \n");
-				}
-
-				if(other->sk_socket && SOCK_INODE(other->sk_socket))
-				   {
-		             printk(KERN_INFO "sockdbg: Peer Inode [%lu] \n", SOCK_INODE(other->sk_socket)->i_ino);
-				    }
-
-				 printk(KERN_INFO "sockdbg: Peer Recieve Queue len:%d \n",other->sk_receive_queue.qlen);
-
-				 //dump receiver queue 128 bytes
-						/* if ((skb = skb_peek_tail(&other->sk_receive_queue)) == NULL) {
-		                        
-		                    printk(KERN_INFO "sockdbg: Peer Recieve Queue is null (warning) \n");
-						 }else{
-						       int i =0 ,len=0;
-		                      if((skb->len !=0) && (skb->data != NULL)){
-
-		                        if(skb->len >= 127){
-									len = 127 ;                          
-								 }else
-								 {
-		                           len = skb->len ;
-								 }
-		                        for (i=0;i<len;i++)
-								  sprintf(skbmsg+i, "%x", skb->data[i]);
-
-								skbmsg[len]= '\0' ;
-								
-		                        printk(KERN_INFO "sockdbg: Peer Recieve Queue dump(%d bytes):%s\n", len, skbmsg);
-												
-		                        
-							  }else{                
-		                        printk(KERN_INFO "sockdbg: Peer Recieve skb error \n");
-							  }*/
-                     //dump receiver queue 128 bytes end      
-
-				 //}
-				//dump receiver queue 128 bytes end				 
-
-			 }
-		}
-
-		return 0 ;	  
-
-	
-}
-
-
-
 /*
  *	Generic send/receive buffer handlers
  */
@@ -1756,15 +1663,7 @@ struct sk_buff *sock_alloc_send_pskb(struct sock *sk, unsigned long header_len,
 			goto failure;
 		if (signal_pending(current))
 			goto interrupted;
-
-        sock_dump_info(sk);
-		printk(KERN_INFO "sockdbg: wait_for_wmem, timeo =%ld, wmem =%d, snd buf =%d \n",
-			 timeo, atomic_read(&sk->sk_wmem_alloc), sk->sk_sndbuf); 
-
 		timeo = sock_wait_for_wmem(sk, timeo);
-		
-		printk(KERN_INFO "sockdbg: wait_for_wmem done, header_len=0x%lx, data_len=0x%lx,timeo =%ld \n",
-			 header_len, data_len ,timeo);
 	}
 
 	skb_set_owner_w(skb, sk);

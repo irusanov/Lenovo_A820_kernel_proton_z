@@ -297,12 +297,6 @@ struct sock *inet_csk_accept(struct sock *sk, int flags, int *err)
 
 	newsk = reqsk_queue_get_child(&icsk->icsk_accept_queue, sk);
 	WARN_ON(newsk->sk_state == TCP_SYN_RECV);
-	{
-		struct inet_sock *inet_t = inet_sk(newsk);
-		if ((inet_t != NULL) && (inet_t->inet_sport != 0))
-		    printk(KERN_INFO "net_sock accept new socket sport:%lu \n", ntohs(inet_t->inet_sport));
-	}	
-	
 out:
 	release_sock(sk);
 	return newsk;

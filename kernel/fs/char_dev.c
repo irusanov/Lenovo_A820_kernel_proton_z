@@ -160,8 +160,6 @@ __register_chrdev_region(unsigned int major, unsigned int baseminor,
 		}
 
 		if (i == 0) {
-            sprintf( aee_str, "[%s]reg cdev fail", name);
-            printk(KERN_ERR"No enough cdev number!!\n");
 			ret = -EBUSY;
 			goto out;
 		}
@@ -193,19 +191,12 @@ __register_chrdev_region(unsigned int major, unsigned int baseminor,
 
 		/* New driver overlaps from the left.  */
 		if (new_max >= old_min && new_max <= old_max) {
-            sprintf( aee_str, "Driver:%s cdev reg fail", name);
-            printk(KERN_ERR"\n!!\n");
-            printk(KERN_ERR"[%s] register cdev error at MAJOR %d. Already used by [%s]\n!!\n\n",name, major, (*cp)->name);
-    		ret = -EBUSY;
+			ret = -EBUSY;
 			goto out;
 		}
 
 		/* New driver overlaps from the right.  */
 		if (new_min <= old_max && new_min >= old_min) {
-            sprintf( aee_str, "Driver:%s:cdev reg fail", name);
-            printk(KERN_ERR"\n!!\n");
-            printk(KERN_ERR"[%s] register cdev error at MAJOR %d. Already used by [%s]\n!!\n\n",name, major, (*cp)->name);
-
 			ret = -EBUSY;
 			goto out;
 		}

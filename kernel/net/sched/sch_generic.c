@@ -126,16 +126,6 @@ int sch_direct_xmit(struct sk_buff *skb, struct Qdisc *q,
 
 	HARD_TX_UNLOCK(dev, txq);
 
-    if(ret != NETDEV_TX_OK ){
-    	if(qdisc_qlen(q) < 16){
-    		if(4 == (qdisc_qlen(q)) % 16)
-    			printk(KERN_INFO "[mtk_net]dev_hard_start_xmit ret = %d(%s)\n", ret, dev->name);
-    	} else {
-    		if(64 == (qdisc_qlen(q)) % 128)
-    			printk(KERN_INFO "[mtk_net]warning: dev_hard_start_xmit ret = %d(%s)\n", ret, dev->name);    		
-    	}
-    }
-
 	spin_lock(root_lock);
 
 	if (dev_xmit_complete(ret)) {
@@ -757,8 +747,6 @@ void dev_activate(struct net_device *dev)
 	   which need queueing and noqueue_qdisc for
 	   virtual interfaces
 	 */
-	 
-	printk(KERN_INFO "[mtk_net]dev_activate dev = %s \n", dev->name);
 
 	if (dev->qdisc == &noop_qdisc)
 		attach_default_qdiscs(dev);
@@ -812,11 +800,6 @@ static bool some_qdisc_is_busy(struct net_device *dev)
 
 		dev_queue = netdev_get_tx_queue(dev, i);
 		q = dev_queue->qdisc_sleeping;
-		if(q == NULL){
-            printk(KERN_WARNING "some_qdisc_is_busy dev=0x%x, i=%d, dev_q=0x%x",
-				(u32)dev, i, (u32)dev_queue);
-			BUG_ON(q == NULL);
-		}
 		root_lock = qdisc_lock(q);
 
 		spin_lock_bh(root_lock);
@@ -873,7 +856,6 @@ void dev_deactivate(struct net_device *dev)
 	LIST_HEAD(single);
 
 	list_add(&dev->unreg_list, &single);
-	printk(KERN_INFO "[mtk_net]dev_deactivate dev = %s \n", dev->name);
 	dev_deactivate_many(&single);
 	list_del(&single);
 }

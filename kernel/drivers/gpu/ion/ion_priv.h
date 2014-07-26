@@ -45,6 +45,15 @@ struct ion_buffer *ion_handle_buffer(struct ion_handle *handle);
  * @vaddr:		the kenrel mapping if kmap_cnt is not zero
  * @dmap_cnt:		number of times the buffer is mapped for dma
  * @sg_table:		the sg table for the buffer if dmap_cnt is not zero
+ * @dirty:		bitmask representing which pages of this buffer have
+ *			been dirtied by the cpu and need cache maintenance
+ *			before dma
+ * @vmas:		list of vma's mapping this buffer
+ * @handle_count:	count of handles referencing this buffer
+ * @task_comm:		taskcomm of last client to reference this buffer in a
+ *			handle, used for debugging
+ * @pid:		pid of last client to reference this buffer in a
+ *			handle, used for debugging
 */
 struct ion_buffer {
 	struct kref ref;
@@ -108,6 +117,8 @@ struct ion_heap_ops {
  *			allocating.  These are specified by platform data and
  *			MUST be unique
  * @name:		used for debugging
+ * @debug_show:		called when heap debug file is read to add any
+ *			heap specific debug info to output
  *
  * Represents a pool of memory from which buffers can be made.  In some
  * systems the only heap is regular system memory allocated via vmalloc.
@@ -196,6 +207,12 @@ void ion_carveout_free(struct ion_heap *heap, ion_phys_addr_t addr,
  */
 #define ION_CARVEOUT_ALLOCATE_FAIL -1
 
+/**
+ * functions for creating and destroying a heap pool -- allows you
+ * to keep a pool of pre allocated memory to use from your heap.  Keeping
+ * a pool of memory that is ready for dma, ie any cached mapping have been
+ * invalidated from the cache, provides a significant peformance benefit on
+ * many systems */
 
 /**
  * struct ion_page_pool - pagepool struct
@@ -203,6 +220,11 @@ void ion_carveout_free(struct ion_heap *heap, ion_phys_addr_t addr,
  * @low_count:          number of lowmem items in the pool
  * @high_items:         list of highmem items
  * @low_items:          list of lowmem items
+ * @shrinker:		a shrinker for the items
+ * @mutex:		lock protecting this struct and especially the count
+ *			item list
+ * @alloc:		function to be used to allocate pageory when the pool
+ *			is empty
  * @free:               function to be used to free pageory back to the system
  *                      when the shrinker fires
  * @gfp_mask:           gfp_mask to use from alloc

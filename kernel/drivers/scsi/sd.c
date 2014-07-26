@@ -2710,11 +2710,6 @@ static int sd_probe(struct device *dev)
 	}
 
 	error = sd_format_disk_name("sd", index, gd->disk_name, DISK_NAME_LEN);
-
-	//ALPS00445134, add more debug message for CR debugging
-	printk(KERN_DEBUG "%s, line %d: gd->disk_name = %s, index = %d\n", __func__, __LINE__, gd->disk_name, index);
-	//ALPS00445134, add more debug message for CR debugging
-
 	if (error) {
 		sdev_printk(KERN_WARNING, sdp, "SCSI disk (sd) name length exceeded.\n");
 		goto out_free_index;
@@ -2776,9 +2771,6 @@ static int sd_probe(struct device *dev)
 static int sd_remove(struct device *dev)
 {
 	struct scsi_disk *sdkp;
-	//ALPS00445134, add more debug message for CR debugging
-	printk(KERN_DEBUG "%s, line %d: \n", __func__, __LINE__);
-	//ALPS00445134, add more debug message for CR debugging
 
 	sdkp = dev_get_drvdata(dev);
 	scsi_autopm_get_device(sdkp->device);
@@ -2812,10 +2804,6 @@ static void scsi_disk_release(struct device *dev)
 	struct scsi_disk *sdkp = to_scsi_disk(dev);
 	struct gendisk *disk = sdkp->disk;
 	
-	//ALPS00445134, add more debug message for CR debugging
-	printk(KERN_DEBUG "%s, line %d: disk->name = %s \n", __func__, __LINE__, disk->disk_name ? disk->disk_name : "no disk");
-	//ALPS00445134, add more debug message for CR debugging
-		
 	spin_lock(&sd_index_lock);
 	ida_remove(&sd_index_ida, sdkp->index);
 	spin_unlock(&sd_index_lock);
@@ -2936,9 +2924,6 @@ static int __init init_sd(void)
 	int majors = 0, i, err;
 
 	SCSI_LOG_HLQUEUE(3, printk("init_sd: sd driver entry point\n"));
-	//ALPS00445134, add more debug message for CR debugging
-	printk(KERN_DEBUG "%s, line %d: \n", __func__, __LINE__);
-	//ALPS00445134, add more debug message for CR debugging
 
 	for (i = 0; i < SD_MAJORS; i++)
 		if (register_blkdev(sd_major(i), "sd") == 0)
@@ -2991,9 +2976,6 @@ static void __exit exit_sd(void)
 	int i;
 
 	SCSI_LOG_HLQUEUE(3, printk("exit_sd: exiting sd driver\n"));
-	//ALPS00445134, add more debug message for CR debugging
-	printk(KERN_DEBUG "%s, line %d: \n", __func__, __LINE__);
-	//ALPS00445134, add more debug message for CR debugging
 
 	mempool_destroy(sd_cdb_pool);
 	kmem_cache_destroy(sd_cdb_cache);

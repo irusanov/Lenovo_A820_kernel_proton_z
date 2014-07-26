@@ -319,10 +319,6 @@ static void sg_complete(struct urb *urb)
 		spin_lock(&io->lock);
 	}
 
-	//ALPS00445134, add more debug message for CR debugging
-	dev_vdbg(&io->dev->dev, "%s, line %d: io->bytes = %d, urb->actual_length = %d, io->entries, = %d, io->count= %d\n", __func__,__LINE__, io->bytes, urb->actual_length, io->entries, io->count);
-	//ALPS00445134, add more debug message for CR debugging
-
 	/* on the last completion, signal usb_sg_wait() */
 	io->bytes += urb->actual_length;
 	io->count--;
@@ -412,10 +408,6 @@ int usb_sg_init(struct usb_sg_request *io, struct usb_device *dev,
 		urb->context = io;
 		urb->sg = sg;
 
-		//ALPS00445134, add more debug message for CR debugging
-		dev_vdbg(&dev->dev, "%s, line %d: use_sg = %d, io->entries = %d, length= %d\n", __func__,__LINE__, use_sg, io->entries, length);
-		//ALPS00445134, add more debug message for CR debugging
-
 		if (use_sg) {
 			/* There is no single transfer buffer */
 			urb->transfer_buffer = NULL;
@@ -449,11 +441,6 @@ int usb_sg_init(struct usb_sg_request *io, struct usb_device *dev,
 					io->entries = i + 1;
 			}
 		}
-
-		//ALPS00445134, add more debug message for CR debugging
-		dev_vdbg(&dev->dev, "%s, line %d: use_sg = %d, io->entries = %d, length= %d, len= %d\n", __func__,__LINE__, use_sg, io->entries, length, len);
-		//ALPS00445134, add more debug message for CR debugging
-
 		urb->transfer_buffer_length = len;
 	}
 	io->urbs[--i]->transfer_flags &= ~URB_NO_INTERRUPT;
@@ -1155,9 +1142,6 @@ void usb_disable_device(struct usb_device *dev, int skip_ep0)
 	int i;
 	struct usb_hcd *hcd = bus_to_hcd(dev->bus);
 
-	//ALPS00445134, add more debug message for CR debugging
-	printk(KERN_DEBUG "%s, line %d: dev->actconfig = %p, dev->actconfig->desc.bNumInterfaces = %d\n", __func__, __LINE__, dev->actconfig, dev->actconfig->desc.bNumInterfaces);
-	//ALPS00445134, add more debug message for CR debugging
 	/* getting rid of interfaces will disconnect
 	 * any drivers bound to them (a key side effect)
 	 */

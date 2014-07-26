@@ -1094,30 +1094,11 @@ static void do_generic_file_read(struct file *filp, loff_t *ppos,
 	unsigned int prev_offset;
 	int error;
 
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-    int j = 0;
-#endif
 	index = *ppos >> PAGE_CACHE_SHIFT;
 	prev_index = ra->prev_pos >> PAGE_CACHE_SHIFT;
 	prev_offset = ra->prev_pos & (PAGE_CACHE_SIZE-1);
 	last_index = (*ppos + desc->count + PAGE_CACHE_SIZE-1) >> PAGE_CACHE_SHIFT;
 	offset = *ppos & ~PAGE_CACHE_MASK;
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-    if (g_mtk_mmc_clear == 0){
-        memset(g_req_buf, 0, 8*4000*30);
-        memset(g_mmcqd_buf, 0, 8*400*300);
-        g_dbg_req_count = 0;
-        g_dbg_raw_count = 0;
-        g_dbg_raw_count_old = 0;
-        g_mtk_mmc_clear = 1;
-    }
-
-    j = 0;
-    if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 18)){
-		g_dbg_raw_count ++;   /* increment 1 means trigger 8k r/w */ 
-        g_req_buf[(g_dbg_raw_count-1) * 2 + j][0] = sched_clock(); /* start time, static with 4k each */
-    }	
-#endif /* end of MTK_IO_PERFORMANCE_DEBUG */
 
 	for (;;) {
 		struct page *page;
@@ -1132,13 +1113,6 @@ find_page:
 			page_cache_sync_readahead(mapping,
 					ra, filp,
 					index, last_index - index);
-
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-    if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 18)){
-        g_req_buf[(g_dbg_raw_count-1) * 2 + j][1] = sched_clock(); 
-    }	
-#endif
-
 			page = find_get_page(mapping, index);
 			if (unlikely(page == NULL))
 				goto no_cached_page;
@@ -1147,12 +1121,6 @@ find_page:
 			page_cache_async_readahead(mapping,
 					ra, filp, page,
 					index, last_index - index);
-
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-    if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 18)){
-        g_req_buf[(g_dbg_raw_count-1) * 2 + j][2] = sched_clock(); 
-    }	
-#endif
 		}
 		if (!PageUptodate(page)) {
 			if (inode->i_blkbits == PAGE_CACHE_SHIFT ||
@@ -1169,12 +1137,6 @@ find_page:
 			unlock_page(page);
 		}
 page_ok:
-
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-    if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 18)){
-        g_req_buf[(g_dbg_raw_count-1) * 2 + j][3] = sched_clock(); 
-    }	
-#endif
 		/*
 		 * i_size must be checked after we know the page is Uptodate.
 		 *
@@ -1233,22 +1195,9 @@ page_ok:
 		offset &= ~PAGE_CACHE_MASK;
 		prev_offset = offset;
 
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-    if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 18)){
-        g_req_buf[(g_dbg_raw_count-1) * 2 + j][4] = sched_clock(); 
-    }	
-#endif
-
 		page_cache_release(page);
 		if (ret == nr && desc->count)
-#ifdef MTK_IO_PERFORMANCE_DEBUG 
-        {
-            j++;
 			continue;
-        }
-#else
-			continue;
-#endif
 		goto out;
 
 page_not_up_to_date:

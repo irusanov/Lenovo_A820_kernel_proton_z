@@ -1953,8 +1953,6 @@ void rtmsg_ifinfo(int type, struct net_device *dev, unsigned change)
 	struct sk_buff *skb;
 	int err = -ENOBUFS;
 	size_t if_info_size;
-    printk(KERN_INFO "[mtk_net]rtmsg_ifinfo type:%d, dev:%s, change:%u, pid = %d", 
-		type, dev->name, change, current->pid);
 
 	skb = nlmsg_new((if_info_size = if_nlmsg_size(dev, 0)), GFP_KERNEL);
 	if (skb == NULL)

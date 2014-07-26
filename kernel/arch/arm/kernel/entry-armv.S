@@ -184,9 +184,6 @@ ENDPROC(__und_invalid)
 
 #ifdef CONFIG_TRACE_IRQFLAGS
 	bl	trace_hardirqs_off
-#ifdef CONFIG_MT_SCHED_MONITOR
-	bl	MT_trace_hardirqs_off
-#endif
 #endif
 	.endm
 
@@ -229,9 +226,6 @@ __irq_svc:
 #ifdef CONFIG_TRACE_IRQFLAGS
 	@ The parent context IRQs must have been enabled to get here in
 	@ the first place, so there's no point checking the PSR I bit.
-#ifdef CONFIG_MT_SCHED_MONITOR
-	bl	MT_trace_hardirqs_on
-#endif
 	bl	trace_hardirqs_on
 #endif
 	svc_exit r5				@ return from exception
@@ -381,9 +375,6 @@ ENDPROC(__pabt_svc)
 
 #ifdef CONFIG_IRQSOFF_TRACER
 	bl	trace_hardirqs_off
-#ifdef CONFIG_MT_SCHED_MONITOR
-	bl	MT_trace_hardirqs_off
-#endif
 #endif
 	.endm
 

@@ -32,7 +32,6 @@
 
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
-#include <mach/mtk_memcfg.h>
 
 #include "mm.h"
 
@@ -647,7 +646,7 @@ void __init mem_init(void)
 #define MLM(b, t) b, t, ((t) - (b)) >> 20
 #define MLK_ROUNDUP(b, t) b, t, DIV_ROUND_UP(((t) - (b)), SZ_1K)
 
-	MTK_MEMCFG_LOG_AND_PRINTK(KERN_NOTICE "Virtual kernel memory layout:\n"
+	printk(KERN_NOTICE "Virtual kernel memory layout:\n"
 			"    vector  : 0x%08lx - 0x%08lx   (%4ld kB)\n"
 #ifdef CONFIG_HAVE_TCM
 			"    DTCM    : 0x%08lx - 0x%08lx   (%4ld kB)\n"

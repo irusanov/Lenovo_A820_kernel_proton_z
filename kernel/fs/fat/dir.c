@@ -20,8 +20,6 @@
 #include <linux/compat.h>
 #include <asm/uaccess.h>
 #include <linux/kernel.h>
-#include <linux/namei.h>
-#include <linux/mount.h>
 #include "fat.h"
 
 /*
@@ -68,42 +66,6 @@ static inline void fat_dir_readahead(struct inode *dir, sector_t iblock,
 	brelse(bh);
 }
 
-int bdev_existed(const char *pathname)
-{
-    struct inode *inode;
-    struct path path;
-    int error;
-
-    if (!pathname || !*pathname)
-        return (-EINVAL);
-
-    error = kern_path(pathname, LOOKUP_FOLLOW, &path);
-    if (error)
-        {
-        //xlog_printk(ANDROID_LOG_DEBUG, "MNT_TAG", "bdev_existed, kern_path error:%d\n", error);               
-        return (error);
-        }
-
-    inode = path.dentry->d_inode;
-    error = -ENOTBLK;
-    if (!S_ISBLK(inode->i_mode))
-    {
-        //xlog_printk(ANDROID_LOG_DEBUG, "MNT_TAG", "bdev_existed, error: ENOTBLK\n");              
-        goto fail;
-    }
-    error = -EACCES;
-    if (path.mnt->mnt_flags & MNT_NODEV)
-    {
-        //xlog_printk(ANDROID_LOG_DEBUG, "MNT_TAG", "bdev_existed, error: MNT_NODEV\n"); 
-        goto fail;
-    }
-    return 0;
-fail:
-    path_put(&path);
-    return (error); 
-}
-
-
 /* Returns the inode number of the directory entry at offset pos. If bh is
    non-NULL, it is brelse'd before. Pos is incremented. The buffer header is
    returned in bh.
@@ -121,8 +83,6 @@ static int fat__get_entry(struct inode *dir, loff_t *pos,
 	sector_t phys, iblock;
 	unsigned long mapped_blocks;
 	int err, offset;
-    int err_print_num = 0;
-    #define ERR_PRINT_THRESHOLD (3)  
 
 next:
 	if (*bh)
@@ -136,35 +96,14 @@ next:
 
 	fat_dir_readahead(dir, iblock, phys);
 
-    *bh = sb_bread(sb, phys);
-    if (*bh == NULL) {
-        char bdev_path[256] = "/dev/block/";
-        strcat(bdev_path, sb->s_id);  
-    
-        err = bdev_existed(bdev_path);
-        if (err) {
-           /* the block device doesn't exist. Don't print un-used log.
-                      Too much log maybe run out of prink buffer !!!
-                   */
-        }
-        else {
-           err_print_num++;  
-           if (err_print_num <= ERR_PRINT_THRESHOLD) {
-               fat_msg(sb, KERN_ERR, "Directory bread(block %llu) failed",
-                   (llu)phys);
-               if (err_print_num == ERR_PRINT_THRESHOLD) {
-                   fat_msg(sb, KERN_ERR, "Too much error! Skip the next error messages.");                  
-               }       
-            } 
-            else {
-               /* skip the error message to prevent from out of the printk buffer */
-            }
-        }       
-
-        /* skip this block */
-        *pos = (iblock + 1) << sb->s_blocksize_bits;
-        goto next;         
-    }
+	*bh = sb_bread(sb, phys);
+	if (*bh == NULL) {
+		fat_msg(sb, KERN_ERR, "Directory bread(block %llu) failed",
+		       (llu)phys);
+		/* skip this block */
+		*pos = (iblock + 1) << sb->s_blocksize_bits;
+		goto next;
+	}
 
 	offset = *pos & (sb->s_blocksize - 1);
 	*pos += sizeof(struct msdos_dir_entry);

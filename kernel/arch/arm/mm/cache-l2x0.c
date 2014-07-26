@@ -29,7 +29,7 @@
 #define CACHE_LINE_SIZE		32
 
 static void __iomem *l2x0_base;
-DEFINE_RAW_SPINLOCK(l2x0_lock);
+static DEFINE_RAW_SPINLOCK(l2x0_lock);
 static u32 l2x0_way_mask;	/* Bitmask of active ways */
 static u32 l2x0_size;
 static u32 l2x0_cache_id;

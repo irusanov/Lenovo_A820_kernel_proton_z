@@ -40,8 +40,6 @@
 #include <asm/mach/irq.h>
 #include <asm/mach/time.h>
 
-#include <linux/mt_sched_mon.h>
-
 /*
  * No architecture-specific irq_finish function defined in arm/arch/irqs.h.
  */
@@ -73,7 +71,6 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 {
 	struct pt_regs *old_regs = set_irq_regs(regs);
 
-    mt_trace_ISR_start(irq);
 	irq_enter();
 
 	/*
@@ -91,7 +88,6 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 	/* AT91 specific workaround */
 	irq_finish(irq);
 
-    mt_trace_ISR_end(irq);
 	irq_exit();
 	set_irq_regs(old_regs);
 }

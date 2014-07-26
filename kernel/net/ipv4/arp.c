@@ -707,7 +707,7 @@ void arp_send(int type, int ptype, __be32 dest_ip,
 
 	if (dev->flags&IFF_NOARP)
 		return;
-    printk(KERN_INFO "[mtk_net]arp_send type = %d, dev = %s\n", type, dev->name);
+
 	skb = arp_create(type, ptype, dest_ip, dev, src_ip,
 			 dest_hw, src_hw, target_hw);
 	if (skb == NULL)
