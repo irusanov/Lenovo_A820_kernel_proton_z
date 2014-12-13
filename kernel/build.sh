@@ -1,4 +1,13 @@
 #!/bin/bash
+
+export CROSS_COMPILE="ccache ../../arm-eabi-4.8/bin/arm-eabi-"
+
+export TARGET_BUILD_VARIANT=user
+export TARGET_PRODUCT=lenovo89_cu_jb
+export MTK_ROOT_CUSTOM=../mediatek/custom/
+export ARCH=arm
+
+
 # Default settings
 verfile="android.ver"
 curcfg=".config"
@@ -164,7 +173,7 @@ if [ ! -z $KMOD_PATH ]; then
 fi
 
 echo "**** Building ****"
-make ${makeflags} ${makejobs} ${makedefs}
+make -j all ${makeflags} ${makejobs} ${makedefs}
 
 if [ $? -ne 0 ]; then exit 1; fi
 

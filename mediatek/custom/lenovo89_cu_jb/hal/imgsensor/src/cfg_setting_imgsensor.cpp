@@ -31,6 +31,28 @@ MBOOL isRetFakeSubOrientation()
 	return MFALSE;
 }
 
+/*******************************************************************************
+* Return fake orientation for back sensor or not
+*       MTRUE: return 90 for back sensor in degree 0, 
+*              return 270 for back sensor in degree 180.
+*       MFALSE: not return fake orientation.
+*******************************************************************************/
+MBOOL isRetFakeMainOrientation()  
+{
+	return MFALSE;
+}
+
+/*******************************************************************************
+* Return fake orientation for back (3D) sensor or not
+*       MTRUE: return 90 for back sensor in degree 0, 
+*              return 270 for back sensor in degree 180.
+*       MFALSE: not return fake orientation.
+*******************************************************************************/
+MBOOL isRetFakeMain2Orientation()  
+{
+	return MFALSE;
+}
+
 
 /*******************************************************************************
 * Sensor Input Data Bit Order

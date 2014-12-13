@@ -1,6 +1,11 @@
-android_kernel_acer_V370_MT6589
+Proton kernel for Lenovo A820
 ===============================
 
-Kernel Sources provided by Acer
+Compile with arm-eabi 4.7 or 4.8 toolchain
 
-TARGET_PRODUCT=simcom89_wet_jb2 MTK_ROOT_CUSTOM=../mediatek/custom/ make
+- Build the kernel
+$ cd kernel
+$ sh build.sh
+
+- Cleanup
+$ sh clean.sh
