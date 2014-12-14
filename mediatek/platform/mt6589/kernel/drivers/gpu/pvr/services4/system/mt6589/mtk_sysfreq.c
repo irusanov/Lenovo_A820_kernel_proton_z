@@ -8,6 +8,23 @@ static bool mt_keep_freq_non_od_set = false;
 
 #define MTK_GPU_DVFS 1
 
+/* SGX544 GPU overclock overrides */
+#if 0
+	#define MTK_GPU_OC_476MHz
+#endif
+#if 0
+	#define MTK_GPU_OC_403MHz
+#endif
+#if 0
+	#define MTK_FORCE_T /* 357MHz */
+#endif
+#if 0
+	#define MTK_FORCE_312MHz
+#endif
+#if 0
+	#define MTK_FORCE_6589 /* 286MHz - force 6589M to 6589 GPU clock */
+#endif
+
 #if MTK_GPU_DVFS
 static struct mt_gpufreq_info freqs_special_vrf18_2[] = {
     {GPU_DVFS_F3, 40, 100, GPU_POWER_VRF18_1_15V, 100},
@@ -55,9 +72,25 @@ PVRSRV_ERROR MTKSetFreqInfo(unsigned int freq, unsigned int tbltype)
 {
 
     printk(" freq= %d", freq);
+#if defined(MTK_GPU_OC_476MHz)
+    freq = GPU_DVFS_F1;
+    tbltype = TBLTYPE1;
+#endif      
+#if defined(MTK_GPU_OC_403MHz)
+    freq = GPU_DVFS_F2;
+    tbltype = TBLTYPE1;
+#endif    
 #if defined(MTK_FORCE_T)
     freq = GPU_DVFS_F3;
     tbltype = TBLTYPE1;
+#endif
+#if defined(MTK_FORCE_312MHz)
+    freq = GPU_DVFS_F4;
+    tbltype = TBLTYPE1;
+#endif
+#if defined(MTK_FORCE_6589)
+    freq = GPU_DVFS_F5;
+    tbltype = TBLTYPE0;
 #endif
 #if defined(MTK_FORCE_M)
     freq = GPU_DVFS_F7;
