@@ -1,201 +1,82 @@
 #!/bin/bash
+#Stop script if something is broken
+set -e
 
+#Export CROSS_COMPILE to point toolchain
 export CROSS_COMPILE="ccache ../../arm-eabi-4.8/bin/arm-eabi-"
-
 export TARGET_BUILD_VARIANT=user
 export TARGET_PRODUCT=lenovo89_cu_jb
 export MTK_ROOT_CUSTOM=../mediatek/custom/
 export ARCH=arm
 
 
-# Default settings
-verfile="android.ver"
-curcfg=".config"
-release="n"
-rebuild="n"
-clean="n"
-makeflags="-w"
-makedefs="V=0"
-makejobs=${MAKEJOBS}
-curdir=`pwd`
-if [ "${KBUILD_OUTPUT_SUPPORT}" == "yes" ];then
-  outdir=$curdir/out
-  mkdir -p $outdir
+#Echo actual vars
+echo "We are actually building for $TARGET_PRODUCT with $CROSS_COMPILE"
+
+#Workaround for + appended on kernelrelease
+export LOCALVERSION=Proton-Kernel-1.0
+
+#Create vars for OUT, SCRIPTS and RAMDISK directories
+OUT_DIRECTORY=../out/$TARGET_PRODUCT
+RAMDISK_DIRECTORY=../ramdisk/$TARGET_PRODUCT
+SCRIPTS_DIRECTORY=../scripts/$TARGET_PRODUCT
+CERTIFICATES_DIRECTORY=../.certificates
+
+#Create and clean out directory for your device
+mkdir -p $OUT_DIRECTORY
+if [ "$(ls -A $OUT_DIRECTORY)" ]; then
+rm $OUT_DIRECTORY/* -R
 fi
 
-usage() {
-    echo "Usage: $0 {release|rebuild|clean|silent|verbose|single} [config-xxx]"
-    echo "  config file will be generated if build with TARGET_PRODUCT"
-    exit 1
-}
+#Kernel part
+make -j all
 
-make_clean() {
-    echo "**** Cleaning ****"
-    nice make ${makeflags} ${makedefs} distclean
-}
+#Add MTK header to zImage
+cp arch/arm/boot/zImage ../mtk-tools/zImageOld
 
+echo "Adding MTK header to zImage"
+cd ../mtk-tools
+./mkimage zImageOld KERNEL > zImage
+echo "zImage with MTK header ready in mtk-tools folder"
 
-# Main starts here
-while test -n "$1"; do
-    case "$1" in
-    release)
-        release="y"
-    ;;
-    rebuild)
-        rebuild="y"
-    ;;
-    clean)
-        clean="y"
-    ;;
-    mrproper)
-        mrproper="y"
-    ;;
-    silent)
-        makeflags="-ws"
-        makedefs="V=0"
-    ;;
-    verbose)
-        makeflags="-w"
-        makedefs="V=1"
-    ;;
-    single)
-        makejobs=""
-    ;;
-    *)
-        export TARGET_PRODUCT=$1
-    ;;
-    esac
-    shift
-done
+#Modules part
+#make INSTALL_MOD_STRIP=--strip-unneeded INSTALL_MOD_PATH=$OUT_DIRECTORY/system INSTALL_MOD_DIR=$OUT_DIRECTORY/system android_modules_install
 
-source ../mediatek/build/shell.sh ../ kernel
-defcfg="${MTK_ROOT_GEN_CONFIG}/kconfig"
-if [ "${KBUILD_OUTPUT_SUPPORT}" == "yes" ]; then
-  makeflags+=" O=$outdir"
-fi
+#Repack part
+if [ -d "$RAMDISK_DIRECTORY" ]; then
 
-if [ ! -z $KMOD_PATH ]; then
-  if [ ! -e $KMOD_PATH ]; then
-     echo "Invalid KMOD_PATH:$KMOD_PATH"
-     echo "CURDIR=$curdir"
-     exit 1;
-  fi
-fi
+echo "GZIP ramdisk and adding mtk header"
+./mkbootfs $RAMDISK_DIRECTORY | gzip >ramdisk.gz
+./mkimage ramdisk.gz ROOTFS > ramdisk.img
 
-# clean if it is necessary
-if [ "${clean}" == "y" ]; then
-   if [ ! -z $KMOD_PATH ]; then
-      echo "Clean kernel module PROJECT=$MTK_PROJECT PATH=$KMOD_PATH";
-      if [ "${KBUILD_OUTPUT_SUPPORT}" == "yes" ]; then
-        make M="$KMOD_PATH" O=$outdir clean
-      else
-        make M="$KMOD_PATH" clean
-      fi
-      exit $?
-   else
-      make_clean; exit $?;
-   fi
-fi
+echo "Repacking boot.img"
+./mkbootimg --kernel ./zImage --ramdisk ./ramdisk.img -o boot.img
+cp boot.img $OUT_DIRECTORY/
+echo "Repacked boot.img is ready in $OUT_DIRECTORY"
 
-if [ "${mrproper}" == "y" ]; then
-  make mrproper; exit $?;
-fi
+cd ../kernel
 
-if [ "${rebuild}" == "y" ]; then make_clean; fi
+#../mtk-tools/repack-MT65xx.pl -boot $OUT_DIRECTORY/zImage $RAMDISK_DIRECTORY $OUT_DIRECTORY/boot.img
+#rm $OUT_DIRECTORY/zImage
 
-echo "**** Configuring / $defcfg / ****"
-# select correct configuration file
-if [ "${KBUILD_OUTPUT_SUPPORT}" == "yes" ]; then
-  make mediatek-configs O=$outdir
+#Cleaning
+echo "Cleaning..."
+rm ../mtk-tools/zImage*
+rm ../mtk-tools/ramdisk*
+
+#Flashable zip build
+if [ -d "$SCRIPTS_DIRECTORY" ]; then
+cp $SCRIPTS_DIRECTORY/* $OUT_DIRECTORY -R
+FLASHABLE_ZIP="$OUT_DIRECTORY/`cat DEVICE_NAME`-$LOCALVERSION-"$(date +'%y%m%d%H%M')
+FLASHABLE_ZIP_2="`cat DEVICE_NAME`-$LOCALVERSION-"$(date +'%y%m%d%H%M')
+echo "Creating flashable at '$FLASHABLE_ZIP'.zip"
+pushd $OUT_DIRECTORY
+zip -r -0 "$FLASHABLE_ZIP_2".zip .
+popd
+if [ ! -d "$CERTIFICATES_DIRECTORY" ]; then
+echo "Warning ! We can't sign flashable.zip, you need to run ./certificates.sh"
 else
-  make mediatek-configs
+java -jar $SCRIPTS_DIRECTORY/../signapk.jar $CERTIFICATES_DIRECTORY/certificate.pem $CERTIFICATES_DIRECTORY/key.pk8 "$FLASHABLE_ZIP".zip "$FLASHABLE_ZIP"-signed.zip
 fi
-
-# Config DRAM size according to central Project Configuration file setting
-# Todo:
-# Need a robust mechanism to control Kconfig content by central Config setting
-# Move below segment to a configuration file for extension
-if [ "$CUSTOM_DRAM_SIZE" == "3G" ]; then
-    # Config DRAM size as 3G (0x18000000).
-    sed --in-place=.orig \
-        -e 's/\(CONFIG_MAX_DRAM_SIZE_SUPPORT=\).*/\10x18000000/' \
-        out/.config
-else
-  if [ "$CUSTOM_DRAM_SIZE" == "2G" ]; then
-      # Config DRAM size as 2G (0x10000000).
-      sed --in-place=.orig \
-          -e 's/\(CONFIG_MAX_DRAM_SIZE_SUPPORT=\).*/\10x10000000/' \
-          -e 's/\(CONFIG_RESERVED_MEM_SIZE_FOR_PMEM=\).*/\10x1700000/' \
-          out/.config
-  else
-    if [ "$CUSTOM_DRAM_SIZE" == "4G" ]; then
-        # Config DRAM size as 4G (0x20000000).
-        sed --in-place=.orig \
-            -e 's/\(CONFIG_MAX_DRAM_SIZE_SUPPORT=\).*/\10x20000000/' \
-            out/.config
-    else
-      if [ "$CUSTOM_DRAM_SIZE" == "6G" ]; then
-          # Config DRAM size as 6G (0x30000000).
-          sed --in-place=.orig \
-              -e 's/\(CONFIG_MAX_DRAM_SIZE_SUPPORT=\).*/\10x30000000/' \
-              -e 's/\(CONFIG_CMDLINE=.*\)"/\1 vmalloc=280M"/' \
-              -e 's/.*\(CONFIG_HIGHMEM\).*/\1=y/' \
-              -e '$ a\# CONFIG_HIGHPTE is not set' \
-              -e '$ a\# CONFIG_DEBUG_HIGHMEM is not set' \
-              out/.config
-      else
-        if [ "$CUSTOM_DRAM_SIZE" == "8G" ]; then
-            # Config DRAM size as 8G (0x40000000).
-            sed --in-place=.orig \
-                -e 's/\(CONFIG_MAX_DRAM_SIZE_SUPPORT=\).*/\10x40000000/' \
-                -e 's/\(CONFIG_CMDLINE=.*\)"/\1 vmalloc=280M"/' \
-                -e 's/.*\(CONFIG_HIGHMEM\).*/\1=y/' \
-                -e '$ a\# CONFIG_HIGHPTE is not set' \
-                -e '$ a\# CONFIG_DEBUG_HIGHMEM is not set' \
-                out/.config
-        fi
-      fi
-    fi
-  fi
 fi
-
-# update configuration
-nice make ${makeflags} ${makedefs} silentoldconfig
-
-if [ ! -z $KMOD_PATH ]; then
-  echo "Build kernel module PROJECT=$MTK_PROJECT PATH=$KMOD_PATH";
-  if [ "${KBUILD_OUTPUT_SUPPORT}" == "yes" ]; then
-    make M="$KMOD_PATH" O=$outdir modules
-  else
-    make M="$KMOD_PATH" modules
-  fi
-  exit $?
 fi
-
-echo "**** Building ****"
-make -j all ${makeflags} ${makejobs} ${makedefs}
-
-if [ $? -ne 0 ]; then exit 1; fi
-
-echo "**** Successfully built kernel ****"
-
-mkimg="${MTK_ROOT_BUILD}/tools/mkimage"
-if [ "${KBUILD_OUTPUT_SUPPORT}" == "yes" ]; then
-  kernel_img="${outdir}/arch/arm/boot/Image"
-  kernel_zimg="${outdir}/arch/arm/boot/zImage"
-else
-kernel_img="${curdir}/arch/arm/boot/Image"
-kernel_zimg="${curdir}/arch/arm/boot/zImage"
-fi
-
-echo "**** Generate download images ****"
-
-if [ ! -x ${mkimg} ]; then chmod a+x ${mkimg}; fi
-
-if [ "${KBUILD_OUTPUT_SUPPORT}" == "yes" ]; then
-  ${mkimg} ${kernel_zimg} KERNEL > out/kernel_${MTK_PROJECT}.bin
-else
-  ${mkimg} ${kernel_zimg} KERNEL > kernel_${MTK_PROJECT}.bin
-fi
-
-# copy_to_legacy_download_flash_folder   kernel_${MTK_PROJECT}.bin rootfs_${MTK_PROJECT}.bin

@@ -1,0 +1,52 @@
+ui_print("=============================================");
+ui_print("");
+ui_print("		    Lenovo A820 Proton kernel");
+ui_print("");
+ui_print("=============================================");
+
+
+set_progress(0.01);
+#ui_print("=== Mounting");
+#set_progress(0.02);
+#mount("ext4", "EMMC", "emmc@system", "/system");
+#mount("ext4", "EMMC", "emmc@usrdata", "/data");
+
+#set_progress(0.2);
+#ui_print(" Done."); 
+#ui_print(" ");
+
+#ui_print("@ Installing drivers");
+#set_progress(0.3);
+#show_progress(0.6,10);
+#package_extract_dir("system", "/system");
+#package_extract_dir("data", "/data");
+#ui_print(" Done."); 
+#ui_print(" ");
+
+#ui_print(" Setting Permissions");
+#set_perm(0, 0, 0644, "/system/lib/modules/srvpvrkm.ko");
+#set_perm(0, 0, 0644, "/system/lib/modules/mtklfb.ko");
+#set_perm(0, 0, 0644, "/system/lib/modules/devapc.ko");
+#set_perm(0, 0, 0644, "/system/lib/modules/devinfo.ko");
+#ui_print(" Done."); ui_print(" ");
+
+#set_progress(0.8);
+
+ui_print("@ Installing Kernel");
+ui_print(" Extracting boot image ");
+assert(package_extract_file("boot.img", "/tmp/boot.img"),
+       write_raw_image("/tmp/boot.img", "bootimg"),
+       delete("/tmp/boot.img"));
+ui_print(" Done."); ui_print(" ");
+
+#ui_print("=== Unmounting");
+
+#unmount("/data");
+#unmount("/system");
+
+set_progress(1.0);
+
+#ui_print(" ");
+#ui_print(" ");
+#ui_print("Done.");
+ui_print("=== Update complete.");

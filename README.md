@@ -5,7 +5,9 @@ Compile with arm-eabi 4.7 or 4.8 toolchain
 
 - Build the kernel
 $ cd kernel
-$ sh build.sh
+$ ./build.sh
+
+You can find the flashable zip in out directory
 
 - Cleanup
-$ sh clean.sh
+$ ./clean.sh
