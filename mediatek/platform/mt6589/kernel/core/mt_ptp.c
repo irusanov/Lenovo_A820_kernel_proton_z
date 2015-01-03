@@ -759,7 +759,7 @@ u32 PTP_INIT_01(void)
     PTP_Init_value.FREQPCT7 = freq_7;
     
     PTP_Init_value.DETWINDOW = 0xa28;  // 100 us, This is the PTP Detector sampling time as represented in cycles of bclk_ck during INIT. 52 MHz
-    PTP_Init_value.VMAX = 0x62; // 1.3125v (700mv + n * 6.25mv)    
+    PTP_Init_value.VMAX = 0x50; // 1.20v (700mv + n * 6.25mv)    
     PTP_Init_value.VMIN = 0x28; // 0.95v (700mv + n * 6.25mv)    
     PTP_Init_value.DTHI = 0x01; // positive
     PTP_Init_value.DTLO = 0xfe; // negative (2・s compliment)
@@ -858,7 +858,7 @@ u32 PTP_INIT_02(void)
     PTP_Init_value.FREQPCT7 = freq_7;
 
     PTP_Init_value.DETWINDOW = 0xa28;  // 100 us, This is the PTP Detector sampling time as represented in cycles of bclk_ck during INIT. 52 MHz
-    PTP_Init_value.VMAX = 0x62; // 1.3125v (700mv + n * 6.25mv)    
+    PTP_Init_value.VMAX = 0x50; // 1.2v (700mv + n * 6.25mv)    
     PTP_Init_value.VMIN = 0x28; // 0.95v (700mv + n * 6.25mv)    
     PTP_Init_value.DTHI = 0x01; // positive
     PTP_Init_value.DTLO = 0xfe; // negative (2・s compliment)
@@ -967,7 +967,7 @@ u32 PTP_MON_MODE(void)
     PTP_Init_value.FREQPCT7 = freq_7;
 
     PTP_Init_value.DETWINDOW = 0xa28;  // 100 us, This is the PTP Detector sampling time as represented in cycles of bclk_ck during INIT. 52 MHz
-    PTP_Init_value.VMAX = 0x62; // 1.3125v (700mv + n * 6.25mv)    
+    PTP_Init_value.VMAX = 0x50; // 1.2v (700mv + n * 6.25mv)
     PTP_Init_value.VMIN = 0x28; // 0.95v (700mv + n * 6.25mv)    
     PTP_Init_value.DTHI = 0x01; // positive
     PTP_Init_value.DTLO = 0xfe; // negative (2・s compliment)
@@ -1282,7 +1282,7 @@ u32 PTP_INIT_01_API(void)
     PTP_Init_value.FREQPCT7 = freq_7;
     
     PTP_Init_value.DETWINDOW = 0xa28;  // 100 us, This is the PTP Detector sampling time as represented in cycles of bclk_ck during INIT. 52 MHz
-    PTP_Init_value.VMAX = 0x62; // 1.3125v (700mv + n * 6.25mv)    
+    PTP_Init_value.VMAX = 0x50; // 1.2v (700mv + n * 6.25mv)
     PTP_Init_value.VMIN = 0x28; // 0.95v (700mv + n * 6.25mv)    
     PTP_Init_value.DTHI = 0x01; // positive
     PTP_Init_value.DTLO = 0xfe; // negative (2・s compliment)

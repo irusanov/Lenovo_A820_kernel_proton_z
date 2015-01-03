@@ -51,7 +51,7 @@ echo "GZIP ramdisk and adding mtk header"
 
 echo "Repacking boot.img"
 ./mkbootimg --kernel ./zImage --ramdisk ./ramdisk.img -o boot.img
-cp boot.img $OUT_DIRECTORY/
+mv boot.img $OUT_DIRECTORY/
 echo "Repacked boot.img is ready in $OUT_DIRECTORY"
 
 cd ../kernel
