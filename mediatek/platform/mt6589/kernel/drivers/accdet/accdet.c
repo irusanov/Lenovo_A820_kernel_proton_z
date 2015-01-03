@@ -1,3 +1,37 @@
+/* Copyright Statement:
+ *
+ * This software/firmware and related documentation ("MediaTek Software") are
+ * protected under relevant copyright laws. The information contained herein
+ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
+ * Without the prior written permission of MediaTek inc. and/or its licensors,
+ * any reproduction, modification, use or disclosure of MediaTek Software,
+ * and information contained herein, in whole or in part, shall be strictly prohibited.
+ *
+ * MediaTek Inc. (C) 2012. All rights reserved.
+ *
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ * The following software/firmware and/or related documentation ("MediaTek Software")
+ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
+ * applicable license agreements with MediaTek Inc.
+ */
 #include "accdet.h"
 #include <mach/mt_boot.h>
 #include <cust_eint.h>
@@ -1903,7 +1937,7 @@ static int accdet_remove(struct platform_device *dev)
 	return 0;
 }
 
-static int accdet_suspend(struct device *device)  // only one suspend mode
+static int accdet_suspend(struct platform_device *dev, pm_message_t state)  // only one suspend mode
 {
 	
 //#ifdef ACCDET_PIN_SWAP
@@ -1993,7 +2027,7 @@ static int accdet_suspend(struct device *device)  // only one suspend mode
 	return 0;
 }
 
-static int accdet_resume(struct device *device) // wake up
+static int accdet_resume(struct platform_device *dev) // wake up
 {
 //#ifdef ACCDET_PIN_SWAP
 //		pmic_pwrap_write(0x0400, 0x1000); 
@@ -2044,67 +2078,15 @@ static int accdet_resume(struct device *device) // wake up
 
     return 0;
 }
-/**********************************************************************
-//add for IPO-H need update headset state when resume
 
-***********************************************************************/
-#ifdef CONFIG_PM
-static int accdet_pm_restore_noirq(struct device *device)
-{
-	int current_status_restore = 0;
-    printk("[Accdet]accdet_pm_restore_noirq start!\n");
-	//enable accdet
-	pmic_pwrap_write(TOP_CKPDN_CLR, RG_ACCDET_CLK_CLR); 
-    pmic_pwrap_write(ACCDET_STATE_SWCTRL, pmic_pwrap_read(ACCDET_STATE_SWCTRL)|pre_state_swctrl);
-    pmic_pwrap_write(ACCDET_CTRL, ACCDET_ENABLE);
-	eint_accdet_sync_flag = 1;
-	current_status_restore = ((pmic_pwrap_read(ACCDET_STATE_RG) & 0xc0)>>6); //AB
-		
-	switch (current_status_restore) {
-		case 0:     //AB=0
-			cable_type = HEADSET_NO_MIC;
-			accdet_status = HOOK_SWITCH;
-			break;
-		case 1:     //AB=1
-			cable_type = HEADSET_MIC;
-			accdet_status = MIC_BIAS;
-			break;
-		case 3:     //AB=3
-			cable_type = NO_DEVICE;
-			accdet_status = PLUG_OUT;
-			break;
-		default:
-			printk("[Accdet]accdet_pm_restore_noirq: accdet current status error!\n");
-			break;
-	}
-	switch_set_state((struct switch_dev *)&accdet_data, cable_type);
-	if (cable_type == NO_DEVICE) {
-		eint_accdet_sync_flag = 0;
-		//disable accdet
-		pre_state_swctrl = pmic_pwrap_read(ACCDET_STATE_SWCTRL);  
-    	pmic_pwrap_write(ACCDET_CTRL, ACCDET_DISABLE);
-    	pmic_pwrap_write(ACCDET_STATE_SWCTRL, 0);
-    	pmic_pwrap_write(TOP_CKPDN_SET, RG_ACCDET_CLK_SET);
-	}
-	return 0;
-}
-static struct dev_pm_ops accdet_pm_ops = {
-	.suspend = accdet_suspend,
-    .resume = accdet_resume,
-	.restore_noirq = accdet_pm_restore_noirq,
-};
-#endif
 
 static struct platform_driver accdet_driver = {
 	.probe		= accdet_probe,	
-	//.suspend	= accdet_suspend,
-	//.resume		= accdet_resume,
+	.suspend	= accdet_suspend,
+	.resume		= accdet_resume,
 	.remove   = accdet_remove,
 	.driver     = {
 	.name       = "Accdet_Driver",
-#ifdef CONFIG_PM
-	.pm         = &accdet_pm_ops,
-#endif
 	},
 };
 

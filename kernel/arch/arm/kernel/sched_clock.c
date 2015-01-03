@@ -28,11 +28,7 @@ struct clock_data {
 static void sched_clock_poll(unsigned long wrap_ticks);
 static DEFINE_TIMER(sched_clock_timer, sched_clock_poll, 0, 0);
 
-#ifdef CONFIG_HIBERNATION
-static struct clock_data cd __nosavedata = {
-#else
 static struct clock_data cd = {
-#endif
 	.mult	= NSEC_PER_SEC / HZ,
 };
 

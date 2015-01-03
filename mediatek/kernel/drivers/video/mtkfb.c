@@ -1,4 +1,4 @@
-#include <linux/autoconf.h>
+#include <generated/autoconf.h>
 #include <linux/module.h>
 #include <linux/mm.h>
 #include <linux/init.h>
@@ -309,11 +309,7 @@ static int esd_recovery_kthread(void *data)
             break;
 
         MTKFB_LOG("sleep start in esd_recovery_kthread()\n");
-	#if defined (ACER_C11)
-        msleep(1000);
-	#else
         msleep(2000);       //2s
-    #endif    
         MTKFB_LOG("sleep ends in esd_recovery_kthread()\n");
 
         if(!esd_kthread_pause)

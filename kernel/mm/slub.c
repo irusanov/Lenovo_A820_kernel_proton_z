@@ -32,7 +32,6 @@
 #include <linux/prefetch.h>
 
 #include <trace/events/kmem.h>
-#include <mach/mtk_memcfg.h>
 
 /*
  * Lock order:
@@ -761,11 +760,6 @@ static int slab_pad_check(struct kmem_cache *s, struct page *page)
 	int length;
 	int remainder;
 
-#ifdef CONFIG_MTK_MEMCFG
-        if (unlikely(mtk_memcfg_get_bypass_slub_debug_flag())) {
-            return 1;
-        }
-#endif 
 	if (!(s->flags & SLAB_POISON))
 		return 1;
 
@@ -795,11 +789,6 @@ static int check_object(struct kmem_cache *s, struct page *page,
 	u8 *p = object;
 	u8 *endobject = object + s->objsize;
 
-#ifdef CONFIG_MTK_MEMCFG
-        if (unlikely(mtk_memcfg_get_bypass_slub_debug_flag())) {
-            return 1;
-        }
-#endif 
 	if (s->flags & SLAB_RED_ZONE) {
 		if (!check_bytes_and_report(s, page, object, "Redzone",
 			endobject, val, s->inuse - s->objsize))
@@ -1061,11 +1050,6 @@ static void setup_object_debug(struct kmem_cache *s, struct page *page,
 static noinline int alloc_debug_processing(struct kmem_cache *s, struct page *page,
 					void *object, unsigned long addr)
 {
-#ifdef CONFIG_MTK_MEMCFG
-        if (unlikely(mtk_memcfg_get_bypass_slub_debug_flag())) {
-            return 1;
-        }
-#endif 
 	if (!check_slab(s, page))
 		goto bad;
 
@@ -1104,11 +1088,6 @@ static noinline int free_debug_processing(struct kmem_cache *s,
 	unsigned long flags;
 	int rc = 0;
 
-#ifdef CONFIG_MTK_MEMCFG
-        if (unlikely(mtk_memcfg_get_bypass_slub_debug_flag())) {
-            return 1;
-        }
-#endif 
 	local_irq_save(flags);
 	slab_lock(page);
 

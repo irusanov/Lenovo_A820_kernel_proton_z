@@ -224,12 +224,6 @@ show_map_vma(struct seq_file *m, struct vm_area_struct *vma, int is_pid)
 	int len;
 	const char *name = NULL;
 
-        if (file && (unsigned long)file < (unsigned long)TASK_SIZE) {
-            printk(KERN_ALERT"Error: invalid file pointer: 0x%p, vma: 0x%p\n", 
-                    (void *)file, (void *)vma);
-            print_hex_dump(KERN_ERR, "vma ", DUMP_PREFIX_ADDRESS, 16, 4, (void *)vma - (PAGE_SIZE / 2),
-                    PAGE_SIZE, 1);
-        }
 	if (file) {
 		struct inode *inode = vma->vm_file->f_path.dentry->d_inode;
 		dev = inode->i_sb->s_dev;

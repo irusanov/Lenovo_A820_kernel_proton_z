@@ -890,7 +890,7 @@ void dbg_dump_leb(const struct ubifs_info *c, int lnum)
 	printk(KERN_ERR "(pid %d) start dumping LEB %d\n",
 	       current->pid, lnum);
 
-	buf = kmalloc(c->leb_size, GFP_KERNEL);
+	buf = __vmalloc(c->leb_size, GFP_NOFS, PAGE_KERNEL);
 	if (!buf) {
 		ubifs_err("cannot allocate memory for dumping LEB %d", lnum);
 		return;
@@ -917,7 +917,7 @@ void dbg_dump_leb(const struct ubifs_info *c, int lnum)
 	ubifs_scan_destroy(sleb);
 
 out:
-	kfree(buf);
+	vfree(buf);
 	return;
 }
 

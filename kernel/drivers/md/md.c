@@ -452,7 +452,7 @@ static void submit_flushes(struct work_struct *ws)
 			atomic_inc(&rdev->nr_pending);
 			atomic_inc(&rdev->nr_pending);
 			rcu_read_unlock();
-			bi = bio_alloc_mddev(GFP_KERNEL, 0, mddev);
+			bi = bio_alloc_mddev(GFP_NOIO, 0, mddev);
 			bi->bi_end_io = md_end_flush;
 			bi->bi_private = rdev;
 			bi->bi_bdev = rdev->bdev;
@@ -7084,14 +7084,10 @@ void md_do_sync(struct mddev *mddev)
 	 *
 	 */
 
-	set_freezable();
-
 	do {
 		mddev->curr_resync = 2;
 
 	try_again:
-	try_to_freeze();
-
 		if (kthread_should_stop())
 			set_bit(MD_RECOVERY_INTR, &mddev->recovery);
 
@@ -7114,9 +7110,6 @@ void md_do_sync(struct mddev *mddev)
 					 * time 'round when curr_resync == 2
 					 */
 					continue;
-
-				try_to_freeze();
-
 				/* We need to wait 'interruptible' so as not to
 				 * contribute to the load average, and not to
 				 * be caught by 'softlockup'
@@ -7129,7 +7122,6 @@ void md_do_sync(struct mddev *mddev)
 					       " share one or more physical units)\n",
 					       desc, mdname(mddev), mdname(mddev2));
 					mddev_put(mddev2);
-					try_to_freeze();
 					if (signal_pending(current))
 						flush_signals(current);
 					schedule();
@@ -7237,8 +7229,6 @@ void md_do_sync(struct mddev *mddev)
 						 || kthread_should_stop());
 		}
 
-		try_to_freeze();
-
 		if (kthread_should_stop())
 			goto interrupted;
 
@@ -7282,7 +7272,6 @@ void md_do_sync(struct mddev *mddev)
 			last_mark = next;
 		}
 
-		try_to_freeze();
 
 		if (kthread_should_stop())
 			goto interrupted;
@@ -7488,10 +7477,8 @@ static void reap_sync_thread(struct mddev *mddev)
  */
 void md_check_recovery(struct mddev *mddev)
 {
-#ifdef CONFIG_FREEZER
-	if (mddev->suspended || unlikely(atomic_read(&system_freezing_cnt)))
+	if (mddev->suspended)
 		return;
-#endif
 
 	if (mddev->bitmap)
 		bitmap_daemon_work(mddev);

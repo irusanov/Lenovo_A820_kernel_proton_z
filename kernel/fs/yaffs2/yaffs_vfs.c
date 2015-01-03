@@ -43,7 +43,7 @@
 #include <linux/init.h>
 #include <linux/fs.h>
 #include <linux/proc_fs.h>
-//#include <linux/smp_lock.h>
+#include <linux/smp_lock.h>
 #include <linux/pagemap.h>
 #include <linux/mtd/mtd.h>
 #include <linux/interrupt.h>
@@ -92,7 +92,7 @@ static uint32_t YCALCBLOCKS(uint64_t partition_size, uint32_t block_size)
 #include "yaffs_mtdif1.h"
 #include "yaffs_mtdif2.h"
 
-unsigned int yaffs_trace_mask = YAFFS_TRACE_BAD_BLOCKS | YAFFS_TRACE_ALWAYS | YAFFS_TRACE_ERROR;
+unsigned int yaffs_trace_mask = YAFFS_TRACE_BAD_BLOCKS | YAFFS_TRACE_ALWAYS;
 unsigned int yaffs_wr_attempts = YAFFS_WR_ATTEMPTS;
 unsigned int yaffs_auto_checkpoint = 1;
 unsigned int yaffs_gc_control = 1;
@@ -142,17 +142,12 @@ static struct inode *yaffs_iget(struct super_block *sb, unsigned long ino)
 	struct inode *inode;
 	struct yaffs_obj *obj;
 	struct yaffs_dev *dev = yaffs_super_to_dev(sb);
-	gfp_t gfp_mask; 
+
 	yaffs_trace(YAFFS_TRACE_OS, "yaffs_iget for %lu", ino);
 
 	inode = iget_locked(sb, ino);
 	if (!inode)
 		return ERR_PTR(-ENOMEM);
-		
-	gfp_mask = mapping_gfp_mask(inode->i_mapping);
-	gfp_mask &= ~__GFP_HIGHMEM;
-	mapping_set_gfp_mask(inode->i_mapping, gfp_mask);
-	
 	if (!(inode->i_state & I_NEW))
 		return inode;
 
@@ -207,7 +202,7 @@ struct inode *yaffs_get_inode(struct super_block *sb, int mode, int dev,
 	return inode;
 }
 
-static int yaffs_mknod(struct inode *dir, struct dentry *dentry, umode_t mode,
+static int yaffs_mknod(struct inode *dir, struct dentry *dentry, int mode,
 		       dev_t rdev)
 {
 	struct inode *inode;
@@ -287,12 +282,12 @@ static int yaffs_mknod(struct inode *dir, struct dentry *dentry, umode_t mode,
 	return error;
 }
 
-static int yaffs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
+static int yaffs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 {
 	return yaffs_mknod(dir, dentry, mode | S_IFDIR, 0);
 }
 
-static int yaffs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
+static int yaffs_create(struct inode *dir, struct dentry *dentry, int mode,
 			struct nameidata *n)
 {
 	return yaffs_mknod(dir, dentry, mode | S_IFREG, 0);
@@ -319,12 +314,12 @@ static int yaffs_link(struct dentry *old_dentry, struct inode *dir,
 				   obj);
 
 	if (link) {
-		old_dentry->d_inode->__i_nlink = yaffs_get_obj_link_count(obj);
+		old_dentry->d_inode->i_nlink = yaffs_get_obj_link_count(obj);
 		d_instantiate(dentry, old_dentry->d_inode);
 		atomic_inc(&old_dentry->d_inode->i_count);
 		yaffs_trace(YAFFS_TRACE_OS,
 			"yaffs_link link count %d i_count %d",
-			old_dentry->d_inode->__i_nlink,
+			old_dentry->d_inode->i_nlink,
 			atomic_read(&old_dentry->d_inode->i_count));
 	}
 
@@ -434,7 +429,7 @@ static int yaffs_unlink(struct inode *dir, struct dentry *dentry)
 	ret_val = yaffs_unlinker(obj, dentry->d_name.name);
 
 	if (ret_val == YAFFS_OK) {
-		dentry->d_inode->__i_nlink--;
+		dentry->d_inode->i_nlink--;
 		dir->i_version++;
 		yaffs_gross_unlock(dev);
 		mark_inode_dirty(dentry->d_inode);
@@ -445,7 +440,7 @@ static int yaffs_unlink(struct inode *dir, struct dentry *dentry)
 	return -ENOTEMPTY;
 }
 
-static int yaffs_sync_object(struct file *file,loff_t start,loff_t end, int datasync)
+static int yaffs_sync_object(struct file *file, int datasync)
 {
 
 	struct yaffs_obj *obj;
@@ -502,7 +497,7 @@ static int yaffs_rename(struct inode *old_dir, struct dentry *old_dentry,
 
 	if (ret_val == YAFFS_OK) {
 		if (target) {
-			new_dentry->d_inode->__i_nlink--;
+			new_dentry->d_inode->i_nlink--;
 			mark_inode_dirty(new_dentry->d_inode);
 		}
 
@@ -1101,7 +1096,7 @@ static void yaffs_evict_inode(struct inode *inode)
 		atomic_read(&inode->i_count),
 		obj ? "object exists" : "null object");
 
-	if (!inode->__i_nlink && !is_bad_inode(inode))
+	if (!inode->i_nlink && !is_bad_inode(inode))
 		deleteme = 1;
 	truncate_inode_pages(&inode->i_data, 0);
 	end_writeback(inode);
@@ -1922,7 +1917,7 @@ static void yaffs_fill_inode_from_obj(struct inode *inode,
 		inode->i_size = yaffs_get_obj_length(obj);
 		inode->i_blocks = (inode->i_size + 511) >> 9;
 
-		inode->__i_nlink = yaffs_get_obj_link_count(obj);
+		inode->i_nlink = yaffs_get_obj_link_count(obj);
 
 		yaffs_trace(YAFFS_TRACE_OS,
 			"yaffs_fill_inode mode %x uid %d gid %d size %d count %d",
@@ -1997,8 +1992,8 @@ static void yaffs_mtd_put_super(struct super_block *sb)
 {
 	struct mtd_info *mtd = yaffs_dev_to_mtd(yaffs_super_to_dev(sb));
 
-	mtd_sync(mtd);
-
+	if (mtd->sync)
+		mtd->sync(mtd);
 
 	put_mtd_device(mtd);
 }
@@ -2025,7 +2020,7 @@ static struct super_block *yaffs_internal_read_super(int yaffs_version,
 	char *data_str = (char *)data;
 	struct yaffs_linux_context *context = NULL;
 	struct yaffs_param *param;
-  int yaffs_mvg_test_debug_mode = 0;
+
 	int read_only = 0;
 
 	struct yaffs_options options;
@@ -2073,31 +2068,11 @@ static struct super_block *yaffs_internal_read_super(int yaffs_version,
 		"yaffs_read_super: Using yaffs%d", yaffs_version);
 	yaffs_trace(YAFFS_TRACE_OS,
 		"yaffs_read_super: block size %d", (int)(sb->s_blocksize));
-#ifdef YAFFS_MVG_TEST_DEBUG_LOG
-	yaffs_mvg_test_debug_mode |= 0x1;
-#endif
-
-#ifdef YAFFS_MVG_TEST_DUMP_SCAN_SEQ //dump seq num in yaffs2_ScanBackwards
-	yaffs_mvg_test_debug_mode |= 0x2;
-#endif
-
-#ifdef YAFFS_MVG_TEST_ERASECHEKFF  //when erase block,check if or not the block becomes 0xff
-	yaffs_mvg_test_debug_mode |= 0x4;
-#endif
-
-#ifdef YAFFS_MVG_TEST_DEBUG_WRITECHECK //check 0xff ,before write every chunk .
-	yaffs_mvg_test_debug_mode |= 0x8;
-#endif
-
-#ifdef YAFFS_MVG_TEST_DEBUG_WRITEHECK_FIXERROR  //fixerror when chunk is not  ,before write every chunk .
-	yaffs_mvg_test_debug_mode |= 0x10;
-#endif
-
 
 	yaffs_trace(YAFFS_TRACE_ALWAYS,
-		"Attempting MTD mount of %u.%u,\"%s\" debug_mode:0x%x\n",
+		"Attempting MTD mount of %u.%u,\"%s\"",
 		MAJOR(sb->s_dev), MINOR(sb->s_dev),
-		yaffs_devname(sb, devname_buf),yaffs_mvg_test_debug_mode);
+		yaffs_devname(sb, devname_buf));
 
 	/* Check it's an mtd device..... */
 	if (MAJOR(sb->s_dev) != MTD_BLOCK_MAJOR)
@@ -2119,13 +2094,13 @@ static struct super_block *yaffs_internal_read_super(int yaffs_version,
 		return NULL;
 	}
 
-	yaffs_trace(YAFFS_TRACE_OS, " erase %p", mtd->_erase);
-	yaffs_trace(YAFFS_TRACE_OS, " read %p", mtd->_read);
-	yaffs_trace(YAFFS_TRACE_OS, " write %p", mtd->_write);
-	yaffs_trace(YAFFS_TRACE_OS, " readoob %p", mtd->_read_oob);
-	yaffs_trace(YAFFS_TRACE_OS, " writeoob %p", mtd->_write_oob);
-	yaffs_trace(YAFFS_TRACE_OS, " block_isbad %p", mtd->_block_isbad);
-	yaffs_trace(YAFFS_TRACE_OS, " block_markbad %p", mtd->_block_markbad);
+	yaffs_trace(YAFFS_TRACE_OS, " erase %p", mtd->erase);
+	yaffs_trace(YAFFS_TRACE_OS, " read %p", mtd->read);
+	yaffs_trace(YAFFS_TRACE_OS, " write %p", mtd->write);
+	yaffs_trace(YAFFS_TRACE_OS, " readoob %p", mtd->read_oob);
+	yaffs_trace(YAFFS_TRACE_OS, " writeoob %p", mtd->write_oob);
+	yaffs_trace(YAFFS_TRACE_OS, " block_isbad %p", mtd->block_isbad);
+	yaffs_trace(YAFFS_TRACE_OS, " block_markbad %p", mtd->block_markbad);
 	yaffs_trace(YAFFS_TRACE_OS, " %s %d", WRITE_SIZE_STR, WRITE_SIZE(mtd));
 	yaffs_trace(YAFFS_TRACE_OS, " oobsize %d", mtd->oobsize);
 	yaffs_trace(YAFFS_TRACE_OS, " erasesize %d", mtd->erasesize);
@@ -2148,11 +2123,11 @@ static struct super_block *yaffs_internal_read_super(int yaffs_version,
 
 	if (yaffs_version == 2) {
 		/* Check for version 2 style functions */
-		if (!mtd->_erase ||
-		    !mtd->_block_isbad ||
-		    !mtd->_block_markbad ||
-		    !mtd->_read ||
-		    !mtd->_write || !mtd->_read_oob || !mtd->_write_oob) {
+		if (!mtd->erase ||
+		    !mtd->block_isbad ||
+		    !mtd->block_markbad ||
+		    !mtd->read ||
+		    !mtd->write || !mtd->read_oob || !mtd->write_oob) {
 			yaffs_trace(YAFFS_TRACE_ALWAYS,
 				"MTD device does not support required functions");
 			return NULL;
@@ -2167,9 +2142,9 @@ static struct super_block *yaffs_internal_read_super(int yaffs_version,
 		}
 	} else {
 		/* Check for V1 style functions */
-		if (!mtd->_erase ||
-		    !mtd->_read ||
-		    !mtd->_write || !mtd->_read_oob || !mtd->_write_oob) {
+		if (!mtd->erase ||
+		    !mtd->read ||
+		    !mtd->write || !mtd->read_oob || !mtd->write_oob) {
 			yaffs_trace(YAFFS_TRACE_ALWAYS,
 				"MTD device does not support required functions");
 			return NULL;
@@ -2376,7 +2351,7 @@ static struct super_block *yaffs_internal_read_super(int yaffs_version,
 
 	yaffs_trace(YAFFS_TRACE_OS, "yaffs_read_super: got root inode");
 
-	root = d_make_root(inode);
+	root = d_alloc_root(inode);
 
 	yaffs_trace(YAFFS_TRACE_OS, "yaffs_read_super: d_alloc_root done");
 
@@ -2400,19 +2375,19 @@ static int yaffs_internal_read_super_mtd(struct super_block *sb, void *data,
 	return yaffs_internal_read_super(1, sb, data, silent) ? 0 : -EINVAL;
 }
 
-static struct dentry *yaffs_read_super(struct file_system_type *fs,
+static int yaffs_read_super(struct file_system_type *fs,
 			    int flags, const char *dev_name,
-			    void *data)
+			    void *data, struct vfsmount *mnt)
 {
 
-	return mount_bdev(fs, flags, dev_name, data,
-			   yaffs_internal_read_super_mtd);
+	return get_sb_bdev(fs, flags, dev_name, data,
+			   yaffs_internal_read_super_mtd, mnt);
 }
 
 static struct file_system_type yaffs_fs_type = {
 	.owner = THIS_MODULE,
 	.name = "yaffs",
-	.mount = yaffs_read_super,
+	.get_sb = yaffs_read_super,
 	.kill_sb = kill_block_super,
 	.fs_flags = FS_REQUIRES_DEV,
 };
@@ -2425,17 +2400,18 @@ static int yaffs2_internal_read_super_mtd(struct super_block *sb, void *data,
 	return yaffs_internal_read_super(2, sb, data, silent) ? 0 : -EINVAL;
 }
 
-static struct dentry *yaffs2_read_super(struct file_system_type *fs,
-			     int flags, const char *dev_name, void *data)
+static int yaffs2_read_super(struct file_system_type *fs,
+			     int flags, const char *dev_name, void *data,
+			     struct vfsmount *mnt)
 {
-	return mount_bdev(fs, flags, dev_name, data,
-			   yaffs2_internal_read_super_mtd);
+	return get_sb_bdev(fs, flags, dev_name, data,
+			   yaffs2_internal_read_super_mtd, mnt);
 }
 
 static struct file_system_type yaffs2_fs_type = {
 	.owner = THIS_MODULE,
 	.name = "yaffs2",
-	.mount = yaffs2_read_super,
+	.get_sb = yaffs2_read_super,
 	.kill_sb = kill_block_super,
 	.fs_flags = FS_REQUIRES_DEV,
 };

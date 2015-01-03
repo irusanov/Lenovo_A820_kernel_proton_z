@@ -30,7 +30,7 @@ struct ion_buffer *ion_handle_buffer(struct ion_handle *handle);
 
 /**
  * struct ion_buffer - metadata for a particular buffer
- * @ref:                refernce count
+ * @ref:		refernce count
  * @node:		node in the ion_device buffers tree
  * @dev:		back pointer to the ion_device
  * @heap:		back pointer to the heap the buffer came from
@@ -68,21 +68,21 @@ struct ion_buffer {
 	};
 	struct mutex lock;
 	int kmap_cnt;
-        void *vaddr;
-        int dmap_cnt;
-        struct sg_table *sg_table;
-        unsigned long *dirty;
-        struct list_head vmas;
-        /* used to track orphaned buffers */
-        int handle_count;
-        char task_comm[TASK_COMM_LEN];
-        pid_t pid;
+	void *vaddr;
+	int dmap_cnt;
+	struct sg_table *sg_table;
+	unsigned long *dirty;
+	struct list_head vmas;
+	/* used to track orphaned buffers */
+	int handle_count;
+	char task_comm[TASK_COMM_LEN];
+	pid_t pid;
 };
 
 /**
  * struct ion_heap_ops - ops to operate on a given heap
- * @allocate:           allocate memory
- * @free:               free memory
+ * @allocate:		allocate memory
+ * @free:		free memory
  * @phys		get physical address of a buffer (only define on
  *			physically contiguous heaps)
  * @map_dma		map the memory for dma to a scatterlist
@@ -126,18 +126,18 @@ struct ion_heap_ops {
  * that are allocated from a specially reserved heap.
  */
 struct ion_heap {
-        struct rb_node node;
-        struct ion_device *dev;
-        enum ion_heap_type type;
-        struct ion_heap_ops *ops;
-        int id;
-        const char *name;
-        int (*debug_show)(struct ion_heap *heap, struct seq_file *, void *);
+	struct rb_node node;
+	struct ion_device *dev;
+	enum ion_heap_type type;
+	struct ion_heap_ops *ops;
+	int id;
+	const char *name;
+	int (*debug_show)(struct ion_heap *heap, struct seq_file *, void *);
 };
 
 /**
  * ion_buffer_cached - this ion buffer is cached
- * @buffer:             buffer
+ * @buffer:		buffer
  *
  * indicates whether this ion buffer is cached
  */
@@ -145,7 +145,7 @@ bool ion_buffer_cached(struct ion_buffer *buffer);
 
 /**
  * ion_buffer_fault_user_mappings - fault in user mappings of this buffer
- * @buffer:             buffer
+ * @buffer:		buffer
  *
  * indicates whether userspace mappings of this buffer will be faulted
  * in, this can affect how buffers are allocated from the heap.
@@ -154,7 +154,7 @@ bool ion_buffer_fault_user_mappings(struct ion_buffer *buffer);
 
 /**
  * ion_device_create - allocates and returns an ion device
- * @custom_ioctl:       arch specific ioctl function if applicable
+ * @custom_ioctl:	arch specific ioctl function if applicable
  *
  * returns a valid device or -PTR_ERR
  */
@@ -216,20 +216,20 @@ void ion_carveout_free(struct ion_heap *heap, ion_phys_addr_t addr,
 
 /**
  * struct ion_page_pool - pagepool struct
- * @high_count:         number of highmem items in the pool
- * @low_count:          number of lowmem items in the pool
- * @high_items:         list of highmem items
- * @low_items:          list of lowmem items
+ * @high_count:		number of highmem items in the pool
+ * @low_count:		number of lowmem items in the pool
+ * @high_items:		list of highmem items
+ * @low_items:		list of lowmem items
  * @shrinker:		a shrinker for the items
  * @mutex:		lock protecting this struct and especially the count
  *			item list
  * @alloc:		function to be used to allocate pageory when the pool
  *			is empty
- * @free:               function to be used to free pageory back to the system
- *                      when the shrinker fires
- * @gfp_mask:           gfp_mask to use from alloc
- * @order:              order of pages in the pool
- * @list:               plist node for list of pools
+ * @free:		function to be used to free pageory back to the system
+ *			when the shrinker fires
+ * @gfp_mask:		gfp_mask to use from alloc
+ * @order:		order of pages in the pool
+ * @list:		plist node for list of pools
  *
  * Allows you to keep a pool of pre allocated pages to use from your heap.
  * Keeping a pool of pages that is ready for dma, ie any cached mapping have
@@ -237,16 +237,16 @@ void ion_carveout_free(struct ion_heap *heap, ion_phys_addr_t addr,
  * on many systems
  */
 struct ion_page_pool {
-        int high_count;
-        int low_count;
-        struct list_head high_items;
-        struct list_head low_items;
-        struct mutex mutex;
-        void *(*alloc)(struct ion_page_pool *pool);
-        void (*free)(struct ion_page_pool *pool, struct page *page);
-        gfp_t gfp_mask;
-        unsigned int order;
-        struct plist_node list;
+	int high_count;
+	int low_count;
+	struct list_head high_items;
+	struct list_head low_items;
+	struct mutex mutex;
+	void *(*alloc)(struct ion_page_pool *pool);
+	void (*free)(struct ion_page_pool *pool, struct page *page);
+	gfp_t gfp_mask;
+	unsigned int order;
+	struct plist_node list;
 };
 
 struct ion_page_pool *ion_page_pool_create(gfp_t gfp_mask, unsigned int order);

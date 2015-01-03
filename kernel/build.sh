@@ -39,9 +39,6 @@ cd ../mtk-tools
 ./mkimage zImageOld KERNEL > zImage
 echo "zImage with MTK header ready in mtk-tools folder"
 
-#Modules part
-#make INSTALL_MOD_STRIP=--strip-unneeded INSTALL_MOD_PATH=$OUT_DIRECTORY/system INSTALL_MOD_DIR=$OUT_DIRECTORY/system android_modules_install
-
 #Repack part
 if [ -d "$RAMDISK_DIRECTORY" ]; then
 
@@ -55,6 +52,19 @@ mv boot.img $OUT_DIRECTORY/
 echo "Repacked boot.img is ready in $OUT_DIRECTORY"
 
 cd ../kernel
+
+#Modules part
+while test -n "$1"; do
+    case "$1" in
+    -m | -modules)
+        make INSTALL_MOD_STRIP=--strip-unneeded INSTALL_MOD_PATH=$OUT_DIRECTORY/system INSTALL_MOD_DIR=$OUT_DIRECTORY/system android_modules_install
+    ;;
+    *)
+        shift
+    ;;
+    esac
+    shift
+done
 
 #../mtk-tools/repack-MT65xx.pl -boot $OUT_DIRECTORY/zImage $RAMDISK_DIRECTORY $OUT_DIRECTORY/boot.img
 #rm $OUT_DIRECTORY/zImage

@@ -36,8 +36,6 @@
 #include <linux/cleancache.h>
 #include "internal.h"
 
-#include <linux/mmc/mmc.h>
-
 /*
  * FIXME: remove all knowledge of the buffer layer from the core VM
  */
@@ -2504,31 +2502,16 @@ ssize_t __generic_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	loff_t		pos;
 	ssize_t		written;
 	ssize_t		err;
-#ifdef MTK_IO_PERFORMANCE_DEBUG
-		if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 25)){
-			g_req_write_buf[g_dbg_write_count][1] = sched_clock(); 
-		}	
-#endif
 
 	ocount = 0;
 	err = generic_segment_checks(iov, &nr_segs, &ocount, VERIFY_READ);
 	if (err)
 		return err;
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-		if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 25)){
-			g_req_write_buf[g_dbg_write_count][2] = sched_clock(); 
-		}	
-#endif
 
 	count = ocount;
 	pos = *ppos;
 
 	vfs_check_frozen(inode->i_sb, SB_FREEZE_WRITE);
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-		if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 25)){
-			g_req_write_buf[g_dbg_write_count][3] = sched_clock(); 
-		}	
-#endif
 
 	/* We can write back this queue in page reclaim */
 	current->backing_dev_info = mapping->backing_dev_info;
@@ -2537,11 +2520,6 @@ ssize_t __generic_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	err = generic_write_checks(file, &pos, &count, S_ISBLK(inode->i_mode));
 	if (err)
 		goto out;
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-		if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 25)){
-			g_req_write_buf[g_dbg_write_count][4] = sched_clock(); 
-		}	
-#endif
 
 	if (count == 0)
 		goto out;
@@ -2549,18 +2527,8 @@ ssize_t __generic_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	err = file_remove_suid(file);
 	if (err)
 		goto out;
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-		if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 25)){
-			g_req_write_buf[g_dbg_write_count][5] = sched_clock(); 
-		}	
-#endif
 
 	file_update_time(file);
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-		if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 25)){
-			g_req_write_buf[g_dbg_write_count][6] = sched_clock(); 
-		}	
-#endif
 
 	/* coalesce the iovecs and go direct-to-BIO for O_DIRECT */
 	if (unlikely(file->f_flags & O_DIRECT)) {
@@ -2569,12 +2537,6 @@ ssize_t __generic_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 
 		written = generic_file_direct_write(iocb, iov, &nr_segs, pos,
 							ppos, count, ocount);
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-		if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 25)){
-				g_req_write_buf[g_dbg_write_count][7] = sched_clock(); 
-		}	
-#endif
-
 		if (written < 0 || written == count)
 			goto out;
 		/*
@@ -2586,11 +2548,6 @@ ssize_t __generic_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 		written_buffered = generic_file_buffered_write(iocb, iov,
 						nr_segs, pos, ppos, count,
 						written);
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-		if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 25)){
-				g_req_write_buf[g_dbg_write_count][8] = sched_clock(); 
-		}	
-#endif
 		/*
 		 * If generic_file_buffered_write() retuned a synchronous error
 		 * then we want to return the number of bytes which were
@@ -2610,21 +2567,11 @@ ssize_t __generic_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 		 */
 		endbyte = pos + written_buffered - written - 1;
 		err = filemap_write_and_wait_range(file->f_mapping, pos, endbyte);
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-		if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 25)){
-			g_req_write_buf[g_dbg_write_count][9] = sched_clock(); 
-		}	
-#endif
 		if (err == 0) {
 			written = written_buffered;
 			invalidate_mapping_pages(mapping,
 						 pos >> PAGE_CACHE_SHIFT,
 						 endbyte >> PAGE_CACHE_SHIFT);
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-		if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 25)){
-			g_req_write_buf[g_dbg_write_count][10] = sched_clock(); 
-		}	
-#endif
 		} else {
 			/*
 			 * We don't know how much we wrote, so just return
@@ -2634,11 +2581,6 @@ ssize_t __generic_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	} else {
 		written = generic_file_buffered_write(iocb, iov, nr_segs,
 				pos, ppos, count, written);
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-		if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 25)){
-			g_req_write_buf[g_dbg_write_count][11] = sched_clock(); 
-		}	
-#endif
 	}
 out:
 	current->backing_dev_info = NULL;
@@ -2674,19 +2616,8 @@ ssize_t generic_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 
 	if (ret > 0 || ret == -EIOCBQUEUED) {
 		ssize_t err;
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-	if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 25)){
-		g_req_write_buf[g_dbg_write_count][12] = sched_clock(); 
-	}	
-#endif
 
 		err = generic_write_sync(file, pos, ret);
-#ifdef MTK_IO_PERFORMANCE_DEBUG   
-	if (('l' == *(current->comm)) && ('m' == *(current->comm + 1)) && ('d' == *(current->comm + 2)) && ('d' == *(current->comm + 3)) && (g_check_read_write == 25)){
-		g_req_write_buf[g_dbg_write_count][13] = sched_clock(); 
-	}	
-#endif
-
 		if (err < 0 && ret > 0)
 			ret = err;
 	}

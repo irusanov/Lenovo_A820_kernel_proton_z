@@ -60,7 +60,7 @@ static inline void switch_new_context(struct mm_struct *mm)
 }
 
 static inline void check_and_switch_context(struct mm_struct *mm,
-                        struct task_struct *tsk)
+					    struct task_struct *tsk)
 {
 	if (unlikely(mm->context.kvm_seq != init_mm.context.kvm_seq))
 		__check_kvm_seq(mm);
@@ -96,17 +96,17 @@ static inline void check_and_switch_context(struct mm_struct *mm,
 #define init_new_context(tsk,mm)	(__init_new_context(tsk,mm),0)
 
 #define finish_arch_post_lock_switch \
-    finish_arch_post_lock_switch
+	finish_arch_post_lock_switch
 static inline void finish_arch_post_lock_switch(void)
 {
 	if (test_and_clear_thread_flag(TIF_SWITCH_MM))
 		switch_new_context(current->mm);
 }
 
-#else
+#else	/* !CONFIG_CPU_HAS_ASID */
 
 static inline void check_and_switch_context(struct mm_struct *mm,
-                        struct task_struct *tsk)
+					    struct task_struct *tsk)
 {
 #ifdef CONFIG_MMU
 	if (unlikely(mm->context.kvm_seq != init_mm.context.kvm_seq))
@@ -115,11 +115,11 @@ static inline void check_and_switch_context(struct mm_struct *mm,
 #endif
 }
 
-#define init_new_context(tsk,mm)    0
+#define init_new_context(tsk,mm)	0
 
-#define finish_arch_post_lock_switch()  do { } while (0)
+#define finish_arch_post_lock_switch()	do { } while (0)
 
-#endif
+#endif	/* CONFIG_CPU_HAS_ASID */
 
 #define destroy_context(mm)		do { } while(0)
 

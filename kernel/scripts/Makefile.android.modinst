@@ -28,7 +28,7 @@ ext-mod-dir = $(INSTALL_MOD_DIR)$(subst $(patsubst %/,%,$(KBUILD_EXTMOD)),,$(@D)
 modinst_dir = $(if $(KBUILD_EXTMOD),$(ext-mod-dir),)
 
 $(modules):
-	$(call cmd,modules_symbol_install,$(AMODSYMLIB)/$(modinst_dir))
+#	$(call cmd,modules_symbol_install,$(AMODSYMLIB)/$(modinst_dir))
 	$(call cmd,modules_install,$(AMODLIB)/$(modinst_dir))
 
 # Declare the contents of the .PHONY variable as phony.  We keep that

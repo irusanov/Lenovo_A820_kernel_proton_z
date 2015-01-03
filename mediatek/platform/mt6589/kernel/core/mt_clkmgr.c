@@ -239,9 +239,9 @@ struct stat_node {
 
 static int initialized = 0;
 
-static struct pll plls[NR_PLLS];
-static struct subsys syss[NR_SYSS];
-static struct clkmux muxs[NR_MUXS];
+static struct pll __nosavedata plls[NR_PLLS];
+static struct subsys __nosavedata syss[NR_SYSS];
+static struct clkmux __nosavedata muxs[NR_MUXS];
 static struct cg_grp grps[NR_GRPS];
 static struct cg_clk clks[NR_CLKS];
 

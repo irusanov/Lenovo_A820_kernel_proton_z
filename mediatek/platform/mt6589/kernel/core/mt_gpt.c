@@ -677,7 +677,7 @@ static inline void setup_clksrc(void)
     setup_gpt_dev_locked(dev, GPT_FREE_RUN, GPT_CLK_SRC_SYS, GPT_CLK_DIV_1,
                 0, NULL, 0);
 
-    setup_sched_clock_needs_suspend((void *)mt_read_sched_clock, 32, SYS_CLK_RATE);
+    setup_sched_clock((void *)mt_read_sched_clock, 32, SYS_CLK_RATE);
 }
 #else
 static inline void setup_clksrc(void) {}

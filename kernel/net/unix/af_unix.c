@@ -308,7 +308,6 @@ found:
 
 static inline int unix_writable(struct sock *sk)
 {
-   
 	return (atomic_read(&sk->sk_wmem_alloc) << 2) <= sk->sk_sndbuf;
 }
 
@@ -317,7 +316,6 @@ static void unix_write_space(struct sock *sk)
 	struct socket_wq *wq;
 
 	rcu_read_lock();
-	
 	if (unix_writable(sk)) {
 		wq = rcu_dereference(sk->sk_wq);
 		if (wq_has_sleeper(wq))

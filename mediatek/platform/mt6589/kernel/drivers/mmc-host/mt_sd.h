@@ -1,3 +1,38 @@
+/* Copyright Statement:
+ *
+ * This software/firmware and related documentation ("MediaTek Software") are
+ * protected under relevant copyright laws. The information contained herein
+ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
+ * Without the prior written permission of MediaTek inc. and/or its licensors,
+ * any reproduction, modification, use or disclosure of MediaTek Software,
+ * and information contained herein, in whole or in part, shall be strictly prohibited.
+ */
+/* MediaTek Inc. (C) 2010. All rights reserved.
+ *
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ * The following software/firmware and/or related documentation ("MediaTek Software")
+ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
+ * applicable license agreements with MediaTek Inc.
+ */
+
 #ifndef MT6589_SD_H
 #define MT6589_SD_H
 
@@ -22,7 +57,6 @@
 #define CUST_EINT_DEBOUNCE_ENABLE           1
 #define CUST_EINT_EDGE_SENSITIVE            0
 #define CUST_EINT_LEVEL_SENSITIVE           1
-#define SDIO_ERROR_BYPASS
 //////////////////////////////////////////////////////////////////////////////
 
 
@@ -1168,13 +1202,6 @@ struct msdc_saved_para
 	u8							int_dat_latch_ck_sel;
 	u8							ckgen_msdc_dly_sel;
 };
-
-struct msdc_error_record{
-    struct mmc_command         cmd;
-    struct mmc_data            data;
-    struct mmc_command         stop;
-};
-
 struct msdc_host
 {
     struct msdc_hw              *hw;
@@ -1188,7 +1215,6 @@ struct msdc_host
     int                         cmd_r1b_done;
 
     int                         error; 
-    
     spinlock_t                  lock;           /* mutex */
     spinlock_t                  clk_gate_lock;
 	spinlock_t                  remove_bad_card;	/*to solve removing bad card race condition with hot-plug enable*/
@@ -1254,11 +1280,7 @@ struct msdc_host
 	int 						sd_cd_polarity;
 	int							sd_cd_insert_work; //to make sure insert mmc_rescan this work in start_host when boot up
 												   //driver will get a EINT(Level sensitive) when boot up phone with card insert
-	bool						block_bad_card;	
-#ifdef SDIO_ERROR_BYPASS      
-    int                         sdio_error;     /* sdio error can't recovery */
-    struct msdc_error_record    sdio_error_rec; 		/* sdio last error mrq */								   
-#endif    
+	bool						block_bad_card;											   
 	void	(*power_control)(struct msdc_host *host,u32 on);
 	void	(*power_switch)(struct msdc_host *host,u32 on);
 };

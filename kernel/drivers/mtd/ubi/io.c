@@ -1350,7 +1350,7 @@ int ubi_dbg_check_write(struct ubi_device *ubi, const void *buf, int pnum,
 	if (!ubi->dbg->chk_io)
 		return 0;
 
-	buf1 = kmalloc(len, GFP_KERNEL);
+	buf1 = __vmalloc(len, GFP_NOFS, PAGE_KERNEL);
 	if (!buf1) {
 		ubi_err("cannot allocate memory to check writes");
 		return 0;
@@ -1385,11 +1385,11 @@ int ubi_dbg_check_write(struct ubi_device *ubi, const void *buf, int pnum,
 		goto out_free;
 	}
 
-	kfree(buf1);
+	vfree(buf1);
 	return 0;
 
 out_free:
-	kfree(buf1);
+	vfree(buf1);
 	return err;
 }
 
@@ -1414,7 +1414,7 @@ int ubi_dbg_check_all_ff(struct ubi_device *ubi, int pnum, int offset, int len)
 	if (!ubi->dbg->chk_io)
 		return 0;
 
-	buf = kmalloc(len, GFP_KERNEL);
+	buf = __vmalloc(len, GFP_NOFS, PAGE_KERNEL);
 	if (!buf) {
 		ubi_err("cannot allocate memory to check for 0xFFs");
 		return 0;
@@ -1434,7 +1434,7 @@ int ubi_dbg_check_all_ff(struct ubi_device *ubi, int pnum, int offset, int len)
 		goto fail;
 	}
 
-	kfree(buf);
+	vfree(buf);
 	return 0;
 
 fail:
@@ -1444,7 +1444,7 @@ fail:
 	err = -EINVAL;
 error:
 	ubi_dbg_dump_stack();
-	kfree(buf);
+	vfree(buf);
 	return err;
 }
 

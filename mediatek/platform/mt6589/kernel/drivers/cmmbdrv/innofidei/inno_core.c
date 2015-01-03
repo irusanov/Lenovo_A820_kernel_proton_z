@@ -1813,8 +1813,8 @@ INNO_RET INNO_SPI_Write_Byte_Type2(unsigned long addr, unsigned char *data, int 
 	INNO_RET ret = INNO_GENERAL_ERROR;
 	SPI_MODE_T mode_parameter;
 	struct spi_message msg;
-	struct spi_transfer transfer[3], *ptransfer=NULL;
-	//unsigned char *tx_buf_tmp;
+	struct spi_transfer transfer[3], *ptransfer;
+	unsigned char *tx_buf_tmp;
 	
 #ifdef MT6589_CMMB_SPI_CONFIG
 	INNO_SPI_Mode(0);
@@ -1837,7 +1837,6 @@ INNO_RET INNO_SPI_Write_Byte_Type2(unsigned long addr, unsigned char *data, int 
 	transfer[0].rx_buf =NULL;
 	transfer[0].len = 5;
 	spi_message_add_tail(&transfer[0], &msg);
-/*
 #ifdef MT6589_CMMB_SPI_CONFIG
 	tx_buf_tmp = kmalloc(MT6589_CMMB_SPI_TX_MAX_PKT_LENGTH_PER_TIMES,GFP_KERNEL);
 #else
@@ -1847,7 +1846,7 @@ INNO_RET INNO_SPI_Write_Byte_Type2(unsigned long addr, unsigned char *data, int 
 	if(tx_buf_tmp ==NULL){
 		inno_err("kmalloc fail");
 		return INNO_GENERAL_ERROR;
-	}*/
+	}
 		
 #ifdef MT6589_CMMB_SPI_CONFIG
 	if( len > MT6589_CMMB_SPI_TX_MAX_PKT_LENGTH_PER_TIMES )
@@ -1855,12 +1854,7 @@ INNO_RET INNO_SPI_Write_Byte_Type2(unsigned long addr, unsigned char *data, int 
 	   		int i;
 			int pkt_cnt = len / MT6589_CMMB_SPI_TX_MAX_PKT_LENGTH_PER_TIMES;
 			int remainder = len % MT6589_CMMB_SPI_TX_MAX_PKT_LENGTH_PER_TIMES;
-			ptransfer = vmalloc((pkt_cnt+1)*sizeof(struct spi_transfer));//kmalloc((pkt_cnt+1)*sizeof(struct spi_transfer),GFP_KERNEL)
-			if(NULL == ptransfer)
-				{
-				inno_err("%s, vmalloc for ptransfer fail!", __func__);
-				return INNO_GENERAL_ERROR;
-				}
+			ptransfer = kmalloc((pkt_cnt+1)*sizeof(struct spi_transfer), GFP_KERNEL);
 			for(i=0; i < pkt_cnt; i++)
 			{
 				ptransfer[i].tx_buf = data + i*MT6589_CMMB_SPI_TX_MAX_PKT_LENGTH_PER_TIMES;
@@ -1895,8 +1889,8 @@ INNO_RET INNO_SPI_Write_Byte_Type2(unsigned long addr, unsigned char *data, int 
 #endif
 	else
 	{
-		//memcpy(tx_buf_tmp,data,len);
-		transfer[1].tx_buf = data;//tx_buf_tmp ;
+		memcpy(tx_buf_tmp,data,len);
+		transfer[1].tx_buf = tx_buf_tmp ;
 		transfer[1].rx_buf = NULL;
 		transfer[1].len = len;
 		spi_message_add_tail(&transfer[1], &msg);
@@ -1907,13 +1901,8 @@ INNO_RET INNO_SPI_Write_Byte_Type2(unsigned long addr, unsigned char *data, int 
 	else
 		ret =INNO_NO_ERROR;
 	
-	//kfree(tx_buf_tmp);
-	//tx_buf_tmp =NULL;
-	if(NULL != ptransfer)
-		{
-		vfree(ptransfer);
-		ptransfer =NULL;
-		}
+	kfree(tx_buf_tmp);
+	tx_buf_tmp =NULL;
 	return ret;
 }
 

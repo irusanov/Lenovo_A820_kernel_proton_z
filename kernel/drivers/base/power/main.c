@@ -56,9 +56,9 @@ static DEFINE_MUTEX(dpm_list_mtx);
 static pm_message_t pm_transition;
 
 struct dpm_watchdog {
-	struct device	*dev;
+	struct device		*dev;
 	struct task_struct	*tsk;
-	struct timer_list		timer;
+	struct timer_list	timer;
 };
 
 static int async_error;
@@ -1257,7 +1257,6 @@ int dpm_suspend(pm_message_t state)
 		dpm_show_time(starttime, state, NULL);
 	return error;
 }
-EXPORT_SYMBOL_GPL(dpm_suspend);
 
 /**
  * device_prepare - Prepare a device for system power transition.
@@ -1348,7 +1347,6 @@ int dpm_prepare(pm_message_t state)
 	mutex_unlock(&dpm_list_mtx);
 	return error;
 }
-EXPORT_SYMBOL_GPL(dpm_prepare);
 
 /**
  * dpm_suspend_start - Prepare devices for PM transition and suspend them.

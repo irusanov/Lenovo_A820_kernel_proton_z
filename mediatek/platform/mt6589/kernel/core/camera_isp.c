@@ -505,7 +505,7 @@ static MINT32 ISP_DumpReg(void)
     //                              #define ISP_ADDR_END    0x15006000
     //
 
-#if 1  //kk test 0:new tile format
+#if 0  //kk test 0:new tile format
     for(i = 0x0; i <= 0x20; i += 4)
     {
         //LOG_DBG("0x%08X %08X ", ISP_ADDR + i, ISP_RD32(ISP_ADDR + i));

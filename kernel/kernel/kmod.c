@@ -422,7 +422,6 @@ void __usermodehelper_set_disable_depth(enum umh_disable_depth depth)
 	wake_up(&usermodehelper_disabled_waitq);
 	up_write(&umhelper_sem);
 }
-EXPORT_SYMBOL_GPL(__usermodehelper_set_disable_depth);
 
 /**
  * __usermodehelper_disable - Prevent new helpers from being started.
@@ -456,7 +455,6 @@ int __usermodehelper_disable(enum umh_disable_depth depth)
 	__usermodehelper_set_disable_depth(UMH_ENABLED);
 	return -EAGAIN;
 }
-EXPORT_SYMBOL_GPL(__usermodehelper_disable);
 
 static void helper_lock(void)
 {

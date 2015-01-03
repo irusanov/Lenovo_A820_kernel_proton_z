@@ -615,7 +615,7 @@ out_wl:
 	ubi_wl_close(ubi);
 out_vtbl:
 	free_internal_volumes(ubi);
-	kfree(ubi->vtbl);
+	vfree(ubi->vtbl);
 out_si:
 	ubi_scan_destroy_si(si);
 	return err;
@@ -945,7 +945,7 @@ int ubi_attach_mtd_dev(struct mtd_info *mtd, int ubi_num, int vid_hdr_offset)
 		goto out_free;
 
 	err = -ENOMEM;
-	ubi->peb_buf = kmalloc(ubi->peb_size, GFP_KERNEL);
+	ubi->peb_buf = vmalloc(ubi->peb_size);
 	if (!ubi->peb_buf)
 		goto out_free;
 
@@ -1021,11 +1021,11 @@ out_uif:
 out_detach:
 	ubi_wl_close(ubi);
 	free_internal_volumes(ubi);
-	kfree(ubi->vtbl);
+	vfree(ubi->vtbl);
 out_debugging:
 	ubi_debugging_exit_dev(ubi);
 out_free:
-	kfree(ubi->peb_buf);
+	vfree(ubi->peb_buf);
 	if (ref)
 		put_device(&ubi->dev);
 	else
@@ -1093,10 +1093,10 @@ int ubi_detach_mtd_dev(int ubi_num, int anyway)
 	uif_close(ubi);
 	ubi_wl_close(ubi);
 	free_internal_volumes(ubi);
-	kfree(ubi->vtbl);
+	vfree(ubi->vtbl);
 	put_mtd_device(ubi->mtd);
 	ubi_debugging_exit_dev(ubi);
-	kfree(ubi->peb_buf);
+	vfree(ubi->peb_buf);
 	ubi_msg("mtd%d is detached from ubi%d", ubi->mtd->index, ubi->ubi_num);
 	put_device(&ubi->dev);
 	return 0;

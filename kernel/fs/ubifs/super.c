@@ -866,7 +866,7 @@ static void free_orphans(struct ubifs_info *c)
 		dbg_err("orphan list not empty at unmount");
 	}
 
-	kfree(c->orph_buf);
+	vfree(c->orph_buf);
 	c->orph_buf = NULL;
 }
 
@@ -1210,12 +1210,12 @@ static int mount_ubifs(struct ubifs_info *c)
 	if (!c->bottom_up_buf)
 		goto out_free;
 
-	c->sbuf = kmalloc(c->leb_size, GFP_KERNEL);
+	c->sbuf = vmalloc(c->leb_size);
 	if (!c->sbuf)
 		goto out_free;
 
 	if (!c->ro_mount) {
-		c->ileb_buf = kmalloc(c->leb_size, GFP_KERNEL);
+		c->ileb_buf = vmalloc(c->leb_size);
 		if (!c->ileb_buf)
 			goto out_free;
 	}
@@ -1511,8 +1511,8 @@ out_cbuf:
 out_free:
 	kfree(c->write_reserve_buf);
 	kfree(c->bu.buf);
-	kfree(c->ileb_buf);
-	kfree(c->sbuf);
+	vfree(c->ileb_buf);
+	vfree(c->sbuf);
 	kfree(c->bottom_up_buf);
 	ubifs_debugging_exit(c);
 	return err;
@@ -1550,8 +1550,8 @@ static void ubifs_umount(struct ubifs_info *c)
 	kfree(c->mst_node);
 	kfree(c->write_reserve_buf);
 	kfree(c->bu.buf);
-	kfree(c->ileb_buf);
-	kfree(c->sbuf);
+	vfree(c->ileb_buf);
+	vfree(c->sbuf);
 	kfree(c->bottom_up_buf);
 	ubifs_debugging_exit(c);
 }
@@ -1630,7 +1630,7 @@ static int ubifs_remount_rw(struct ubifs_info *c)
 			goto out;
 	}
 
-	c->ileb_buf = kmalloc(c->leb_size, GFP_KERNEL);
+	c->ileb_buf = vmalloc(c->leb_size);
 	if (!c->ileb_buf) {
 		err = -ENOMEM;
 		goto out;
@@ -1655,7 +1655,7 @@ static int ubifs_remount_rw(struct ubifs_info *c)
 	}
 	wake_up_process(c->bgt);
 
-	c->orph_buf = kmalloc(c->leb_size, GFP_KERNEL);
+	c->orph_buf = vmalloc(c->leb_size);
 	if (!c->orph_buf) {
 		err = -ENOMEM;
 		goto out;
@@ -1709,7 +1709,7 @@ static int ubifs_remount_rw(struct ubifs_info *c)
 
 out:
 	c->ro_mount = 1;
-	kfree(c->orph_buf);
+	vfree(c->orph_buf);
 	c->orph_buf = NULL;
 	if (c->bgt) {
 		kthread_stop(c->bgt);
@@ -1718,7 +1718,7 @@ out:
 	free_wbufs(c);
 	kfree(c->write_reserve_buf);
 	c->write_reserve_buf = NULL;
-	kfree(c->ileb_buf);
+	vfree(c->ileb_buf);
 	c->ileb_buf = NULL;
 	ubifs_lpt_free(c, 1);
 	c->remounting_rw = 0;
@@ -1758,11 +1758,11 @@ static void ubifs_remount_ro(struct ubifs_info *c)
 	if (err)
 		ubifs_ro_mode(c, err);
 
-	kfree(c->orph_buf);
+	vfree(c->orph_buf);
 	c->orph_buf = NULL;
 	kfree(c->write_reserve_buf);
 	c->write_reserve_buf = NULL;
-	kfree(c->ileb_buf);
+	vfree(c->ileb_buf);
 	c->ileb_buf = NULL;
 	ubifs_lpt_free(c, 1);
 	c->ro_mount = 1;

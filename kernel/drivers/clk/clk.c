@@ -1062,9 +1062,9 @@ static int __clk_set_parent(struct clk *clk, struct clk *parent)
 
 	old_parent = clk->parent;
 
-  if (!clk->parents)
- 		clk->parents = kzalloc((sizeof(struct clk*) * clk->num_parents),
- 								GFP_KERNEL);
+	if (!clk->parents)
+		clk->parents = kzalloc((sizeof(struct clk*) * clk->num_parents),
+								GFP_KERNEL);
 
 	/*
 	 * find index of new parent clock using cached parent ptrs,
