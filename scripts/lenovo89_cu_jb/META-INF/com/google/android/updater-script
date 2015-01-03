@@ -24,7 +24,7 @@ ui_print(" Done.");
 ui_print(" ");
 
 ui_print(" Setting Permissions");
-set_perm_recursive(0, 0, 0775 0644, "/system/lib/modules");
+set_perm_recursive(0, 0, 0775, 0644, "/system/lib/modules");
 ui_print(" Done."); ui_print(" ");
 
 set_progress(0.8);
