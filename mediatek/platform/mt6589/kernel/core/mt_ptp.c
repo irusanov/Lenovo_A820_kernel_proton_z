@@ -25,9 +25,9 @@
 #endif
 
 #if PROTON_UNDERVOLT
-	#define PK_VMAX 0x38 // 1.050V
-	#define PK_VMIN 0x18 // 1.000V
-	#define PK_VBOOT 0x38 // 0.950V
+	#define PK_VMAX 0x40 // 1.100V
+	#define PK_VMIN 0x18 // 0.850V
+	#define PK_VBOOT 0x40 // 1.100V
 #else //default
 	#define PK_VMAX 0x5D // 1.28125V
 	#define PK_VMIN 0x28 // 0.95V
@@ -54,7 +54,11 @@ u32 val_1 = 0xf6AAAAAA;
 u32 val_2 = 0x14AAAAAA;
 u32 val_3 = 0x60260000;
 
+#if PROTON_UNDERVOLT
+unsigned int ptpod_pmic_volt[8] = {0x40, 0x2F, 0x27, 0x23, 0x17, 0,0,0};
+#else
 unsigned int ptpod_pmic_volt[8] = {0x51, 0x47, 0x37, 0x27, 0x17, 0,0,0};
+#endif
 
 u8 freq_0, freq_1, freq_2, freq_3;
 u8 freq_4, freq_5, freq_6, freq_7;

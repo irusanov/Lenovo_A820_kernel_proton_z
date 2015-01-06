@@ -10,5 +10,5 @@ make distclean
 rm -rf ../mediatek/config/out/
 rm -rf ../mediatek/custom/out/
 rm -rf ../out/
-rm kernel_.bin
+cd ..
 find . -name "modules.builtin" -type f -print -delete
