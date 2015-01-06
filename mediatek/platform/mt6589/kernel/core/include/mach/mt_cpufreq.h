@@ -4,6 +4,11 @@
 #include <linux/module.h>
 
 /*********************
+* CPU undervolt
+**********************/
+#define PROTON_UNDERVOLT 1
+
+/*********************
 * Clock Mux Register
 **********************/
 #define TOP_CKMUXSEL    (0xF0001000)

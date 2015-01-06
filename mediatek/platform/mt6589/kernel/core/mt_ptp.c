@@ -24,6 +24,16 @@
 #define clc_isr_info(fmt, args...)     clc_debug( fmt, ##args)
 #endif
 
+#if PROTON_UNDERVOLT
+	#define PK_VMAX 0x38 // 1.050V
+	#define PK_VMIN 0x18 // 1.000V
+	#define PK_VBOOT 0x38 // 0.950V
+#else //default
+	#define PK_VMAX 0x5D // 1.28125V
+	#define PK_VMIN 0x28 // 0.95V
+	#define PK_VBOOT 0x48 // 1.15V
+#endif
+
 extern int mt_irq_mask_all(struct mtk_irq_mask *mask);
 extern int mt_irq_mask_restore(struct mtk_irq_mask *mask);
 extern u32 get_devinfo_with_index(u32 index);
@@ -819,11 +829,11 @@ u32 PTP_INIT_01(void)
     PTP_Init_value.FREQPCT7 = freq_7;
     
     PTP_Init_value.DETWINDOW = 0xa28;  // 100 us, This is the PTP Detector sampling time as represented in cycles of bclk_ck during INIT. 52 MHz
-    PTP_Init_value.VMAX = 0x50; // 1.20v (700mv + n * 6.25mv)    
-    PTP_Init_value.VMIN = 0x28; // 0.95v (700mv + n * 6.25mv)    
+    PTP_Init_value.VMAX = PK_VMAX; // 1.20v (700mv + n * 6.25mv)    
+    PTP_Init_value.VMIN = PK_VMIN; // 0.95v (700mv + n * 6.25mv)    
     PTP_Init_value.DTHI = 0x01; // positive
     PTP_Init_value.DTLO = 0xfe; // negative (2¡¦s compliment)
-    PTP_Init_value.VBOOT = 0x48; // 115v  (700mv + n * 6.25mv)    
+    PTP_Init_value.VBOOT = PK_VBOOT; // 115v  (700mv + n * 6.25mv)    
     PTP_Init_value.DETMAX = 0xffff; // This timeout value is in cycles of bclk_ck.
     
     if(PTP_Init_value.PTPINITEN == 0x0)
@@ -918,11 +928,11 @@ u32 PTP_INIT_02(void)
     PTP_Init_value.FREQPCT7 = freq_7;
 
     PTP_Init_value.DETWINDOW = 0xa28;  // 100 us, This is the PTP Detector sampling time as represented in cycles of bclk_ck during INIT. 52 MHz
-    PTP_Init_value.VMAX = 0x50; // 1.2v (700mv + n * 6.25mv)    
-    PTP_Init_value.VMIN = 0x28; // 0.95v (700mv + n * 6.25mv)    
+    PTP_Init_value.VMAX = PK_VMAX; // 1.2v (700mv + n * 6.25mv)    
+    PTP_Init_value.VMIN = PK_VMIN; // 0.95v (700mv + n * 6.25mv)    
     PTP_Init_value.DTHI = 0x01; // positive
     PTP_Init_value.DTLO = 0xfe; // negative (2¡¦s compliment)
-    PTP_Init_value.VBOOT = 0x48; // 115v  (700mv + n * 6.25mv)    
+    PTP_Init_value.VBOOT = PK_VBOOT; // 115v  (700mv + n * 6.25mv)    
     PTP_Init_value.DETMAX = 0xffff; // This timeout value is in cycles of bclk_ck.
 
     PTP_Init_value.DCVOFFSETIN= PTP_DCVOFFSET;
@@ -1027,11 +1037,11 @@ u32 PTP_MON_MODE(void)
     PTP_Init_value.FREQPCT7 = freq_7;
 
     PTP_Init_value.DETWINDOW = 0xa28;  // 100 us, This is the PTP Detector sampling time as represented in cycles of bclk_ck during INIT. 52 MHz
-    PTP_Init_value.VMAX = 0x50; // 1.2v (700mv + n * 6.25mv)
-    PTP_Init_value.VMIN = 0x28; // 0.95v (700mv + n * 6.25mv)    
+    PTP_Init_value.VMAX = PK_VMAX; // 1.2v (700mv + n * 6.25mv)
+    PTP_Init_value.VMIN = PK_VMIN; // 0.95v (700mv + n * 6.25mv)    
     PTP_Init_value.DTHI = 0x01; // positive
     PTP_Init_value.DTLO = 0xfe; // negative (2¡¦s compliment)
-    PTP_Init_value.VBOOT = 0x48; // 115v  (700mv + n * 6.25mv)    
+    PTP_Init_value.VBOOT = PK_VBOOT; // 115v  (700mv + n * 6.25mv)    
     PTP_Init_value.DETMAX = 0xffff; // This timeout value is in cycles of bclk_ck.
 
     if( (PTP_Init_value.PTPINITEN == 0x0) || (PTP_Init_value.PTPMONEN == 0x0) || (PTP_Init_value.ADC_CALI_EN == 0x0) )
