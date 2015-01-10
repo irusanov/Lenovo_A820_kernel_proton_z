@@ -244,10 +244,6 @@ static PVRSRV_ERROR InitDevInfo(PVRSRV_PER_PROCESS_DATA *psPerProc,
 #if defined(FIX_HW_BRN_29823)
 	psDevInfo->psKernelDummyTermStreamMemInfo = (PVRSRV_KERNEL_MEM_INFO *)psInitInfo->hKernelDummyTermStreamMemInfo;
 #endif
-#if defined(SGX_FEATURE_VDM_CONTEXT_SWITCH) && defined(FIX_HW_BRN_31559)
-	psDevInfo->psKernelVDMSnapShotBufferMemInfo = (PVRSRV_KERNEL_MEM_INFO *)psInitInfo->hKernelVDMSnapShotBufferMemInfo;
-	psDevInfo->psKernelVDMCtrlStreamBufferMemInfo = (PVRSRV_KERNEL_MEM_INFO *)psInitInfo->hKernelVDMCtrlStreamBufferMemInfo;
-#endif
 #if defined(SGX_FEATURE_VDM_CONTEXT_SWITCH) && \
 	defined(FIX_HW_BRN_33657) && defined(SUPPORT_SECURE_33657_FIX)
 	psDevInfo->psKernelVDMStateUpdateBufferMemInfo = (PVRSRV_KERNEL_MEM_INFO *)psInitInfo->hKernelVDMStateUpdateBufferMemInfo;
@@ -644,7 +640,7 @@ PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO	*psDevInfo,
 	{
 		PVR_DPF((PVR_DBG_ERROR, "SGXInitialise: Wait for uKernel initialisation failed"));
 
-		SGXDumpDebugInfo(psDevInfo, IMG_FALSE);
+		SGXDumpDebugInfo(psDevInfo, IMG_TRUE);
 		PVR_DBG_BREAK;
 
 		return PVRSRV_ERROR_RETRY;
@@ -1885,6 +1881,12 @@ IMG_BOOL SGX_ISRHandler (IMG_VOID *pvData)
 			/* clear the events */
 			OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_EVENT_HOST_CLEAR, ui32EventClear);
 			OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_EVENT_HOST_CLEAR2, ui32EventClear2);
+
+			/*
+				Sample the current count from the uKernel _after_ we've cleared the
+				interrupt.
+			*/
+			g_ui32HostIRQCountSample = psDevInfo->psSGXHostCtl->ui32InterruptCount;
 		}
 	}
 

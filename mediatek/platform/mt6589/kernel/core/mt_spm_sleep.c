@@ -586,7 +586,6 @@ static int spm_request_uart_to_sleep(void)
             dump_uart_reg();
             return -EBUSY;
         }
-		spm_crit2("spm_request_uart_to_sleep udelay 10\n");
         udelay(10);
     }
 
@@ -1026,51 +1025,47 @@ wake_reason_t spm_go_to_sleep(bool cpu_pdn, bool infra_pdn)
 #if SPM_PWAKE_EN
     sec = spm_get_wake_period(last_wr);
 #endif
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);//hongzhe.liu-dbg
+
     mtk_wdt_suspend();
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);//hongzhe.liu-dbg
+
     spin_lock_irqsave(&spm_lock, flags);
     mt_irq_mask_all(&mask);
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);	//hongzhe.liu-dbg
     mt_irq_unmask_for_sleep(MT_SPM_IRQ_ID);
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);	//hongzhe.liu-dbg
     mt_cirq_clone_gic();
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);	//hongzhe.liu-dbg
     mt_cirq_enable();
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);	//hongzhe.liu-dbg
 
     spm_set_sysclk_settle();
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);//hongzhe.liu-dbg
+
     spm_crit2("sec = %u, wakesrc = 0x%x (%u)(%u)\n",
               sec, spm_sleep_wakesrc, cpu_pdn, infra_pdn);
 
     spm_reset_and_init_pcm();
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);//hongzhe.liu-dbg
+
     spm_kick_im_to_fetch(PCM_SUSPEND_BASE, PCM_SUSPEND_LEN);
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);//hongzhe.liu-dbg
+
     if (spm_request_uart_to_sleep()) {
         last_wr = WR_UART_BUSY;
         goto RESTORE_IRQ;
     }
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);//hongzhe.liu-dbg
-    spm_init_pcm_register();mdelay(1);
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);//hongzhe.liu-dbg
+
+    spm_init_pcm_register();
+
     spm_init_event_vector(PCM_SUSPEND_VEC0, PCM_SUSPEND_VEC1, 0, 0);
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);//hongzhe.liu-dbg
+
     spm_set_pwrctl_for_sleep();
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);//hongzhe.liu-dbg
+
     spm_set_wakeup_event(sec * 32768, spm_sleep_wakesrc);
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);//hongzhe.liu-dbg
+
     spm_kick_pcm_to_run(cpu_pdn, infra_pdn);
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);//hongzhe.liu-dbg
+
     spm_trigger_wfi_for_sleep(cpu_pdn, infra_pdn);
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);//hongzhe.liu-dbg
+
     spm_get_wakeup_status(&wakesta);
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);//hongzhe.liu-dbg
+
     spm_clean_after_wakeup();
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);//hongzhe.liu-dbg
+
     last_wr = spm_output_wake_reason(&wakesta, false);
-spm_crit2("%s %d\n",__func__,  __LINE__);mdelay(1);//hongzhe.liu-dbg
+
 RESTORE_IRQ:
     mt_cirq_flush();
     mt_cirq_disable();

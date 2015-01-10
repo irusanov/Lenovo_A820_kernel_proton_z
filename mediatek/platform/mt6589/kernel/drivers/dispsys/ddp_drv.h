@@ -202,10 +202,9 @@ typedef struct{
 
 } DISPLAY_PQ_T;
 
-#define NEW_GAMMA_ARRAY_ARRANGEMENT
 typedef struct{
 
-    unsigned long entry[3][257]; //may change structure after 1302 due to NCSTool rework
+    unsigned long entry[3][256]; //may change structure after 1302 due to NCSTool rework
 
 } DISPLAY_GAMMA_T;
 

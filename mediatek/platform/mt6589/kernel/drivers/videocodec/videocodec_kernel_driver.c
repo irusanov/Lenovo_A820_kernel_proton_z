@@ -12,6 +12,7 @@
 #include <linux/mm.h>
 #include <linux/jiffies.h>
 #include <linux/sched.h>
+#include <linux/cpumask.h>
 #include <asm/uaccess.h>
 #include <asm/page.h>
 #include <linux/vmalloc.h>
@@ -58,6 +59,12 @@ static DEFINE_MUTEX(VdecHWLock);
 static DEFINE_MUTEX(VencHWLock);
 static DEFINE_MUTEX(EncEMILock);
 static DEFINE_MUTEX(DecEMILock);
+
+#ifdef MTK_VIDEO_HEVC_SUPPORT
+static DEFINE_MUTEX(EncHEVCLock);
+static DEFINE_MUTEX(DecHEVCLock);
+#endif
+
 static DEFINE_MUTEX(DriverOpenCountLock);
 static DEFINE_MUTEX(NonCacheMemoryListLock);
 static DEFINE_MUTEX(DecHWLockEventTimeoutLock);
@@ -80,6 +87,12 @@ static int MT6589Driver_Open_Count;         //mutex : DriverOpenCountLock
 static VAL_UINT32_T gu4PWRCounter = 0;      //mutex : PWRLock
 static VAL_UINT32_T gu4EncEMICounter = 0;   //mutex : EncEMILock
 static VAL_UINT32_T gu4DecEMICounter = 0;   //mutex : DecEMILock
+
+#ifdef MTK_VIDEO_HEVC_SUPPORT
+static VAL_UINT32_T gu4EncHEVCCounter = 0;   //mutex : EncHEVCLock
+static VAL_UINT32_T gu4DecHEVCCounter = 0;   //mutex : DecHEVCLock
+#endif
+
 static VAL_BOOL_T bIsOpened = VAL_FALSE;    //mutex : IsOpenedLock
 static VAL_UINT32_T gu4HwVencIrqStatus = 0; //hardware VENC IRQ status (VP8/H264)
 
@@ -98,6 +111,7 @@ static VAL_UINT32_T gu4HwVencIrqStatus = 0; //hardware VENC IRQ status (VP8/H264
 // VENC physical base address
 #undef VENC_BASE
 #define VENC_BASE       0x17002000
+#define VENC_REGION     0x1000
 #define VENC_IRQ_STATUS_addr        VENC_BASE + 0x05C
 #define VENC_IRQ_ACK_addr           VENC_BASE + 0x060
 #define VENC_MP4_IRQ_ACK_addr       VENC_BASE + 0x678
@@ -138,8 +152,16 @@ static VAL_UINT32_T gu4HwVencIrqStatus = 0; //hardware VENC IRQ status (VP8/H264
 #endif
 
 // VDEC virtual base address
+#define VDEC_BASE_PHY   0x16000000
+#define VDEC_REGION     0x29000
 #define VDEC_MISC_BASE  VDEC_BASE + 0x0000
 #define VDEC_VLD_BASE   VDEC_BASE + 0x1000
+
+#define HW_BASE         0x7FFF000
+#define HW_REGION       0x2000
+
+#define INFO_BASE       0x10000000
+#define INFO_REGION     0x1000
 
 int KVA_VENC_IRQ_ACK_ADDR, KVA_VENC_MP4_IRQ_ACK_ADDR;
 int KVA_VENC_IRQ_STATUS_ADDR, KVA_VENC_MP4_IRQ_STATUS_ADDR, KVA_VENC_ZERO_COEF_COUNT_ADDR, KVA_VENC_BYTE_COUNT_ADDR;
@@ -575,6 +597,11 @@ static long vcodec_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned 
     VAL_UINT32_T u4TempVCodecThreadID[VCODEC_THREAD_MAX_NUM];
     VAL_UINT32_T *pu4TempKVA;
     VAL_UINT32_T u4TempKPA;
+#ifdef MTK_VIDEO_HEVC_SUPPORT    
+    VAL_UINT32_T u4TempHEVCEncUser = 0;
+    VAL_UINT32_T u4TempHEVCDecUser = 0;
+    VAL_UINT32_T u4TempTotalHEVCUser = 0;
+#endif    
 #if 0
     VCODEC_DRV_CMD_QUEUE_T rDrvCmdQueue;
     P_VCODEC_DRV_CMD_T cmd_queue = VAL_NULL;
@@ -766,6 +793,108 @@ static long vcodec_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned 
             MFV_LOGD("[MT6589] VCODEC_DEC_ENC_EMI_USER - tid = %d\n", current->pid);
         break;
 
+#ifdef MTK_VIDEO_HEVC_SUPPORT
+        case VCODEC_QUERY_HEVC_USER:
+            MFV_LOGE("[MT6589] VCODEC_QUERY_HEVC_USER + tid = %d\n", current->pid);
+
+            mutex_lock(&EncHEVCLock);
+            u4TempHEVCEncUser = gu4EncHEVCCounter;
+            mutex_unlock(&EncHEVCLock);    
+
+            mutex_lock(&DecHEVCLock);
+            u4TempHEVCDecUser = gu4DecHEVCCounter;
+            mutex_unlock(&DecHEVCLock);   
+
+            u4TempTotalHEVCUser = u4TempHEVCEncUser + u4TempHEVCDecUser;
+
+            MFV_LOGE("TOTAL_HEVC_USER = %d\n", u4TempTotalHEVCUser);
+
+            user_data_addr = (VAL_UINT8_T *)arg;
+            
+            ret = copy_to_user(user_data_addr, &u4TempTotalHEVCUser, sizeof(VAL_UINT32_T));
+            if (ret) {
+                MFV_LOGE("[ERROR] VCODEC_QUERY_HEVC_USER, copy_to_user failed: %d\n", ret);
+                return -EFAULT;
+            }
+
+            MFV_LOGE("[MT6589] VCODEC_QUERY_HEVC_USER - tid = %d\n", current->pid);
+        break;    
+
+        case VCODEC_INC_ENC_HEVC_USER:
+            MFV_LOGE("[MT6589] VCODEC_INC_ENC_HEVC_USER + tid = %d\n", current->pid);
+
+            mutex_lock(&EncHEVCLock);
+            gu4EncHEVCCounter++;
+            MFV_LOGE("ENC_HEVC_USER = %d\n", gu4EncHEVCCounter);
+            user_data_addr = (VAL_UINT8_T *)arg;
+            ret = copy_to_user(user_data_addr, &gu4EncHEVCCounter, sizeof(VAL_UINT32_T));
+            if (ret) {
+                MFV_LOGE("[ERROR] VCODEC_INC_ENC_HEVC_USER, copy_to_user failed: %d\n", ret);
+                mutex_unlock(&EncHEVCLock);
+                return -EFAULT;
+            }
+            mutex_unlock(&EncHEVCLock);
+
+            MFV_LOGE("[MT6589] VCODEC_INC_ENC_HEVC_USER - tid = %d\n", current->pid);
+        break;
+
+        case VCODEC_DEC_ENC_HEVC_USER:
+            MFV_LOGE("[MT6589] VCODEC_DEC_ENC_HEVC_USER + tid = %d\n", current->pid);
+
+            mutex_lock(&EncHEVCLock);
+            gu4EncHEVCCounter--;
+            MFV_LOGE("ENC_HEVC_USER = %d\n", gu4EncHEVCCounter);
+            user_data_addr = (VAL_UINT8_T *)arg;
+            ret = copy_to_user(user_data_addr, &gu4EncHEVCCounter, sizeof(VAL_UINT32_T));
+            if (ret) {
+                MFV_LOGE("[ERROR] VCODEC_DEC_ENC_HEVC_USER, copy_to_user failed: %d\n", ret);
+                mutex_unlock(&EncHEVCLock);
+                return -EFAULT;
+            }
+            mutex_unlock(&EncHEVCLock);
+
+            MFV_LOGE("[MT6589] VCODEC_DEC_ENC_HEVC_USER - tid = %d\n", current->pid);
+        break;
+
+        case VCODEC_INC_DEC_HEVC_USER:
+            MFV_LOGE("[MT6589] VCODEC_INC_DEC_HEVC_USER + tid = %d\n", current->pid);
+
+            mutex_lock(&DecHEVCLock);
+            gu4DecHEVCCounter++;
+            MFV_LOGE("DEC_HEVC_USER = %d\n", gu4DecHEVCCounter);
+            user_data_addr = (VAL_UINT8_T *)arg;
+            ret = copy_to_user(user_data_addr, &gu4DecHEVCCounter, sizeof(VAL_UINT32_T));
+            if (ret)
+            {
+            	MFV_LOGE("[ERROR] VCODEC_INC_DEC_HEVC_USER, copy_to_user failed: %d\n", ret);
+                mutex_unlock(&DecHEVCLock);
+            	return -EFAULT;
+            }
+            mutex_unlock(&DecHEVCLock);
+
+            MFV_LOGD("[MT6589] VCODEC_INC_DEC_HEVC_USER - tid = %d\n", current->pid);            
+        break;
+
+        case VCODEC_DEC_DEC_HEVC_USER:
+            MFV_LOGD("[MT6589] VCODEC_DEC_DEC_HEVC_USER + tid = %d\n", current->pid);
+
+            mutex_lock(&DecHEVCLock);
+            gu4DecHEVCCounter--;
+            MFV_LOGE("DEC_HEVC_USER = %d\n", gu4DecHEVCCounter);
+            user_data_addr = (VAL_UINT8_T *)arg;
+            ret = copy_to_user(user_data_addr, &gu4DecHEVCCounter, sizeof(VAL_UINT32_T));
+            if (ret)
+            {
+            	MFV_LOGE("[ERROR] VCODEC_DEC_DEC_HEVC_USER, copy_to_user failed: %d\n", ret);
+                mutex_unlock(&DecHEVCLock);
+            	return -EFAULT;
+            }
+            mutex_unlock(&DecHEVCLock);
+
+            MFV_LOGD("[MT6589] VCODEC_DEC_DEC_HEVC_USER - tid = %d\n", current->pid);            
+        break;
+#endif
+
         case VCODEC_LOCKHW:
             MFV_LOGD("[MT6589] VCODEC_LOCKHW + tid = %d\n", current->pid);
             user_data_addr = (VAL_UINT8_T *)arg;
@@ -836,6 +965,10 @@ static long vcodec_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned 
                             }
                             mutex_unlock(&VdecHWLock);
                         }
+                    }
+                    else if (VAL_RESULT_RESTARTSYS == eValRet)
+                    {
+                        return -ERESTARTSYS;
                     }
 
                     mutex_lock(&VdecHWLock);
@@ -1512,12 +1645,16 @@ static long vcodec_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned 
             MFV_LOGD("[MT6589] VCODEC_GET_CPU_LOADING_INFO +\n");
             user_data_addr = (VAL_UINT8_T *)arg;
             // TODO:
-#if 0 // Morris Yang 20120112 mark temporarily
-            _temp._cpu_idle_time = mt_get_cpu_idle(0);
-            _temp._thread_cpu_time = mt_get_thread_cputime(0);
-            spin_lock_irqsave(&OalHWContextLock, ulFlags);
-            _temp._inst_count = getCurInstanceCount();
-            spin_unlock_irqrestore(&OalHWContextLock, ulFlags);
+#if 1 // Morris Yang 20120112 mark temporarily
+            VAL_UINT8_T cpu_id;
+            //MFV_LOGE("[MT6582] VCODEC_GET_CPU_LOADING_INFO num_possible_cpus(%d)\n", num_possible_cpus());
+            for (cpu_id = 0 ; cpu_id < num_possible_cpus()  ; cpu_id++) {
+                _temp._cpu_idle_time += mt_get_cpu_idle(cpu_id);
+                _temp._thread_cpu_time += mt_get_thread_cputime(cpu_id);
+            }
+            //spin_lock_irqsave(&OalHWContextLock, ulFlags);
+            //_temp._inst_count = getCurInstanceCount();
+            //spin_unlock_irqrestore(&OalHWContextLock, ulFlags);
             _temp._sched_clock = mt_sched_clock();
 #endif
             ret = copy_to_user(user_data_addr, &_temp, sizeof(VAL_VCODEC_CPU_LOADING_INFO_T));
@@ -1725,6 +1862,16 @@ static int vcodec_flush(struct file *file, fl_owner_t id)
         gu4EncEMICounter = 0;
         mutex_unlock(&EncEMILock);
 
+#ifdef MTK_VIDEO_HEVC_SUPPORT
+        mutex_lock(&DecHEVCLock);
+        gu4DecHEVCCounter = 0;
+        mutex_unlock(&DecHEVCLock);
+
+        mutex_lock(&EncHEVCLock);
+        gu4EncHEVCCounter = 0;
+        mutex_unlock(&EncHEVCLock);
+#endif
+
         mutex_lock(&PWRLock);
         gu4PWRCounter = 0;
         mutex_unlock(&PWRLock);
@@ -1806,6 +1953,41 @@ static struct vm_operations_struct vcodec_remap_vm_ops = {
 
 static int vcodec_mmap(struct file* file, struct vm_area_struct* vma)
 {
+    VAL_UINT32_T u4I = 0;
+    long length;
+    unsigned int pfn;
+
+    length = vma->vm_end - vma->vm_start;
+    pfn = vma->vm_pgoff<<PAGE_SHIFT;
+    
+    if(((length > VENC_REGION) || (pfn < VENC_BASE) || (pfn > VENC_BASE+VENC_REGION)) &&
+       ((length > VDEC_REGION) || (pfn < VDEC_BASE_PHY) || (pfn > VDEC_BASE_PHY+VDEC_REGION)) &&
+       ((length > HW_REGION) || (pfn < HW_BASE) || (pfn > HW_BASE+HW_REGION)) &&
+       ((length > INFO_REGION) || (pfn < INFO_BASE) || (pfn > INFO_BASE+INFO_REGION))
+      )
+    {
+        VAL_UINT32_T u4Addr, u4Size;
+        for(u4I = 0; u4I < VCODEC_MULTIPLE_INSTANCE_NUM_x_10; u4I++)
+        {
+            if ((grNonCacheMemoryList[u4I].u4KVA != 0xffffffff) && (grNonCacheMemoryList[u4I].u4KPA != 0xffffffff))
+            {
+                u4Addr = grNonCacheMemoryList[u4I].u4KPA;
+                u4Size = (grNonCacheMemoryList[u4I].u4Size + 0x1000 -1) & ~(0x1000-1);
+                if((length == u4Size) && (pfn == u4Addr))
+                {
+                    MFV_LOGD(" cache idx %d \n", u4I);
+                    break;
+                }
+            }
+        }
+
+        if (u4I == VCODEC_MULTIPLE_INSTANCE_NUM_x_10)
+        {
+            MFV_LOGE("[ERROR] mmap region error: Length(0x%x), pfn(0x%x)\n", length, pfn);
+            return -EAGAIN;
+        }
+    }
+
     vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
     MFV_LOGE("[mmap] vma->start 0x%x, vma->end 0x%x, vma->pgoff 0x%x\n", 
              (unsigned int)vma->vm_start, (unsigned int)vma->vm_end, (unsigned int)vma->vm_pgoff);
@@ -1886,6 +2068,16 @@ static int vcodec_probe(struct platform_device *dev)
     mutex_lock(&EncEMILock);
     gu4EncEMICounter = 0;
     mutex_unlock(&EncEMILock);
+
+#ifdef MTK_VIDEO_HEVC_SUPPORT
+    mutex_lock(&DecHEVCLock);
+    gu4DecHEVCCounter = 0;
+    mutex_unlock(&DecHEVCLock);
+
+    mutex_lock(&EncHEVCLock);
+    gu4EncHEVCCounter = 0;
+    mutex_unlock(&EncHEVCLock);
+#endif
 
     mutex_lock(&PWRLock);
     gu4PWRCounter = 0;

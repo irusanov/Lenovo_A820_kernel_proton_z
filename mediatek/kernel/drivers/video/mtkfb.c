@@ -3164,6 +3164,35 @@ void mtkfb_disable_non_fb_layer(void)
     }
 }
 
+int m4u_reclaim_mva_callback_ovl(int moduleID, unsigned int va, unsigned int size, unsigned int mva)
+{
+    int id;
+    unsigned int dirty = 0;
+    MMProfileLogEx(MTKFB_MMP_Events.Debug, MMProfileFlagStart, mva, size);
+    for (id = 0; id < DDP_OVL_LAYER_MUN; id++)
+    {
+        if (cached_layer_config[id].layer_en == 0)
+            continue;
+
+        if (cached_layer_config[id].addr >= mva &&
+            cached_layer_config[id].addr < (mva+size))
+        {
+            DISP_LOG_PRINT(ANDROID_LOG_INFO, "LCD", "  disable(%d)\n", id);
+            cached_layer_config[id].layer_en = 0;
+            cached_layer_config[id].isDirty = true;
+            dirty = 1;
+        }
+    }
+    printk("Warning: m4u_reclaim_mva_callback_ovl. mva=0x%08X size=0x%X dirty=%d\n", mva, size, dirty);
+    if (dirty)
+    {
+        memset(mtkfb_fbi->screen_base, 0, DISP_GetVRamSize());
+        mtkfb_pan_display_impl(&mtkfb_fbi->var, mtkfb_fbi);
+    }
+    MMProfileLogEx(MTKFB_MMP_Events.Debug, MMProfileFlagEnd, dirty, 0);
+    return 0;
+}
+
 #if INIT_FB_AS_COLOR_BAR
 static void fill_color(u8 *buffer,
                        u32 fillColor,
@@ -3470,34 +3499,6 @@ static int lcd_info_read_proc(char *page, char **start, off_t off, int count, in
 {
     char *ptr = page;
 	char *name;
-#if defined(ACER_C11)
-    int ret = 0, _data[4], i, ret_value = 0, ret_temp = 0;
-    int Channel=1;
-	
-    i = 5;
-    while (i--)
-    {
-        ret_value = IMM_GetOneChannelValue(Channel, _data, &ret_temp);
-		printk("chailu: IMM_GetOneChannelValue = %d \n",ret_temp);
-        ret += ret_temp;
-		
-    }
-    
-    ret = ret*1500/4096	;
-    ret = ret/5;
-
-
-    if (ret < 500)
-      ptr += sprintf( ptr, "LCD name : %s\n","TRUL");
-    else if (ret > 1200)
-      ptr += sprintf( ptr, "LCD name : %s\n","YUSUN");
-    else
-      ptr += sprintf( ptr, "LCD name : %s\n","BOYI");	
-
-    *eof = 1;
-	return ( ptr - page );
-	
-#else
 
 	name = disp_get_lcm_name();
 	printk("%s ,lcm name=%s, %s\n", __func__,name,mtkfb_lcm_name);
@@ -3508,8 +3509,7 @@ static int lcd_info_read_proc(char *page, char **start, off_t off, int count, in
 
 
 	*eof = 1;
-	return ( ptr - page );
-#endif	
+	return ( ptr - page );	
 }
 
 static int lcd_info_write_proc(struct file *file, const char *buffer, unsigned long count, void *data)

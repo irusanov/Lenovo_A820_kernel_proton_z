@@ -34,6 +34,8 @@
 #include "mach/upmu_common.h"
 #include "mach/sync_write.h"
 
+#define GPU_CLK_CFG_0_BIT_23
+
 /***************************
 * debug message
 ****************************/
@@ -616,8 +618,23 @@ static void mt_gpu_clock_switch(unsigned int sel)
             }
             #endif
 			
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF) | (0x1 << 23);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+			
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+            #endif
+			
             clk_cfg_0 = (clk_cfg_0 & 0xFFF8FFFF) | (0x5 << 16);
             mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+            #endif
+			
             dprintk("mt_gpu_clock_switch: switch MFG clock to GPU_MMPLL_D3\n");
 
             #ifdef GPU_HYD_CLK_SWITCH_ENABLED
@@ -641,8 +658,23 @@ static void mt_gpu_clock_switch(unsigned int sel)
                 mt_gpufreq_enable_mainpll = 1;
             }
 			
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF) | (0x1 << 23);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+			
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+            #endif
+			
             clk_cfg_0 = (clk_cfg_0 & 0xFFF8FFFF) | (0x2 << 16);
             mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+            #endif
+
             dprintk("mt_gpu_clock_switch: switch MFG clock to GPU_SYSPLL_D2\n");
 
             #ifdef GPU_HYD_CLK_SWITCH_ENABLED
@@ -668,8 +700,23 @@ static void mt_gpu_clock_switch(unsigned int sel)
             }
             #endif
 			
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF) | (0x1 << 23);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+			
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+            #endif
+			
             clk_cfg_0 = (clk_cfg_0 & 0xFFF8FFFF) | (0x6 << 16);
             mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+            #endif
+
             dprintk("mt_gpu_clock_switch: switch MFG clock to GPU_MMPLL_D4\n");
 
             #ifdef GPU_HYD_CLK_SWITCH_ENABLED
@@ -687,8 +734,24 @@ static void mt_gpu_clock_switch(unsigned int sel)
             #endif
             break;
         case GPU_UNIVPLL1_D2: // 312Mhz
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF) | (0x1 << 23);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+			
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+            #endif
+
             clk_cfg_0 = (clk_cfg_0 & 0xFFF8FFFF) | (0x4 << 16);
             mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+            #endif
+
             dprintk("mt_gpu_clock_switch: switch MFG clock to GPU_UNIVPLL1_D2\n");
 
             #ifdef GPU_HYD_CLK_SWITCH_ENABLED
@@ -720,8 +783,23 @@ static void mt_gpu_clock_switch(unsigned int sel)
             }
             #endif
 			
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF) | (0x1 << 23);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+			
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+            #endif
+			
             clk_cfg_0 = (clk_cfg_0 & 0xFFF8FFFF) | (0x7 << 16);
             mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+            #endif
+
             dprintk("mt_gpu_clock_switch: switch MFG clock to GPU_MMPLL_D5\n");
 
             #ifdef GPU_HYD_CLK_SWITCH_ENABLED
@@ -745,8 +823,23 @@ static void mt_gpu_clock_switch(unsigned int sel)
                 mt_gpufreq_enable_mainpll = 1;
             }
 			
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF) | (0x1 << 23);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+			
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+            #endif
+
             clk_cfg_0 = (clk_cfg_0 & 0xFFF8FFFF) | (0x3 << 16);
             mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+            #endif
+
             dprintk("mt_gpu_clock_switch: switch MFG clock to GPU_SYSPLL_D3\n");
 
             #ifdef GPU_HYD_CLK_SWITCH_ENABLED
@@ -772,8 +865,23 @@ static void mt_gpu_clock_switch(unsigned int sel)
             }
             #endif
 			
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF) | (0x1 << 23);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+			
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+            #endif
+
             clk_cfg_0 = (clk_cfg_0 & 0xFFF8FFFF) | (0x1 << 16);
             mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+            #endif
+
             dprintk("mt_gpu_clock_switch: switch MFG clock to GPU_MMPLL_D6\n");
 
             #ifdef GPU_HYD_CLK_SWITCH_ENABLED
@@ -791,8 +899,24 @@ static void mt_gpu_clock_switch(unsigned int sel)
             #endif
             break;
         case GPU_UNIVPLL1_D4: // 156Mhz
+        
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF) | (0x1 << 23);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+			
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+            #endif
+
             clk_cfg_0 = (clk_cfg_0 & 0xFFF8FFFF) | (0x0 << 16);
             mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+            #endif
+
             dprintk("mt_gpu_clock_switch: switch MFG clock to GPU_UNIVPLL1_D4\n");
 
             #ifdef GPU_HYD_CLK_SWITCH_ENABLED
@@ -841,8 +965,23 @@ static void mt_gpu_clock_switch_initial(unsigned int sel)
             }
             #endif
 			
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF) | (0x1 << 23);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+			
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+            #endif
+			
             clk_cfg_0 = (clk_cfg_0 & 0xFFF8FFFF) | (0x5 << 16);
             mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+            #endif
+
             dprintk("mt_gpu_clock_switch_initial: switch MFG clock to GPU_MMPLL_D3\n");
 
             clk_cfg_4 = (clk_cfg_4 & 0xFFFFFFF8) | (0x5);
@@ -864,8 +1003,23 @@ static void mt_gpu_clock_switch_initial(unsigned int sel)
                 mt_gpufreq_enable_mainpll = 1;
             }
 			
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF) | (0x1 << 23);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+			
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+            #endif
+			
             clk_cfg_0 = (clk_cfg_0 & 0xFFF8FFFF) | (0x2 << 16);
             mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+            #endif
+
             dprintk("mt_gpu_clock_switch_initial: switch MFG clock to GPU_SYSPLL_D2\n");
 
             clk_cfg_4 = (clk_cfg_4 & 0xFFFFFFF8) | (0x2);
@@ -889,8 +1043,23 @@ static void mt_gpu_clock_switch_initial(unsigned int sel)
             }
             #endif
 			
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF) | (0x1 << 23);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+			
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+            #endif
+			
             clk_cfg_0 = (clk_cfg_0 & 0xFFF8FFFF) | (0x6 << 16);
             mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+            #endif
+
             dprintk("mt_gpu_clock_switch_initial: switch MFG clock to GPU_MMPLL_D4\n");
 
             clk_cfg_4 = (clk_cfg_4 & 0xFFFFFFF8) | (0x6);
@@ -906,8 +1075,24 @@ static void mt_gpu_clock_switch_initial(unsigned int sel)
             #endif
             break;
         case GPU_UNIVPLL1_D2: // 312Mhz
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF) | (0x1 << 23);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+			
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+            #endif
+
             clk_cfg_0 = (clk_cfg_0 & 0xFFF8FFFF) | (0x4 << 16);
             mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+            #endif
+
             dprintk("mt_gpu_clock_switch_initial: switch MFG clock to GPU_UNIVPLL1_D2\n");
 			
             clk_cfg_4 = (clk_cfg_4 & 0xFFFFFFF8) | (0x4);
@@ -937,8 +1122,23 @@ static void mt_gpu_clock_switch_initial(unsigned int sel)
             }
             #endif
 			
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF) | (0x1 << 23);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+			
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+            #endif
+
             clk_cfg_0 = (clk_cfg_0 & 0xFFF8FFFF) | (0x7 << 16);
             mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+            #endif
+
             dprintk("mt_gpu_clock_switch_initial: switch MFG clock to GPU_MMPLL_D5\n");
 
             clk_cfg_4 = (clk_cfg_4 & 0xFFFFFFF8) | (0x7);
@@ -960,8 +1160,23 @@ static void mt_gpu_clock_switch_initial(unsigned int sel)
                 mt_gpufreq_enable_mainpll = 1;
             }
 			
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF) | (0x1 << 23);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+			
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+            #endif
+			
             clk_cfg_0 = (clk_cfg_0 & 0xFFF8FFFF) | (0x3 << 16);
             mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+            #endif
+
             dprintk("mt_gpu_clock_switch_initial: switch MFG clock to GPU_SYSPLL_D3\n");
 
             clk_cfg_4 = (clk_cfg_4 & 0xFFFFFFF8) | (0x7);
@@ -985,8 +1200,23 @@ static void mt_gpu_clock_switch_initial(unsigned int sel)
             }
             #endif
 			
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF) | (0x1 << 23);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+			
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+            #endif
+			
             clk_cfg_0 = (clk_cfg_0 & 0xFFF8FFFF) | (0x1 << 16);
             mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+            #endif
+
             dprintk("mt_gpu_clock_switch_initial: switch MFG clock to GPU_MMPLL_D6\n");
 
             clk_cfg_4 = (clk_cfg_4 & 0xFFFFFFF8) | (0x7);
@@ -1002,8 +1232,24 @@ static void mt_gpu_clock_switch_initial(unsigned int sel)
             #endif
             break;
         case GPU_UNIVPLL1_D4: // 156Mhz
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF) | (0x1 << 23);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+			
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+            #endif
+
             clk_cfg_0 = (clk_cfg_0 & 0xFFF8FFFF) | (0x0 << 16);
             mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+
+            #ifdef GPU_CLK_CFG_0_BIT_23
+            clk_cfg_0 = DRV_Reg32(CLK_CFG_0);
+
+            clk_cfg_0 = (clk_cfg_0 & 0xFF7FFFFF);
+            mt65xx_reg_sync_writel(clk_cfg_0, CLK_CFG_0);
+            #endif
+
             dprintk("mt_gpu_clock_switch_initial: switch MFG clock to GPU_UNIVPLL1_D4\n");
 
             clk_cfg_4 = (clk_cfg_4 & 0xFFFFFFF8) | (0x7);

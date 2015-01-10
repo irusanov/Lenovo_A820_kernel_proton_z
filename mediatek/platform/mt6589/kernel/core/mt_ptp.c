@@ -754,14 +754,7 @@ static void PTP_Monitor_Mode(PTP_Init_T* PTP_Init_val)
     // clear all pending PTP interrupt & config PTPINTEN =================================================================
     ptp_write(PTP_PTPINTSTS, 0xffffffff);
     
-    if (ptp_level < 1 || ptp_level > 3) // non-turbo no PTPOD
-    {
-        ptp_write(PTP_PTPINTEN, 0x00FFA002);
-    }
-    else
-    {
         ptp_write(PTP_PTPINTEN, 0x00FF0000);
-    }
 
     // enable PTP monitor mode =================================================================
     ptp_write(PTP_PTPEN, 0x00000002);
@@ -1404,11 +1397,11 @@ u32 PTP_INIT_01_API(void)
     PTP_Init_value.FREQPCT7 = freq_7;
     
     PTP_Init_value.DETWINDOW = 0xa28;  // 100 us, This is the PTP Detector sampling time as represented in cycles of bclk_ck during INIT. 52 MHz
-    PTP_Init_value.VMAX = 0x50; // 1.2v (700mv + n * 6.25mv)
-    PTP_Init_value.VMIN = 0x28; // 0.95v (700mv + n * 6.25mv)    
+    PTP_Init_value.VMAX = PK_VMAX; // 1.2v (700mv + n * 6.25mv)
+    PTP_Init_value.VMIN = PK_VMIN; // 0.95v (700mv + n * 6.25mv)    
     PTP_Init_value.DTHI = 0x01; // positive
     PTP_Init_value.DTLO = 0xfe; // negative (2¡¦s compliment)
-    PTP_Init_value.VBOOT = 0x48; // 115v  (700mv + n * 6.25mv)    
+    PTP_Init_value.VBOOT = PK_VBOOT; // 115v  (700mv + n * 6.25mv)    
     PTP_Init_value.DETMAX = 0xffff; // This timeout value is in cycles of bclk_ck.
     
     if(PTP_Init_value.PTPINITEN == 0x0)

@@ -81,7 +81,7 @@ typedef enum _VAL_RESULT_T
     VAL_RESULT_INVALID_ISR,                     ///< Error due to invalid isr request
     VAL_RESULT_ISR_TIMEOUT,                     ///< Error due to invalid isr request
     VAL_RESULT_UNKNOWN_ERROR,                   ///< Unknown error
-
+    VAL_RESULT_RESTARTSYS,                      ///< Restart sys
     VAL_RESULT_MAX = 0xFFFFFFFF          ///< Max result
 } VAL_RESULT_T;
 

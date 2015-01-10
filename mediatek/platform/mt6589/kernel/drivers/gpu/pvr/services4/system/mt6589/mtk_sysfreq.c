@@ -9,7 +9,7 @@ static bool mt_keep_freq_non_od_set = false;
 #define MTK_GPU_DVFS 1
 
 /* SGX544 GPU overclock overrides */
-#if 0
+#if 1
 	#define MTK_GPU_OC_476MHz
 #endif
 #if 0
