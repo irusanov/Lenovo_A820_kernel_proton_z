@@ -6,8 +6,8 @@
 
 static bool mt_keep_freq_non_od_set = false;
 
-#define MTK_GPU_DVFS 1
-#define PROTON_KEEP_FREQ 0
+#define MTK_GPU_DVFS 0
+#define PROTON_KEEP_FREQ 1
 
 /* SGX544 GPU overclock overrides */
 #if 1
@@ -22,7 +22,7 @@ static bool mt_keep_freq_non_od_set = false;
 #if 0
 	#define MTK_FORCE_312MHz
 #endif
-#if 0
+#if 1
 	#define MTK_FORCE_6589 /* 286MHz - force 6589M to 6589 GPU clock */
 #endif
 
@@ -32,12 +32,12 @@ static struct mt_gpufreq_info freqs_special_vrf18_2[] = {
     {GPU_DVFS_F5, 0,  40, GPU_POWER_VRF18_1_05V,  80},
 };
 static struct mt_gpufreq_info freqs_special2_vrf18_2[] = {
-    {GPU_DVFS_F2, 60, 100, GPU_POWER_VRF18_1_15V, 100},
+    {GPU_DVFS_F2, 60, 100, GPU_POWER_VRF18_1_05V, 100},
     {GPU_DVFS_F3, 30,  60, GPU_POWER_VRF18_1_05V,  90},
     {GPU_DVFS_F5, 0,  30, GPU_POWER_VRF18_1_05V,  75},
 };
 static struct mt_gpufreq_info freqs_special3_vrf18_2[] = {
-    {GPU_DVFS_F1, 60, 100, GPU_POWER_VRF18_1_15V, 100},
+    {GPU_DVFS_F1, 60, 100, GPU_POWER_VRF18_1_05V, 100},
     {GPU_DVFS_F3, 30,  60, GPU_POWER_VRF18_1_05V,  90},
     {GPU_DVFS_F5, 0,  30, GPU_POWER_VRF18_1_05V,  75},
 };
@@ -103,19 +103,17 @@ PVRSRV_ERROR MTKSetFreqInfo(unsigned int freq, unsigned int tbltype)
 //#if defined(MTK_FREQ_OD_INIT)
     if (freq > GPU_DVFS_F5)
     {
-        mt_gpufreq_set_initial(freq, GPU_POWER_VRF18_1_10V);
-//        mt_gpufreq_set_initial(freq, GPU_POWER_VRF18_1_05V);
+        mt_gpufreq_set_initial(freq, GPU_POWER_VRF18_1_05V);
         mt65xx_reg_sync_writel((readl(CLK_CFG_8)&0xffcffff)|0x30000, CLK_CFG_8);
         #if defined(MTK_GPU_OC_476MHz)
-			mt_gpufreq_keep_frequency_non_OD_init(GPU_MMPLL_D3, GPU_POWER_VRF18_1_10V);
+			mt_gpufreq_keep_frequency_non_OD_init(GPU_MMPLL_D3, GPU_POWER_VRF18_1_05V);
 		#endif
 		#if defined(MTK_GPU_OC_403MHz)
-			mt_gpufreq_keep_frequency_non_OD_init(GPU_SYSPLL_D2, GPU_POWER_VRF18_1_10V);
+			mt_gpufreq_keep_frequency_non_OD_init(GPU_SYSPLL_D2, GPU_POWER_VRF18_1_05V);
 		#endif
 		#if defined(MTK_FORCE_T)
-			mt_gpufreq_keep_frequency_non_OD_init(GPU_MMPLL_D4, GPU_POWER_VRF18_1_10V);
+			mt_gpufreq_keep_frequency_non_OD_init(GPU_MMPLL_D4, GPU_POWER_VRF18_1_05V);
 		#endif
-//        mt_gpufreq_keep_frequency_non_OD_init(GPU_MMPLL_D5, GPU_POWER_VRF18_1_05V);
     }
     else
 //#endif
@@ -132,17 +130,18 @@ PVRSRV_ERROR MTKSetFreqInfo(unsigned int freq, unsigned int tbltype)
 
 void MtkSetKeepFreq(void)
 {
-	#if !PROTON_KEEP_FREQ
+	#if PROTON_KEEP_FREQ == 0
 		if (mt_gpufreq_keep_frequency_non_OD_get())
 		{
-	#endif
 			if (mt_keep_freq_non_od_set==false)
 			{
+	#endif
 				mt_gpufreq_keep_frequency_non_OD_set(1);
 				mt_gpufreq_keep_frequency_non_OD(1);
 				mt_keep_freq_non_od_set=true;
+	#if PROTON_KEEP_FREQ == 0
 			}
-	#if !PROTON_KEEP_FREQ
+	
 		}
 		else
 		{
