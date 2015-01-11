@@ -25,7 +25,7 @@
 #endif
 
 #if PROTON_UNDERVOLT
-	#define PK_VMAX 0x38 // 1.050V
+	#define PK_VMAX 0x5D // 1.28125V
 	#define PK_VMIN 0x8 // 0.750V
 	#define PK_VBOOT 0x38 // 1.050V
 #else //default

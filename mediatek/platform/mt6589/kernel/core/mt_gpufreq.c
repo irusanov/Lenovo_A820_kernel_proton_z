@@ -34,7 +34,7 @@
 #include "mach/upmu_common.h"
 #include "mach/sync_write.h"
 
-#define GPU_CLK_CFG_0_BIT_23
+//#define GPU_CLK_CFG_0_BIT_23
 
 /***************************
 * debug message
@@ -59,6 +59,7 @@ static struct early_suspend mt_gpufreq_early_suspend_handler =
 * MT6589 GPU Power Table
 ****************************/
 static struct mt_gpufreq_power_info mt_gpufreqs_golden_power[] = {
+    {.gpufreq_khz = GPU_DVFS_F1, .gpufreq_power = 705},
     {.gpufreq_khz = GPU_DVFS_F2, .gpufreq_power = 606},
     {.gpufreq_khz = GPU_DVFS_F3, .gpufreq_power = 561},
     {.gpufreq_khz = GPU_DVFS_F5, .gpufreq_power = 456},

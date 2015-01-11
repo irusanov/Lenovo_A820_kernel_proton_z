@@ -83,18 +83,18 @@ static struct early_suspend mt_cpufreq_early_suspend_handler =
 	#define DVFS_V1 (1000)  // mV  	HEX: 0x30
 	#define DVFS_V2 ( 950)  // mV	HEX: 0x28
 	#define DVFS_V3 ( 925)  // mV	HEX: 0x24
-	#define DVFS_V4 ( 750)  // mV	HEX: 0x8
+	#define DVFS_V4 ( 800)  // mV	HEX: 0x10
 	
 	/* HEX values */
 	#define DVFS_PKV0 0x38 // 1.050V
 	#define DVFS_PKV1 0x30 // 1.000V
 	#define DVFS_PKV2 0x28 // 0.950V
 	#define DVFS_PKV3 0x24 // 0.925V
-	#define DVFS_PKV4 0x8 // 0.750V
+	#define DVFS_PKV4 0x10 // 0.800V
 	
 	#define DVFS_PKV5 0x30 // 1.000V
 	#define DVFS_PKV6 0x28 // 0.950V
-	#define DVFS_PKV7 0x8 // 0.750V
+	#define DVFS_PKV7 0x10 // 0.800V
 	
 #else //default
 	#define DVFS_V0 (1250) // mV
