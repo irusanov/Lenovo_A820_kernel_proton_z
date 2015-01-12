@@ -7,10 +7,10 @@
 static bool mt_keep_freq_non_od_set = false;
 
 #define MTK_GPU_DVFS 0
-#define PROTON_KEEP_FREQ 1
+#define PROTON_KEEP_FREQ 0
 
 /* SGX544 GPU overclock overrides */
-#if 1
+#if 0
 	#define MTK_GPU_OC_476MHz
 #endif
 #if 0

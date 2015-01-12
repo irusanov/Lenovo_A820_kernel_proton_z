@@ -17,6 +17,11 @@
 #include <linux/backing-dev.h>
 #include "internal.h"
 
+#ifdef CONFIG_DYNAMIC_FSYNC
+extern bool early_suspend_active;
+extern bool dyn_fsync_active;
+#endif
+
 #define VALID_FLAGS (SYNC_FILE_RANGE_WAIT_BEFORE|SYNC_FILE_RANGE_WRITE| \
 			SYNC_FILE_RANGE_WAIT_AFTER)
 
@@ -29,12 +34,6 @@
  */
 static int __sync_filesystem(struct super_block *sb, int wait)
 {
-	/*
-	 * This should be safe, as we require bdi backing to actually
-	 * write out data in the first place
-	 */
-	if (sb->s_bdi == &noop_backing_dev_info)
-		return 0;
 
 	if (sb->s_qcop && sb->s_qcop->quota_sync)
 		sb->s_qcop->quota_sync(sb, -1, wait);
@@ -77,29 +76,57 @@ int sync_filesystem(struct super_block *sb)
 }
 EXPORT_SYMBOL_GPL(sync_filesystem);
 
-static void sync_one_sb(struct super_block *sb, void *arg)
+static void sync_inodes_one_sb(struct super_block *sb, void *arg)
 {
 	if (!(sb->s_flags & MS_RDONLY))
-		__sync_filesystem(sb, *(int *)arg);
-}
-/*
- * Sync all the data for all the filesystems (called by sys_sync() and
- * emergency sync)
- */
-static void sync_filesystems(int wait)
-{
-	iterate_supers(sync_one_sb, &wait);
+		sync_inodes_sb(sb);
 }
 
+static void sync_fs_one_sb(struct super_block *sb, void *arg)
+{
+	if (!(sb->s_flags & MS_RDONLY) && sb->s_op->sync_fs)
+		sb->s_op->sync_fs(sb, *(int *)arg);
+}
+static void fdatawrite_one_bdev(struct block_device *bdev, void *arg)
+{
+	filemap_fdatawrite(bdev->bd_inode->i_mapping);
+}
+
+static void fdatawait_one_bdev(struct block_device *bdev, void *arg)
+{
+	filemap_fdatawait(bdev->bd_inode->i_mapping);
+}
+
+
+void sync_filesystems(void)
+{
+	int nowait = 0, wait = 1;
+	iterate_supers(sync_inodes_one_sb, NULL);
+	iterate_supers(sync_fs_one_sb, &nowait);
+	iterate_supers(sync_fs_one_sb, &wait);
+	iterate_bdevs(fdatawrite_one_bdev, NULL);
+	iterate_bdevs(fdatawait_one_bdev, NULL);
+}
 /*
- * sync everything.  Start out by waking pdflush, because that writes back
- * all queues in parallel.
+ * Sync everything. We start by waking flusher threads so that most of
+ * writeback runs on all devices in parallel. Then we sync all inodes reliably
+ * which effectively also waits for all flusher threads to finish doing
+ * writeback. At this point all data is on disk so metadata should be stable
+ * and we tell filesystems to sync their metadata via ->sync_fs() calls.
+ * Finally, we writeout all block devices because some filesystems (e.g. ext2)
+ * just write metadata (such as inodes or bitmaps) to block device page cache
+ * and do not sync it on their own in ->sync_fs().
  */
 SYSCALL_DEFINE0(sync)
 {
+	int nowait = 0, wait = 1;
+
 	wakeup_flusher_threads(0, WB_REASON_SYNC);
-	sync_filesystems(0);
-	sync_filesystems(1);
+	iterate_supers(sync_inodes_one_sb, NULL);
+	iterate_supers(sync_fs_one_sb, &nowait);
+	iterate_supers(sync_fs_one_sb, &wait);
+	iterate_bdevs(fdatawrite_one_bdev, NULL);
+	iterate_bdevs(fdatawait_one_bdev, NULL);
 	if (unlikely(laptop_mode))
 		laptop_sync_completion();
 	return 0;
@@ -107,12 +134,18 @@ SYSCALL_DEFINE0(sync)
 
 static void do_sync_work(struct work_struct *work)
 {
+	int nowait = 0;
+
 	/*
 	 * Sync twice to reduce the possibility we skipped some inodes / pages
 	 * because they were temporarily locked
 	 */
-	sync_filesystems(0);
-	sync_filesystems(0);
+	iterate_supers(sync_inodes_one_sb, &nowait);
+	iterate_supers(sync_fs_one_sb, &nowait);
+	iterate_bdevs(fdatawrite_one_bdev, NULL);
+	iterate_supers(sync_inodes_one_sb, &nowait);
+	iterate_supers(sync_fs_one_sb, &nowait);
+	iterate_bdevs(fdatawrite_one_bdev, NULL);
 	printk("Emergency Sync complete\n");
 	kfree(work);
 }
@@ -164,9 +197,17 @@ SYSCALL_DEFINE1(syncfs, int, fd)
  */
 int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 {
+#ifdef CONFIG_DYNAMIC_FSYNC
+	if (likely(dyn_fsync_active && !early_suspend_active))
+		return 0;
+	else {
+#endif
 	if (!file->f_op || !file->f_op->fsync)
 		return -EINVAL;
 	return file->f_op->fsync(file, start, end, datasync);
+#ifdef CONFIG_DYNAMIC_FSYNC
+	}
+#endif
 }
 EXPORT_SYMBOL(vfs_fsync_range);
 
@@ -199,6 +240,11 @@ static int do_fsync(unsigned int fd, int datasync)
 
 SYSCALL_DEFINE1(fsync, unsigned int, fd)
 {
+#ifdef CONFIG_DYNAMIC_FSYNC
+	if (likely(dyn_fsync_active && !early_suspend_active))
+		return 0;
+	else
+#endif
 	return do_fsync(fd, 0);
 }
 
@@ -274,6 +320,12 @@ EXPORT_SYMBOL(generic_write_sync);
 SYSCALL_DEFINE(sync_file_range)(int fd, loff_t offset, loff_t nbytes,
 				unsigned int flags)
 {
+#ifdef CONFIG_DYNAMIC_FSYNC
+	if (likely(dyn_fsync_active && !early_suspend_active))
+		return 0;
+	else {
+#endif
+
 	int ret;
 	struct file *file;
 	struct address_space *mapping;
@@ -353,6 +405,9 @@ out_put:
 	fput_light(file, fput_needed);
 out:
 	return ret;
+#ifdef CONFIG_DYNAMIC_FSYNC
+	}
+#endif
 }
 #ifdef CONFIG_HAVE_SYSCALL_WRAPPERS
 asmlinkage long SyS_sync_file_range(long fd, loff_t offset, loff_t nbytes,
@@ -369,6 +424,11 @@ SYSCALL_ALIAS(sys_sync_file_range, SyS_sync_file_range);
 SYSCALL_DEFINE(sync_file_range2)(int fd, unsigned int flags,
 				 loff_t offset, loff_t nbytes)
 {
+#ifdef CONFIG_DYNAMIC_FSYNC
+	if (likely(dyn_fsync_active && !early_suspend_active))
+		return 0;
+	else
+#endif
 	return sys_sync_file_range(fd, offset, nbytes, flags);
 }
 #ifdef CONFIG_HAVE_SYSCALL_WRAPPERS
