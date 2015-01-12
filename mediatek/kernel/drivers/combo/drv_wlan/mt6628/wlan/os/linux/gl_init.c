@@ -2433,6 +2433,8 @@ static void wlanLateResume(void)
     struct net_device *prDev = NULL;
     P_GLUE_INFO_T prGlueInfo = NULL;
     WLAN_STATUS rStatus = WLAN_STATUS_FAILURE;
+    EVENT_AIS_BSS_INFO_T rParam;
+    UINT_32 u4BufLen = 0;    
     UINT_8  ip[4] = { 0 };
 #ifdef  CONFIG_IPV6
     UINT_8  ip6[16] = { 0 };     // FIX ME: avoid to allocate large memory in stack
@@ -2449,7 +2451,7 @@ static void wlanLateResume(void)
     prDev = arWlanDevInfo[u4WlanDevNum-1].prDev;
     ASSERT(prDev);
 
-fgIsUnderEarlierSuspend = false;
+	fgIsUnderEarlierSuspend = false;
 
     if(!prDev ){
         DBGLOG(INIT, INFO, ("prDev == NULL!!! \n"));
@@ -2459,8 +2461,6 @@ fgIsUnderEarlierSuspend = false;
     // <3> acquire the prGlueInfo
     prGlueInfo = *((P_GLUE_INFO_T *) netdev_priv(prDev));
     ASSERT(prGlueInfo);
-    EVENT_AIS_BSS_INFO_T rParam;
-    UINT_32 u4BufLen = 0;
     kalMemZero(&rParam, sizeof(EVENT_AIS_BSS_INFO_T));
 
     rStatus = kalIoctl(prGlueInfo,

@@ -3370,9 +3370,10 @@ kalScanDone(
     IN WLAN_STATUS                   status
     )
 {
-    ASSERT(prGlueInfo);
-
     P_AIS_FSM_INFO_T prAisFsmInfo;
+    
+    ASSERT(prGlueInfo);
+    
     prAisFsmInfo = &(prGlueInfo->prAdapter->rWifiVar.rAisFsmInfo);
 
     cnmTimerStopTimer(prGlueInfo->prAdapter, &prAisFsmInfo->rScanDoneTimer);

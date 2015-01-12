@@ -2564,6 +2564,7 @@ DISP_STATUS DISP_Capture_Framebuffer( unsigned int pvbuf, unsigned int bpp, unsi
 {
     unsigned int mva;
     unsigned int ret = 0;
+    BOOL deconfigWdma = TRUE;
     M4U_PORT_STRUCT portStruct;
 	DISP_FUNC();
 	disp_drv_init_context();
@@ -2657,8 +2658,6 @@ DISP_STATUS DISP_Capture_Framebuffer( unsigned int pvbuf, unsigned int bpp, unsi
         wait_event_interruptible(reg_update_wq, !MemOutConfig.dirty);
         MMProfileLogEx(MTKFB_MMP_Events.CaptureFramebuffer, MMProfileFlagPulse, 4, 0);
     }
-
-    BOOL deconfigWdma = TRUE;
 
 #if defined(MTK_HDMI_SUPPORT)
     deconfigWdma &= !is_hdmi_active();

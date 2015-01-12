@@ -1627,6 +1627,7 @@ wlanoidSetBssidListScanExt (
     PUINT_8 pucIe;
     UINT_32 u4IeLength;
 	WLAN_STATUS rStatus = WLAN_STATUS_SUCCESS;
+	P_AIS_FSM_INFO_T prAisFsmInfo;
 
     DEBUGFUNC("wlanoidSetBssidListScanExt()");
 
@@ -1662,7 +1663,6 @@ wlanoidSetBssidListScanExt (
         u4IeLength = 0;
     }
 
-    P_AIS_FSM_INFO_T prAisFsmInfo;
     prAisFsmInfo = &(prAdapter->rWifiVar.rAisFsmInfo);
     cnmTimerStartTimer(prAdapter,
                     &prAisFsmInfo->rScanDoneTimer,
@@ -5820,7 +5820,6 @@ wlanoidSetSwCtrlWrite (
 #endif
         case 0xFFFF:
             {
-            CMD_ACCESS_REG rCmdAccessReg;
 #if 1 //CFG_MT6573_SMT_TEST
             if (u2SubId == 0x0123) {
 

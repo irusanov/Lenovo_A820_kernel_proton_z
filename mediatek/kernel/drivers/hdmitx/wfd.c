@@ -140,14 +140,14 @@ extern 	void hdmi_dsi_waitnotbusy(void);
 
 static void hdmi_update_impl(void);
 
-static struct switch_dev hdmi_switch_data;
+//static struct switch_dev hdmi_switch_data;
 
 
 //extern int pll_fsel(enum mt65xx_pll_id id, unsigned int pll_value);
 #define HDMI_DEVNAME "ext_display"
 HDMI_PARAMS _s_wfd_params = {0};
-static HDMI_PARAMS *hdmi_params = &_s_wfd_params;
-static HDMI_DRIVER *hdmi_drv = NULL;
+//static HDMI_PARAMS *hdmi_params = &_s_wfd_params;
+//static HDMI_DRIVER *hdmi_drv = NULL;
 
 static struct timeval  timestamp[16];
 
@@ -196,7 +196,7 @@ struct hdmi_video_buffer_list {
 		struct list_head list;
 };
 
-static struct list_head hdmi_video_mode_buffer_list;
+//static struct list_head hdmi_video_mode_buffer_list;
 //static struct list_head *hdmi_video_buffer_list_head = &hdmi_video_mode_buffer_list;
 static atomic_t hdmi_video_mode_flag = ATOMIC_INIT(0);
 //static int hdmi_add_video_buffer(struct hdmi_video_buffer_info *buffer_info, struct file *file);
@@ -244,14 +244,14 @@ static struct class *hdmi_class = NULL;
 static UINT32 const DPI_PAD_CON = 0xf2080900;
 static UINT32 const NLI_ARB_CS = 0xf100d014;
 
-static int hdmi_bpp = 4;
+//static int hdmi_bpp = 4;
 
-static int hdmi_default_width = 1280;
-static int hdmi_default_height = 720;
+//static int hdmi_default_width = 1280;
+//static int hdmi_default_height = 720;
 static int hdmi_temp_buffer_number = 0;
 
 static int hdmi_buffer_write_id = 0;
-static int hdmi_buffer_read_id = 0;
+//static int hdmi_buffer_read_id = 0;
 static int hdmi_buffer_lcdw_id = 0;
 static int hdmi_buffer_lcdw_id_tmp = 0;
 static struct timeval  timestamp[16];
@@ -309,7 +309,7 @@ void init_wfd_mmp_events(void)
 }
 
 
-
+/*
 static void hdmi_udelay(unsigned int us)
 {
 		udelay(us);
@@ -319,7 +319,7 @@ static void hdmi_mdelay(unsigned int ms)
 {
 		msleep(ms);
 }
-
+*/
 
 /* Will be called in LCD Interrupt handler to check whether HDMI is actived */
 bool is_wfd_active(void)
@@ -980,7 +980,7 @@ static int hdmi_open(struct inode *inode, struct file *file)
 		return 0;
 }
 
-static BOOL hdmi_drv_init_context(void);
+//static BOOL hdmi_drv_init_context(void);
 
 
 static char* _hdmi_ioctl_spy(unsigned int cmd)

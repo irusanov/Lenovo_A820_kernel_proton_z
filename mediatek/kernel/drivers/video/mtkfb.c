@@ -106,9 +106,9 @@ struct fb_overlay_buffer_list{
 
 static BOOL mtkfb_enable_m4u = TRUE;
 unsigned int fb_pa = 0;
-static unsigned int fb_va_m4u = 0;
-static unsigned int fb_size_m4u = 0;
-static unsigned int fb_mva_m4u = 0;
+//static unsigned int fb_va_m4u = 0;
+//static unsigned int fb_size_m4u = 0;
+//static unsigned int fb_mva_m4u = 0;
 
 struct fb_overlay_buffer_list *overlay_buffer_head = NULL;
 EXPORT_SYMBOL(overlay_buffer_head);
@@ -124,7 +124,9 @@ UINT32 dbg_backup = 0;
 UINT32 dbb_backup = 0;
 bool fblayer_dither_needed = false;
 static unsigned int video_rotation = 0;
+#if defined(MTK_LCD_HW_3D_SUPPORT)
 static UINT32 mtkfb_current_layer_type = LAYER_2D;
+#endif
 static UINT32 mtkfb_using_layer_type = LAYER_2D;
 static bool	hwc_force_fb_enabled = true;
 bool is_ipoh_bootup = false;
@@ -186,8 +188,9 @@ static int mtkfb_get_overlay_layer_info(struct fb_overlay_layer_info* layerInfo)
 static int mtkfb_update_screen(struct fb_info *info);
 static void mtkfb_update_screen_impl(void);
 extern int is_pmem_range(unsigned long* base, unsigned long size);
-
+#if defined(MTK_LCD_HW_3D_SUPPORT)
 static int mtkfb_set_s3d_ftm(struct fb_info *info, unsigned int mode);
+#endif
 #if defined(MTK_HDMI_SUPPORT) ||defined (MTK_WFD_SUPPORT)
 extern void hdmi_setorientation(int orientation);
 void hdmi_power_on(void);
@@ -273,7 +276,7 @@ void mtkfb_hang_test(bool en)
 	up(&sem_flipping);
 	}
 }
-
+/*
 static int screen_update_kthread(void *data)
 {
 	struct sched_param param = { .sched_priority = RTPM_PRIO_SCRN_UPDATE };
@@ -290,7 +293,7 @@ static int screen_update_kthread(void *data)
 
     return 0;
 }
-
+*/
 BOOL esd_kthread_pause = TRUE;
 
 void esd_recovery_pause(BOOL en)
@@ -1510,13 +1513,16 @@ static int mtkfb_set_overlay_layer(struct fb_info *info, struct fb_overlay_layer
 
     unsigned int layerpitch;
 	unsigned int layerbpp;
+#if !defined(MTKFB_NO_M4U)	
     unsigned int u4OvlPhyAddr, layer_addr;
+#endif
 	LCD_LAYER_FORMAT eFormat;
     unsigned int id = layerInfo->layer_id;
     int enable = layerInfo->layer_enable ? 1 : 0;
     int ret = 0;
+#if defined(MTK_LCD_HW_3D_SUPPORT)
 	bool r_1st = 0, landscape = 0;
-
+#endif
 	MTKFB_FUNC();
     MSG_FUNC_ENTER();
     MMProfileLogEx(MTKFB_MMP_Events.SetOverlayLayer, MMProfileFlagStart, (id<<16)|enable, (unsigned int)layerInfo->src_phy_addr);
@@ -2506,9 +2512,9 @@ static int mtkfb_ioctl(struct file *file, struct fb_info *info, unsigned int cmd
 
 	case MTKFB_REGISTER_OVERLAYBUFFER:
     {
-		struct fb_overlay_buffer_info overlay_buffer;
 		printk("[mtkfb_ioctl]MTKFB_REGISTER_OVERLAYBUFFER\n");
 #if defined(MTK_M4U_SUPPORT)
+		struct fb_overlay_buffer_info overlay_buffer;
 		if (copy_from_user(&overlay_buffer, (void __user *)arg, sizeof(overlay_buffer))) {
             printk("[FB]: copy_from_user failed! line:%d \n", __LINE__);
             r = -EFAULT;
@@ -2592,10 +2598,10 @@ static int mtkfb_ioctl(struct file *file, struct fb_info *info, unsigned int cmd
     }
 
 	case MTKFB_UNREGISTER_OVERLAYBUFFER:
-    {
-		unsigned int overlay_bufferVA;
+    {	
 		printk("[mtkfb_ioctl]MTKFB_UNREGISTER_OVERLAYBUFFER\n");
 #if defined(MTK_M4U_SUPPORT)
+		unsigned int overlay_bufferVA;
 		if (copy_from_user(&overlay_bufferVA, (void __user *)arg, sizeof(overlay_bufferVA))) {
             printk("[FB]: copy_from_user failed! line:%d \n", __LINE__);
             r = -EFAULT;
@@ -3113,7 +3119,7 @@ static void mtkfb_fbinfo_cleanup(struct mtkfb_device *fbdev)
 
     MSG_FUNC_LEAVE();
 }
-
+#ifndef MT65XX_NEW_DISP
 static void mtkfb_lcd_complete_interrupt(void *param)
 {
     if(atomic_read(&has_pending_update))
@@ -3130,6 +3136,7 @@ static void mtkfb_lcd_complete_interrupt(void *param)
 #endif
 
 }
+#endif
 
 static void mtkfb_dpi_vsync_interrupt(void *param)
 {
@@ -3300,11 +3307,10 @@ static int init_framebuffer(struct fb_info *info)
     void *buffer = info->screen_base +
                    info->var.yoffset * info->fix.line_length;
 
-    u32 bpp = (info->var.bits_per_pixel + 7) >> 3;
-
 #if INIT_FB_AS_COLOR_BAR
     int i;
-
+	u32 bpp = (info->var.bits_per_pixel + 7) >> 3;
+	
     u32 colorRGB565[] =
     {
         0xffff, // White
@@ -3425,7 +3431,7 @@ void disp_get_fb_address(UINT32 *fbVirAddr, UINT32 *fbPhysAddr)
 
 static int mtkfb_fbinfo_modify(struct fb_info *info)
 {
-    struct mtkfb_device *fbdev = (struct mtkfb_device *)info->par;
+    //struct mtkfb_device *fbdev = (struct mtkfb_device *)info->par;
     struct fb_var_screeninfo var;
 	int r = 0;
 

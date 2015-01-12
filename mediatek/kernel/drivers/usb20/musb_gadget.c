@@ -2278,23 +2278,9 @@ musb_gadget_set_self_powered(struct usb_gadget *gadget, int is_selfpowered)
 
 static void musb_pullup(struct musb *musb, int is_on)
 {
-	static int first_enable = 0;
-
-/*	u8 power;
-
-	power = musb_readb(musb->mregs, MUSB_POWER);
-	if (is_on)
-		power |= MUSB_POWER_SOFTCONN;
-	else
-		power &= ~MUSB_POWER_SOFTCONN;
-
-	DBG(3, "gadget %s D+ pullup %s\n",
-		musb->gadget_driver->function, is_on ? "on" : "off");
-	musb_writeb(musb->mregs, MUSB_POWER, power);*/
-
-	/* This is a workaround to check if need to turn on USB */
-	/* The init.usb.rc would always write enable to 1 when device booting */
 #if 0
+	static int first_enable = 0;
+	
 	if (unlikely(first_enable == 0 && is_on)) {
 		first_enable++;
 		if (!is_usb_connected()) {

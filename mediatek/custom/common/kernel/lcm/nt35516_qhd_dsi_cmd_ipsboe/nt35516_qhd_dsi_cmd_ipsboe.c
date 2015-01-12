@@ -92,7 +92,7 @@ static void push_table(struct LCM_setting_table *table, unsigned int count, unsi
     }
 	
 }
-
+/*
 static struct LCM_setting_table lcm_sleep_out_setting[] = {
     // Sleep Out
 	{0x11, 1, {0x00}},
@@ -115,7 +115,7 @@ static struct LCM_setting_table lcm_sleep_in_setting[] = {
 	{0x4F, 1, {0x01}},
 	{REGFLAG_END_OF_TABLE, 0x00, {}}
 };
-
+*/
 static struct LCM_setting_table lcm_initialization_setting[] = {
 	
 	/*
@@ -822,33 +822,6 @@ static void lcm_init(void)
 	lcm_check_status();
     init_lcm_registers();
 }
-
-//<2013/04/12-23797-stevenchen, [Pelican][drv] Fix the adb command of turning on/off LCM.
-static void lcm_poweron(void)
-{
-	lcm_init();
-}
-//>2013/04/12-23797-stevenchen
-
-//<2013/02/10-21805-stevenchen, Add ADB commands to turn on/off LCM.
-static void lcm_poweroff(void)
-{
-	unsigned int data_array[2];
-
-#if !defined(BUILD_LK) && !defined(BUILD_UBOOT)
-	printk("[Steven][kernel] Entry %s\n", __func__);
-#endif
-
-	data_array[0] = 0x00280500; // Display Off
-	dsi_set_cmdq(data_array, 1, 1);
-
-	data_array[0] = 0x00100500; // Sleep In
-	dsi_set_cmdq(data_array, 1, 1);
-	MDELAY(120);
-
-	SET_RESET_PIN(0);
-}
-//>2013/02/10-21805-stevenchen
 
 static void lcm_suspend(void)
 {

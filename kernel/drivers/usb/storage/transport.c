@@ -474,11 +474,6 @@ int usb_stor_bulk_srb(struct us_data* us, unsigned int pipe,
 		      struct scsi_cmnd* srb)
 {
 	unsigned int partial;
-	
-//ALPS00445134, add more debug message for CR debugging
-	US_DEBUGP("%s, line %d: \n", __func__, __LINE__);
-//ALPS00445134, add more debug message for CR debugging
-
 	int result = usb_stor_bulk_transfer_sglist(us, pipe, scsi_sglist(srb),
 				      scsi_sg_count(srb), scsi_bufflen(srb),
 				      &partial);

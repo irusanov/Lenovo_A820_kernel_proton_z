@@ -325,15 +325,15 @@ static int ipanic_write_userspace(unsigned int off)
 
 static void ipanic_write_mmprofile(int offset, struct ipanic_header *hdr)
 {
-  int rc = 0;
-  unsigned int index = 0;
-  unsigned int pbuf = 0;
-  unsigned int bufsize = 0;
-
   offset = ALIGN(offset, EMMC_BLOCK_SIZE);
   hdr->mmprofile_offset = offset;
 
 #ifdef MTK_MMPROFILE_SUPPORT
+
+  int rc = 0;
+  unsigned int index = 0;
+  unsigned int pbuf = 0;
+  unsigned int bufsize = 0;
   
   unsigned int mmprofile_dump_size = MMProfileGetDumpSize();
   if (mmprofile_dump_size == 0 || mmprofile_dump_size > IPANIC_OOPS_MMPROFILE_LENGTH_LIMIT) {
