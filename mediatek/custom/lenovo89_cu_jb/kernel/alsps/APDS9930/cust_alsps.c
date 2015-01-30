@@ -15,8 +15,8 @@ static struct alsps_hw cust_alsps_hw = {
     //.als_value  = {10, 20,20,  120, 120, 280,  280,  280, 1600,  1600,  1600,  6000,  6000, 9000,  10240, 10240},
     .als_level  = { 5, 10,  25,   50,  100, 150,  200, 400, 1000,  1500, 2000, 3000, 5000, 8000, 10000},
     .als_value  = {10, 50,  100,  150, 200, 250,  280,  280, 1600,  1600,  1600,  6000,  6000, 9000,  10240, 10240},
-    .ps_threshold_high = 100,
-    .ps_threshold_low = 100,
+    .ps_threshold_high = 200,
+    .ps_threshold_low = 200,
     .ps_threshold = 900,
 };
 struct alsps_hw *get_cust_alsps_hw(void) {
