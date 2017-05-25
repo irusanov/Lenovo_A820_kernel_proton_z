@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export CROSS_COMPILE="../../arm-eabi-4.8/bin/arm-eabi-"
+export CROSS_COMPILE="ccache ../../arm-cortex_a7-linux-gnueabihf-linaro_4.9.4-2015.06/bin/arm-eabi-"
 export TARGET_PRODUCT=lenovo89_cu_jb
 export MTK_ROOT_CUSTOM=../mediatek
 

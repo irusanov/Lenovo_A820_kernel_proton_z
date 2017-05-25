@@ -3,7 +3,7 @@
 set -e
 
 #Export CROSS_COMPILE to point toolchain
-export CROSS_COMPILE="ccache ../../arm-eabi-4.8/bin/arm-eabi-"
+export CROSS_COMPILE="ccache ../../arm-cortex_a7-linux-gnueabihf-linaro_4.9.4-2015.06/bin/arm-eabi-"
 export TARGET_BUILD_VARIANT=user
 export TARGET_PRODUCT=lenovo89_cu_jb
 export MTK_ROOT_CUSTOM=../mediatek/custom/
@@ -29,7 +29,7 @@ rm $OUT_DIRECTORY/* -R
 fi
 
 #Kernel part
-make -j all
+make -j8
 
 #Add MTK header to zImage
 cp arch/arm/boot/zImage ../mtk-tools/zImageOld
