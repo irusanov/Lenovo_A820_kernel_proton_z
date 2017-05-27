@@ -71,7 +71,7 @@ done
 
 #Cleaning
 echo "Cleaning..."
-rm ../mtk-tools/zImage*
+#rm ../mtk-tools/zImage*
 rm ../mtk-tools/ramdisk*
 
 #Flashable zip build
