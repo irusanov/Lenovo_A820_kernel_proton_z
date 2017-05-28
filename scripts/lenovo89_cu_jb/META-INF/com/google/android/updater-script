@@ -11,8 +11,10 @@ set_progress(0.02);
 mount("ext4", "EMMC", "emmc@system", "/system");
 #mount("ext4", "EMMC", "emmc@usrdata", "/data");
 
+delete_recursive("/system/lib/modules");
+
 set_progress(0.2);
-ui_print(" Done."); 
+ui_print(" Done.");
 ui_print(" ");
 
 ui_print("@ Installing modules");
@@ -20,7 +22,7 @@ set_progress(0.3);
 show_progress(0.6,18);
 package_extract_dir("system", "/system");
 #package_extract_dir("data", "/data");
-ui_print(" Done."); 
+ui_print(" Done.");
 ui_print(" ");
 
 ui_print(" Setting Permissions");
