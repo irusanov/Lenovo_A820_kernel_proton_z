@@ -5,6 +5,9 @@
 #
    
 on post-fs-data
+
+    write /proc/bootprof "post-fs-data: on modem start"
+
     # Modem related device nodes
     mkdir /data/nvram/md  0770 root nvram
     mkdir /data/nvram/md2 0770 root nvram
@@ -12,21 +15,6 @@ on post-fs-data
     insmod /system/lib/modules/ccci_plat.ko
     insmod /system/lib/modules/ccci.ko
     chown ccci ccci /sys/class/BOOT/BOOT/boot/md
-
-    # xplod: this is not in the original mtk file... But I have no
-    # idea what kind of sorcery normally sets them
-    chown ccci ccci /dev/ccci_fs
-    chown ccci ccci /dev/ccci_ioctl0
-    chown ccci ccci /dev/ccci_ioctl1
-    chown ccci ccci /dev/ccci_ipc_1220_0
-    chown ccci ccci /dev/ccci_md_log_rx
-    chown ccci ccci /dev/ccci_md_log_tx
-    chown ccci ccci /dev/ccci_monitor
-    chown ccci ccci /dev/ccci_pcm_rx
-    chown ccci ccci /dev/ccci_pcm_tx
-    chown ccci ccci /dev/ccci_uem_rx
-    chown ccci ccci /dev/ccci_uem_tx
-
     
 service gsm0710muxd /system/bin/gsm0710muxd -s /dev/ttyC0 -f 512 -n 8 -m basic
     class core
@@ -52,13 +40,12 @@ service ril-daemon /system/bin/rild
     socket rild stream 660 root radio
     socket rild2 stream 660 root radio
     socket rild-debug stream 660 radio system
-    socket rild-oem stream 660 radio system
     socket rild-mtk-ut stream 660 radio net_bt
     socket rild-mtk-ut-2 stream 660 radio net_bt
     socket rild-mtk-modem stream 660 radio system
     socket rild-atci stream 660 root radio
     user root
-    group radio cache inet misc audio sdcard_r sdcard_rw log ccci system
+    group radio cache inet misc audio sdcard_r sdcard_rw log ccci
     disabled
 
 service ril-daemon-md2 /system/bin/rildmd2
@@ -66,13 +53,12 @@ service ril-daemon-md2 /system/bin/rildmd2
     socket rild-md2 stream 660 root radio
     socket rild2-md2 stream 660 root radio
     socket rild-debug-md2 stream 660 radio system
-    socket rild-oem-md2 stream 660 radio system
     socket rild-mtk-ut-md2 stream 660 radio net_bt
     socket rild-mtk-ut-2-md2 stream 660 radio net_bt
     socket rild-mtk-modem-md2 stream 660 radio system
     socket rild-atci-md2 stream 660 root radio
     user root
-    group radio cache inet misc audio sdcard_r sdcard_rw log ccci system
+    group radio cache inet misc audio sdcard_r sdcard_rw log ccci
     disabled
 
 service md_minilog_util /system/bin/md_minilog_util
@@ -92,13 +78,13 @@ service permission_check /system/bin/permission_check
 
 service ccci_fsd /system/bin/ccci_fsd 0
     user ccci
-    group nvram ccci system
+    group  nvram ccci system
     class core
     oneshot
 
 service ccci2_fsd /system/bin/ccci_fsd 1
     user ccci
-    group nvram ccci system
+    group  nvram ccci system
     class core
     oneshot
 
@@ -131,3 +117,4 @@ service pppd /system/bin/pppd file /data/misc/ppp/ppp_options
 #
 #  Modem related services (End)
 #
+
